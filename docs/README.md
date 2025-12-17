@@ -271,6 +271,84 @@ Testing is done in the Oracle Health sandbox environment with synthetic patient 
 - Research capabilities
 - Performance optimizations
 
+## Future Directions
+
+The following advanced features are planned for future development:
+
+### 1. Clinical Guideline Integration & Domain Detection
+
+**Intelligent Guideline Recommendations**
+- Automatically detect the clinical domain/problem the clinician is addressing
+- Provide real-time access to the most up-to-date treatment and diagnostic guidelines
+- Offer evidence-based suggestions and recommendations based on current clinical guidelines
+- Support multiple guideline sources (e.g., specialty-specific guidelines, national protocols)
+- Context-aware guideline matching based on patient presentation and clinical context
+
+**Use Cases:**
+- Clinician queries patient data → System detects clinical domain → Presents relevant guidelines
+- Real-time decision support during patient care
+- Treatment pathway recommendations based on current best practices
+
+### 2. Clinical Sign-Out & Event Summarization
+
+**Intelligent Handoff Summaries**
+- Generate comprehensive summaries of clinical events over specified time frames
+- Capture and summarize:
+  - Clinical events and interventions
+  - New or pertinent laboratory results
+  - Imaging studies and findings
+  - Changes in vital signs and trends
+  - New consultations and specialist recommendations
+  - Medication changes and adjustments
+
+**Tailored Sign-Out Reports**
+- Customizable summaries based on clinician role and needs
+- Examples:
+  - **ICU Night Shift Handoff**: Focus on critical events, vital sign trends, and acute interventions
+  - **Weekend Coverage Summary**: Highlight new developments, pending results, and urgent follow-ups
+  - **Consultant Return Summary**: Comprehensive overview of changes during absence
+  - **Transfer Summaries**: Key information for patient handoffs between units
+
+**Features:**
+- Time-range selection (e.g., "What happened over the weekend?", "Last 24 hours")
+- Role-based filtering (e.g., cardiology-focused vs. general medicine)
+- Prioritization of critical information
+- Chronological event timeline
+
+### 3. Predictive Analytics & Clinical Deterioration Monitoring
+
+**Machine Learning-Powered Risk Assessment**
+- Real-time monitoring and probability calculations for patient deterioration
+- Specialized models for high-risk clinical scenarios:
+
+**Sepsis Detection & Monitoring**
+- Early warning indicators
+- Probability scoring for sepsis development
+- Trend analysis of vital signs and lab values
+
+**Neurological Monitoring**
+- Subarachnoid hemorrhage (SAH) risk assessment
+- Delayed cerebral ischemia (DCI) prediction and monitoring
+- Neurological deterioration probability
+
+**Bleeding Risk Assessment**
+- Trauma patient bleeding risk stratification
+- Post-surgical bleeding probability
+- Real-time monitoring of bleeding indicators
+
+**Features:**
+- Continuous monitoring with configurable alert thresholds
+- Probability scores with confidence intervals
+- Trend visualization and risk trajectory analysis
+- Integration with existing clinical decision support systems
+- Alert notifications for high-probability events
+
+**Technical Approach:**
+- ML models trained on clinical data patterns
+- Integration with FHIR Observation and Condition resources
+- Real-time data processing and risk calculation
+- Explainable AI for transparency in clinical decision-making
+
 ## Contributing
 
 This is a private project. For questions or issues, contact the development team.
