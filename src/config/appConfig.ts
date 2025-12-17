@@ -11,7 +11,11 @@ export const appConfig = {
   clientId: import.meta.env.VITE_CLIENT_ID || '',
   redirectUri: import.meta.env.VITE_REDIRECT_URI || 'http://localhost:8080/redirect',
   
-  // AI Configuration
+  // Backend Configuration
+  backendUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',
+  
+  // AI Configuration (deprecated - now handled by backend)
+  // Kept for backward compatibility during migration
   aiProvider: (import.meta.env.VITE_AI_PROVIDER || 'openrouter') as 'openai' | 'openrouter',
   openaiApiKey: import.meta.env.VITE_OPENAI_API_KEY || '',
   openaiModel: import.meta.env.VITE_OPENAI_MODEL || 'gpt-4',
@@ -24,32 +28,32 @@ export const appConfig = {
 } as const;
 
 /**
- * Get the active AI API key based on provider
+ * Get backend API URL
  */
+export const getBackendUrl = (): string => {
+  return appConfig.backendUrl;
+};
+
+// Deprecated functions - kept for backward compatibility
+// AI configuration is now handled by backend
 export const getAIApiKey = (): string => {
+  console.warn('getAIApiKey() is deprecated - AI is now handled by backend');
   if (appConfig.aiProvider === 'openai') {
     return appConfig.openaiApiKey;
   }
   return appConfig.openrouterApiKey;
 };
 
-/**
- * Get the active AI model based on provider
- */
 export const getAIModel = (): string => {
+  console.warn('getAIModel() is deprecated - AI is now handled by backend');
   if (appConfig.aiProvider === 'openai') {
     return appConfig.openaiModel;
   }
   return appConfig.openrouterModel;
 };
 
-/**
- * Get the AI API endpoint based on provider
- */
 export const getAIEndpoint = (): string => {
-  if (appConfig.aiProvider === 'openai') {
-    return 'https://api.openai.com/v1/chat/completions';
-  }
-  return 'https://openrouter.ai/api/v1/chat/completions';
+  console.warn('getAIEndpoint() is deprecated - AI is now handled by backend');
+  return `${appConfig.backendUrl}/api/ai/chat`;
 };
 
