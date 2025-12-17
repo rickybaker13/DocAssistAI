@@ -223,15 +223,192 @@ This project uses various agentic design patterns for AI functionality. See `doc
 
 ## Testing
 
-Testing is done in the Oracle Health sandbox environment with synthetic patient data.
+DocAssistAI supports multiple testing approaches for efficient development and validation.
 
-### Test Checklist
+### Testing Modes
+
+#### 1. Local Development Testing (Mock Data Mode)
+
+For rapid UI development without requiring Oracle Health EHR access:
+
+**Setup:**
+1. Add to `.env.local`:
+   ```env
+   VITE_USE_MOCK_DATA=true
+   ```
+
+2. Start development server:
+   ```bash
+   npm run dev
+   ```
+
+3. Open `http://localhost:8080` in browser
+
+**What You Can Test:**
+- ✅ UI components and styling
+- ✅ Component interactions
+- ✅ State management
+- ✅ AI chat interface (with API keys)
+- ✅ Patient data display
+- ✅ Responsive design
+
+**Benefits:**
+- Fast iteration without EHR access
+- Test edge cases and error states
+- Develop UI independently
+- No network dependencies for FHIR data
+
+**Limitations:**
+- Mock data only (not real patient data)
+- Cannot test SMART authentication flow
+- Cannot test real FHIR API interactions
+
+#### 2. Oracle Health Sandbox Testing (Primary Testing)
+
+This is the **primary testing environment** - equivalent to device testing for mobile apps.
+
+**Setup:**
+1. Register app in Oracle Health Code Console:
+   - Application ID: Your registered application ID
+   - Client ID: Your OAuth client ID
+   - Launch URL: `http://localhost:8080` (dev) or production URL
+   - Redirect URI: `http://localhost:8080/redirect`
+
+2. Configure `.env.local`:
+   ```env
+   VITE_USE_MOCK_DATA=false  # or omit this line
+   VITE_CLIENT_ID=your_client_id
+   VITE_APP_ID=your_application_id
+   VITE_REDIRECT_URI=http://localhost:8080/redirect
+   ```
+
+3. Start development server:
+   ```bash
+   npm run dev
+   ```
+
+4. Launch from Oracle Health EHR:
+   - Log into Oracle Health sandbox
+   - Navigate to patient chart
+   - Launch DocAssistAI from EHR interface
+   - App loads embedded in EHR with patient context
+
+**What You Can Test:**
+- ✅ SMART on FHIR authentication
+- ✅ Patient context extraction
+- ✅ Real FHIR data fetching
+- ✅ Complete integration workflow
+- ✅ Security and compliance
+- ✅ Error handling with real data
+
+**Testing Checklist:**
 - [ ] SMART launch flow works correctly
 - [ ] Patient context is extracted properly
 - [ ] FHIR data fetching succeeds
 - [ ] Patient data displays correctly
 - [ ] AI chat interface responds appropriately
-- [ ] Document generation produces valid output
+- [ ] AI responses use patient context
+- [ ] All FHIR resources load properly
+- [ ] Error handling works correctly
+- [ ] App works in embedded context (iframe)
+
+#### 3. Production Testing
+
+After building and deploying:
+
+1. Build production version:
+   ```bash
+   npm run build
+   ```
+
+2. Deploy to hosting (e.g., hospital server, AWS, Azure)
+
+3. Update Oracle Health Code Console:
+   - Update Launch URL to production URL
+   - Update Redirect URI to production redirect URL
+
+4. Test launch from production EHR environment
+
+### Recommended Testing Workflow
+
+**Daily Development:**
+```
+1. Code changes → npm run dev
+2. Test UI locally with mock data (VITE_USE_MOCK_DATA=true)
+3. Iterate on components and features
+4. When ready → Test in Oracle Health sandbox
+5. Launch from EHR → Verify integration
+```
+
+**Before Committing:**
+- [ ] Code compiles without errors
+- [ ] No TypeScript errors
+- [ ] Linter passes: `npm run lint`
+- [ ] UI works with mock data
+- [ ] Tested in sandbox (if EHR access available)
+
+**Before Production:**
+- [ ] All sandbox tests pass
+- [ ] Tested with multiple patient records
+- [ ] Error scenarios tested
+- [ ] Production build works: `npm run build`
+- [ ] Production deployment tested
+
+### Testing Tools
+
+**Browser DevTools:**
+- Console: Check for errors and logs
+- Network: Monitor API calls
+- React DevTools: Inspect component state
+- Application: Check localStorage/session
+
+**Development Commands:**
+```bash
+npm run dev      # Start dev server
+npm run build    # Build for production
+npm run preview  # Preview production build
+npm run lint     # Run linter
+```
+
+### Mock Data
+
+The app includes comprehensive mock data for local testing:
+- Patient demographics
+- Active conditions (Type 2 Diabetes, Hypertension)
+- Medications (Metformin, Amlodipine)
+- Allergies (Penicillin)
+- Laboratory results (Glucose, Hemoglobin, Cholesterol)
+- Vital signs (Blood Pressure, Heart Rate, Temperature)
+
+Mock data is automatically used when:
+- `VITE_USE_MOCK_DATA=true` is set, OR
+- SMART launch fails in development mode (automatic fallback)
+
+### Troubleshooting Testing Issues
+
+**SMART Launch Fails:**
+- Verify redirect URI matches Code Console configuration
+- Check that client ID is correct
+- Ensure you're launching from sandbox environment
+- Check browser console for detailed errors
+
+**Mock Data Not Loading:**
+- Verify `VITE_USE_MOCK_DATA=true` in `.env.local`
+- Check browser console for errors
+- Ensure you're in development mode (`npm run dev`)
+
+**FHIR Data Not Loading:**
+- Verify tenant ID is correct
+- Check network connectivity
+- Review browser console for errors
+- Ensure proper scopes are requested
+- Verify patient ID is valid
+
+**AI Service Errors:**
+- Verify API key is set correctly
+- Check API quota/limits
+- Review AI service logs in console
+- Test API key independently
 
 ## Troubleshooting
 
