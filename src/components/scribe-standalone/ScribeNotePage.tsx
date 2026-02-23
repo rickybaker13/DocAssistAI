@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
+import { ScribeChatDrawer } from './ScribeChatDrawer';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface NoteData {
@@ -62,6 +63,13 @@ export const ScribeNotePage: React.FC = () => {
       [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + suggestion,
     }));
     setFocusedSection(null);
+  };
+
+  const handleChatInsert = (sectionId: string, text: string) => {
+    setEdits(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + text,
+    }));
   };
 
   const handleCopyAll = () => {
@@ -144,6 +152,11 @@ export const ScribeNotePage: React.FC = () => {
           onApplySuggestion={handleApplySuggestion}
         />
       )}
+      <ScribeChatDrawer
+        sections={sections}
+        noteType={note.note_type}
+        onInsert={handleChatInsert}
+      />
     </div>
   );
 };
