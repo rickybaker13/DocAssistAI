@@ -187,8 +187,16 @@ router.post('/generate-document', async (req: Request, res: Response) => {
           `[${e.timestamp}] ${e.type.toUpperCase()} | ${e.label}: ${e.value ?? ''} ${e.unit ?? ''}${e.isAbnormal ? ' ABNORMAL' : ''}`
         )
         .join('\n');
-    } else if (patientData) {
-      timelineData = JSON.stringify(patientData).slice(0, 10000);
+    } else if (patientData && typeof patientData === 'object' && patientData.patient?.id) {
+      // Only accept structured patient data — reject arbitrary payloads
+      const safeFields = ['labs', 'vitals', 'medications', 'medicationAdmins', 'conditions', 'encounters', 'diagnosticReports', 'procedures', 'notes', 'deviceMetrics', 'fetchedAt'];
+      const safeData: Record<string, unknown> = { patient: { id: patientData.patient.id } };
+      for (const field of safeFields) {
+        if (Array.isArray(patientData[field])) {
+          safeData[field] = patientData[field];
+        }
+      }
+      timelineData = JSON.stringify(safeData).slice(0, 10000);
     }
 
     const prompt = buildCoWriterPrompt(template, timelineData, additionalContext);

@@ -1,3 +1,4 @@
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CoWriterPanel } from './CoWriterPanel';
 
@@ -65,5 +66,17 @@ describe('CoWriterPanel', () => {
     const sectionTextarea = textareas[1]; // first section textarea
     fireEvent.change(sectionTextarea, { target: { value: 'Edited content' } });
     expect(sectionTextarea).toHaveValue('Edited content');
+  });
+
+  it('shows error message when fetch fails', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      json: async () => ({ error: 'Server error' }),
+    });
+    render(<CoWriterPanel />);
+    fireEvent.click(screen.getByRole('button', { name: /generate note/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/server error/i)).toBeInTheDocument();
+    });
   });
 });

@@ -23,4 +23,11 @@ describe('noteBuilder', () => {
     const prompt = buildCoWriterPrompt('Unknown Type', 'chart');
     expect(prompt).toContain('Subjective');
   });
+
+  it('buildCoWriterPrompt includes JSON structure instruction with sections array', () => {
+    const prompt = buildCoWriterPrompt('Progress Note', 'chart data');
+    expect(prompt).toContain('"sections"');
+    expect(prompt).toContain('"sources"');
+    expect(prompt).toContain('"content"');
+  });
 });

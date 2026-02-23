@@ -21,7 +21,7 @@ interface GeneratedDocument {
 export const CoWriterPanel: React.FC = () => {
   const [noteType, setNoteType] = useState('Progress Note');
   const [additionalContext, setAdditionalContext] = useState('');
-  const [document, setDocument] = useState<GeneratedDocument | null>(null);
+  const [generatedDoc, setGeneratedDoc] = useState<GeneratedDocument | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editedSections, setEditedSections] = useState<Record<string, string>>({});
@@ -48,7 +48,7 @@ export const CoWriterPanel: React.FC = () => {
       }
       const data = await res.json();
       const doc: GeneratedDocument = data.document;
-      setDocument(doc);
+      setGeneratedDoc(doc);
       // Initialize editable sections
       const initial: Record<string, string> = {};
       doc.sections?.forEach((s) => { initial[s.name] = s.content; });
@@ -60,11 +60,15 @@ export const CoWriterPanel: React.FC = () => {
     }
   };
 
-  const copyAll = () => {
-    const fullNote = document?.sections
+  const copyAll = async () => {
+    const fullNote = generatedDoc?.sections
       ?.map((s) => `${s.name.toUpperCase()}\n${editedSections[s.name] ?? s.content}`)
       .join('\n\n');
-    navigator.clipboard.writeText(fullNote || '');
+    try {
+      await navigator.clipboard.writeText(fullNote || '');
+    } catch {
+      setError('Could not copy to clipboard. Please select and copy manually.');
+    }
   };
 
   return (
@@ -85,7 +89,7 @@ export const CoWriterPanel: React.FC = () => {
         >
           {loading ? 'Generating...' : 'Generate Note'}
         </button>
-        {document && (
+        {generatedDoc && (
           <button
             onClick={copyAll}
             className="px-4 py-2 bg-green-600 text-white rounded text-sm font-medium hover:bg-green-700 transition-colors"
@@ -111,7 +115,7 @@ export const CoWriterPanel: React.FC = () => {
       )}
 
       {/* Generated sections */}
-      {document?.sections?.map((section) => (
+      {generatedDoc?.sections?.map((section) => (
         <div key={section.name} className="flex flex-col gap-1">
           <div className="flex items-center justify-between">
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
