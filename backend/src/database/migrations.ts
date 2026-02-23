@@ -54,5 +54,5 @@ CREATE TABLE IF NOT EXISTS note_templates (
   verbosity  TEXT NOT NULL DEFAULT 'standard',
   sections   TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
-)
+);
 `;
