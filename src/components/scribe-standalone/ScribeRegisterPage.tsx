@@ -13,7 +13,7 @@ export const ScribeRegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: '', password: '', name: '', specialty: '' });
 
-  useEffect(() => { if (user) navigate('/scribe/dashboard'); }, [user]);
+  useEffect(() => { if (user) navigate("/scribe/dashboard"); }, [user, navigate]);
 
   const setField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }));

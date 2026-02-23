@@ -22,7 +22,7 @@ export const ScribeAuthGuard: React.FC<{ children: React.ReactNode }> = ({ child
     );
   }
 
-  if (!useScribeAuthStore.getState().user) {
+  if (!user) {
     return <Navigate to="/scribe/login" replace />;
   }
 

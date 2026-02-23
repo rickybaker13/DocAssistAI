@@ -9,7 +9,7 @@ export const ScribeLoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  useEffect(() => { if (user) navigate('/scribe/dashboard'); }, [user]);
+  useEffect(() => { if (user) navigate("/scribe/dashboard"); }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
