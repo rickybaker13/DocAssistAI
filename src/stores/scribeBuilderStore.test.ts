@@ -1,7 +1,11 @@
 import { useScribeBuilderStore } from './scribeBuilderStore';
 
 describe('scribeBuilderStore', () => {
-  beforeEach(() => useScribeBuilderStore.getState().clearCanvas());
+  beforeEach(() => {
+    useScribeBuilderStore.getState().clearCanvas();
+    useScribeBuilderStore.getState().setNoteType('progress_note');
+    useScribeBuilderStore.getState().setPatientLabel('');
+  });
 
   it('starts with empty canvas', () => {
     expect(useScribeBuilderStore.getState().canvasSections).toEqual([]);

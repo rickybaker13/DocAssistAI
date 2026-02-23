@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { vi } from 'vitest';
 import { SectionLibrary } from './SectionLibrary';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 
@@ -8,13 +9,17 @@ const mockTemplates = [
   { id: '3', name: 'Vasopressor Status', prompt_hint: 'ICU section', is_prebuilt: 1 },
 ];
 
-global.fetch = vi.fn().mockResolvedValue({
-  ok: true,
-  json: async () => ({ templates: mockTemplates }),
-});
+global.fetch = vi.fn();
 
 describe('SectionLibrary', () => {
-  beforeEach(() => useScribeBuilderStore.getState().clearCanvas());
+  beforeEach(() => {
+    useScribeBuilderStore.getState().clearCanvas();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: async () => ({ templates: mockTemplates }),
+    });
+  });
+  afterEach(() => vi.clearAllMocks());
 
   it('renders section names after loading', async () => {
     render(<SectionLibrary />);

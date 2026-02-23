@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { SectionLibrary } from './SectionLibrary';
 import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
+import { getBackendUrl } from '../../config/appConfig';
 
 const NOTE_TYPES = [
   { value: 'progress_note', label: 'Progress Note' },
@@ -13,11 +14,6 @@ const NOTE_TYPES = [
   { value: 'discharge_summary', label: 'Discharge Summary' },
   { value: 'procedure_note', label: 'Procedure Note' },
 ];
-
-const getBackendUrl = () => {
-  try { return import.meta.env?.VITE_BACKEND_URL || 'http://localhost:3000'; }
-  catch { return 'http://localhost:3000'; }
-};
 
 export const NoteBuilderPage: React.FC = () => {
   const { canvasSections, noteType, patientLabel, setNoteType, setPatientLabel, clearCanvas } = useScribeBuilderStore();
@@ -40,8 +36,8 @@ export const NoteBuilderPage: React.FC = () => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to create note');
       navigate(`/scribe/note/${data.note.id}/record`);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
     } finally {
       setCreating(false);
     }
@@ -54,7 +50,10 @@ export const NoteBuilderPage: React.FC = () => {
         <button onClick={() => navigate('/scribe/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">Cancel</button>
       </div>
       <div className="flex gap-3 flex-wrap">
-        <select value={noteType} onChange={e => setNoteType(e.target.value)}
+        <select
+          value={noteType}
+          onChange={e => setNoteType(e.target.value)}
+          aria-label="Note type"
           className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
           {NOTE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
+import { getBackendUrl } from '../../config/appConfig';
 
 interface Template {
   id: string;
@@ -8,21 +9,28 @@ interface Template {
   is_prebuilt: number;
 }
 
-const getBackendUrl = () => {
-  try { return import.meta.env?.VITE_BACKEND_URL || 'http://localhost:3000'; }
-  catch { return 'http://localhost:3000'; }
-};
-
 export const SectionLibrary: React.FC = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [search, setSearch] = useState('');
   const { addSection, canvasSections } = useScribeBuilderStore();
 
   useEffect(() => {
-    fetch(`${getBackendUrl()}/api/scribe/templates`, { credentials: 'include' })
-      .then(r => r.json())
+    const controller = new AbortController();
+    fetch(`${getBackendUrl()}/api/scribe/templates`, {
+      credentials: 'include',
+      signal: controller.signal,
+    })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then(d => setTemplates(d.templates || []))
-      .catch(() => {});
+      .catch(err => {
+        if (err.name !== 'AbortError') {
+          // silently ignore non-abort errors (empty list shown)
+        }
+      });
+    return () => controller.abort();
   }, []);
 
   const filtered = templates.filter(t => t.name.toLowerCase().includes(search.toLowerCase()));
@@ -36,6 +44,7 @@ export const SectionLibrary: React.FC = () => {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search sections..."
+          aria-label="Search sections"
           className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
