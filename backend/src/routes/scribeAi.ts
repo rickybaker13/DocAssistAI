@@ -18,7 +18,7 @@ function extractContent(raw: unknown): string {
 
 // ─── POST /api/ai/scribe/generate ────────────────────────────────────────────
 router.post('/generate', async (req: Request, res: Response) => {
-  const { transcript, sections, noteType, userContext } = req.body;
+  const { transcript, sections, noteType, userContext, verbosity } = req.body;
 
   if (!transcript || !transcript.trim()) {
     return res.status(400).json({ error: 'transcript is required' }) as any;
@@ -32,12 +32,19 @@ router.post('/generate', async (req: Request, res: Response) => {
     .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
     .join('\n');
 
+  const verbosityInstruction =
+    verbosity === 'brief'
+      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
+      : verbosity === 'detailed'
+      ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
+      : '';
+
   const systemPrompt = `You are a clinical documentation AI assistant for a ${specialty} physician.
 Generate structured note content for each section listed below, based ONLY on the transcript provided.
 Write in first-person plural physician voice ("We assessed...", "The patient was...", "Our plan includes...").
 Be clinically precise. Do not fabricate findings not present in the transcript.
 If a section cannot be completed from the transcript, write: "Insufficient information captured."
-Return ONLY valid JSON — no markdown fences, no extra text.`;
+Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}`;
 
   const userPrompt = `Transcript:
 "${transcript}"
