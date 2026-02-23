@@ -16,6 +16,12 @@ import transcribeRoutes from './routes/transcribe.js';
 import discoveryRoutes from './routes/discovery.js';
 import signalRouter from './routes/signal.js';
 import populationRouter from './routes/population.js';
+import cookieParser from 'cookie-parser';
+import scribeAuthRouter from './routes/scribeAuth.js';
+import scribeNotesRouter from './routes/scribeNotes.js';
+import scribeTemplatesRouter from './routes/scribeTemplates.js';
+import scribeAiRouter from './routes/scribeAi.js';
+import scribeNoteTemplatesRouter from './routes/scribeNoteTemplates.js';
 
 dotenv.config();
 
@@ -61,6 +67,7 @@ app.use('/api/', limiter);
 
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 
 // HIPAA compliance middleware
@@ -80,6 +87,11 @@ app.use('/api/ai', transcribeRoutes);
 app.use('/api/discovery', discoveryRoutes);
 app.use('/api/signal', signalRouter);
 app.use('/api/population', populationRouter);
+app.use('/api/scribe/auth', scribeAuthRouter);
+app.use('/api/scribe/notes', scribeNotesRouter);
+app.use('/api/scribe/templates', scribeTemplatesRouter);
+app.use('/api/ai/scribe', scribeAiRouter);
+app.use('/api/scribe/note-templates', scribeNoteTemplatesRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {

@@ -40,3 +40,4 @@ coverage/
 
 # Vite
 .vite/
+backend/data/*.db

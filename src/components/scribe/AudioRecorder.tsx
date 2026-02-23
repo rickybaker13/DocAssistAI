@@ -68,7 +68,16 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       setRecording(true);
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Microphone access failed';
+      let message = err instanceof Error ? err.message : 'Microphone access failed';
+      if (err instanceof DOMException) {
+        if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+          message = 'No microphone found. Please connect a microphone and try again.';
+        } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          message = 'Microphone permission denied. Please allow microphone access in your browser settings.';
+        } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+          message = 'Microphone is in use by another application. Please close other apps using the mic and try again.';
+        }
+      }
       onError?.(message);
     } finally {
       // Fix 2: Always clear the starting guard

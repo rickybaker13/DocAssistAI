@@ -6,6 +6,7 @@
 import { aiConfig } from '../../config/aiConfig.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { OpenRouterProvider } from './providers/openrouter.js';
+import { AnthropicProvider } from './providers/anthropic.js';
 import { SelfHostedProvider } from './providers/selfHosted.js';
 import { AIProvider } from './providers/base.js';
 
@@ -40,6 +41,14 @@ export function createAIProvider(): AIProvider {
       cachedProvider = new OpenRouterProvider(
         aiConfig.external.openrouter.apiKey,
         aiConfig.external.openrouter.model
+      );
+    } else if (aiConfig.external.type === 'anthropic') {
+      if (!aiConfig.external.anthropic?.apiKey) {
+        throw new Error('Anthropic API key not configured');
+      }
+      cachedProvider = new AnthropicProvider(
+        aiConfig.external.anthropic.apiKey,
+        aiConfig.external.anthropic.model
       );
     } else {
       throw new Error(`Unknown external AI type: ${aiConfig.external.type}`);
