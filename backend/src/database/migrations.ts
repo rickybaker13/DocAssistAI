@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS scribe_notes (
   patient_label TEXT,
   transcript    TEXT,
   status        TEXT DEFAULT 'draft',
+  verbosity     TEXT NOT NULL DEFAULT 'standard',
   deleted_at    TEXT,
   created_at    TEXT DEFAULT (datetime('now')),
   updated_at    TEXT DEFAULT (datetime('now'))
@@ -44,4 +45,14 @@ CREATE TABLE IF NOT EXISTS scribe_section_templates (
   created_at  TEXT DEFAULT (datetime('now')),
   updated_at  TEXT DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS note_templates (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT REFERENCES scribe_users(id),
+  note_type  TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  verbosity  TEXT NOT NULL DEFAULT 'standard',
+  sections   TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+)
 `;
