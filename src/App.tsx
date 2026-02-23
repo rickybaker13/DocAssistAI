@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './stores/authStore';
 import { usePatientStore } from './stores/patientStore';
 import { smartAuthService } from './services/auth/smartAuthService';
@@ -19,8 +20,12 @@ import { CoWriterPanel } from './components/cowriter/CoWriterPanel';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorMessage from './components/common/ErrorMessage';
 import ConnectionStatus from './components/common/ConnectionStatus';
+import { ScribeLayout } from './components/scribe-standalone/ScribeLayout';
+import { ScribeAuthGuard } from './components/scribe-standalone/ScribeAuthGuard';
+import { ScribeLoginPage } from './components/scribe-standalone/ScribeLoginPage';
+import { ScribeRegisterPage } from './components/scribe-standalone/ScribeRegisterPage';
 
-function App() {
+function ExistingApp() {
   const { isAuthenticated, setAuthenticated, setLoading, setError, error } = useAuthStore();
   const { setPatientSummary, setLoading: setPatientLoading } = usePatientStore();
   const [isInitializing, setIsInitializing] = useState(true);
@@ -469,6 +474,28 @@ function App() {
         )}
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/scribe/login" element={<ScribeLoginPage />} />
+        <Route path="/scribe/register" element={<ScribeRegisterPage />} />
+        <Route
+          path="/scribe/*"
+          element={
+            <ScribeAuthGuard>
+              <ScribeLayout />
+            </ScribeAuthGuard>
+          }
+        >
+          <Route index element={<Navigate to="/scribe/dashboard" replace />} />
+        </Route>
+        <Route path="*" element={<ExistingApp />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
