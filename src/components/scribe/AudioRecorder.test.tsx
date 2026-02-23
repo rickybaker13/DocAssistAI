@@ -1,6 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 import { AudioRecorder } from './AudioRecorder';
+import { useScribeStore } from '../../stores/scribeStore';
 
 // Proper MediaRecorder mock using a class so vitest doesn't warn
 class MockMediaRecorder {
@@ -16,6 +17,9 @@ class MockMediaRecorder {
 
 beforeEach(() => {
   vi.clearAllMocks();
+
+  // Reset the Zustand store so each test starts from a clean slate
+  useScribeStore.getState().reset();
 
   // Mock getUserMedia to return a fake stream
   Object.defineProperty(navigator, 'mediaDevices', {
@@ -47,5 +51,28 @@ describe('AudioRecorder', () => {
     });
 
     expect(await screen.findByRole('button', { name: /stop/i })).toBeInTheDocument();
+  });
+
+  // Fix 6: getUserMedia rejection calls onError
+  it('calls onError when getUserMedia is rejected', async () => {
+    const micError = new Error('Permission denied');
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: {
+        getUserMedia: vi.fn().mockRejectedValue(micError),
+      },
+      configurable: true,
+      writable: true,
+    });
+
+    const onError = vi.fn();
+    render(<AudioRecorder onTranscript={() => {}} onError={onError} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /record/i }));
+    });
+
+    expect(onError).toHaveBeenCalledWith('Permission denied');
+    // Button should return to Record state after the failure
+    expect(screen.getByRole('button', { name: /record/i })).toBeInTheDocument();
   });
 });
