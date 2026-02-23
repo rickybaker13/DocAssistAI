@@ -14,6 +14,7 @@ import { auditMiddleware } from './middleware/audit.js';
 import aiRoutes from './routes/ai.js';
 import transcribeRoutes from './routes/transcribe.js';
 import discoveryRoutes from './routes/discovery.js';
+import signalRouter from './routes/signal.js';
 
 dotenv.config();
 
@@ -76,6 +77,7 @@ if (!configValidation.valid) {
 app.use('/api/ai', aiRoutes);
 app.use('/api/ai', transcribeRoutes);
 app.use('/api/discovery', discoveryRoutes);
+app.use('/api/signal', signalRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
