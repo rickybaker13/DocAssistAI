@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { signalEngine } from '../services/signal/signalEngine.js';
 import { contextStore } from '../services/signal/contextStore.js';
 
@@ -9,13 +10,18 @@ router.post('/process', async (req: Request, res: Response) => {
     const { patientData, hoursBack = 24 } = req.body;
     const sessionId = (req.headers['x-session-id'] as string) ||
                       (req.headers['x-patient-id'] as string) ||
-                      'default';
+                      randomUUID(); // Never share context between unidentified callers
 
     if (!patientData) {
       return res.status(400).json({ error: 'patientData required' });
     }
 
-    const signal = await signalEngine.process(sessionId, patientData, Number(hoursBack));
+    const hours = Number(hoursBack);
+    if (!Number.isFinite(hours) || hours <= 0 || hours > 168) {
+      return res.status(400).json({ error: 'hoursBack must be a number between 1 and 168' });
+    }
+
+    const signal = await signalEngine.process(sessionId, patientData, hours);
     return res.json({ signal });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Signal extraction failed';

@@ -27,7 +27,9 @@ export class FhirNormalizer {
         value: obs.valueQuantity?.value ?? obs.valueString ?? obs.valueCodeableConcept?.text,
         unit: obs.valueQuantity?.unit,
         referenceRange: obs.referenceRange?.[0]?.text,
-        isAbnormal: obs.interpretation?.[0]?.coding?.[0]?.code !== 'N',
+        isAbnormal: obs.interpretation != null
+          ? obs.interpretation[0]?.coding?.[0]?.code !== 'N'
+          : undefined,
         source: obs.id || '',
       });
     });
@@ -39,7 +41,9 @@ export class FhirNormalizer {
         label: obs.code?.text || obs.code?.coding?.[0]?.display || 'Unknown Vital',
         value: obs.valueQuantity?.value,
         unit: obs.valueQuantity?.unit,
-        isAbnormal: obs.interpretation?.[0]?.coding?.[0]?.code !== 'N',
+        isAbnormal: obs.interpretation != null
+          ? obs.interpretation[0]?.coding?.[0]?.code !== 'N'
+          : undefined,
         source: obs.id || '',
       });
     });

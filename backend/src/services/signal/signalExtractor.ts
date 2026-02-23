@@ -62,10 +62,16 @@ Ignore: routine stable findings, minor fluctuations within normal range.`,
     };
   }
 
+  // PRIVACY: source IDs and raw text are intentionally excluded from the LLM prompt to limit PHI exposure.
   private buildPrompt(recentEvents: any[], hoursBack: number): string {
-    const summary = recentEvents.slice(0, 150).map(e =>
-      `[${e.timestamp}] ${e.type.toUpperCase()} | ${e.label}: ${e.value ?? ''} ${e.unit ?? ''}${e.isAbnormal ? ' ABNORMAL' : ''}`
-    ).join('\n');
+    const summary = recentEvents.slice(0, 150).map(e => {
+      // Scrub FHIR resource IDs (source field) and truncate free-text values
+      const value = typeof e.value === 'string'
+        ? e.value.slice(0, 200)  // truncate free-text (may contain PHI narrative)
+        : e.value;
+      return `[${e.timestamp}] ${e.type.toUpperCase()} | ${e.label}: ${value ?? ''} ${e.unit ?? ''}${e.isAbnormal ? ' ABNORMAL' : ''}`;
+      // Note: source (FHIR resource ID) intentionally omitted from LLM prompt
+    }).join('\n');
 
     return `Analyze this ICU patient data from the last ${hoursBack} hours and extract clinical signal.
 
