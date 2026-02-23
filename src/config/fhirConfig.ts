@@ -69,6 +69,13 @@ export const FHIR_QUERIES = {
   
   // Care Plans
   getCarePlans: (patientId: string) => `CarePlan?patient=${patientId}&status=active`,
+  
+  // Document References (clinical notes)
+  // Use 'subject' parameter (FHIR R4 standard) instead of 'patient'
+  getDocumentReferences: (patientId: string) => `DocumentReference?subject=Patient/${patientId}&_sort=-date&_count=100`,
+  
+  // Communications (alternative note storage)
+  getCommunications: (patientId: string) => `Communication?patient=${patientId}&_sort=-date&_count=100`,
 } as const;
 
 export type FHIRResourceType = typeof FHIR_RESOURCES[keyof typeof FHIR_RESOURCES];

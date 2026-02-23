@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocAssistAI - Redirect Handler</title>
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient@2.6.3/build/fhir-client.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            color: #ff6b6b;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            text-align: left;
+        }
+        .success {
+            color: #4caf50;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+        }
+        pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 4px;
+            font-size: 11px;
+            overflow-x: auto;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <h2>Completing Authentication...</h2>
+        <p id="status">Processing authorization code...</p>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="success" class="success" style="display: none;"></div>
+    </div>
+
+    <script>
+        (async function() {
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
+            const successEl = document.getElementById('success');
+
+            try {
+                console.log('[Redirect Handler] ========================================');
+                console.log('[Redirect Handler] Starting OAuth callback processing...');
+                console.log('[Redirect Handler] Current URL:', window.location.href);
+                console.log('[Redirect Handler] Full URL:', window.location.href);
+                console.log('[Redirect Handler] Pathname:', window.location.pathname);
+                console.log('[Redirect Handler] Search:', window.location.search);
+                console.log('[Redirect Handler] Hash:', window.location.hash);
+                
+                statusEl.textContent = 'Checking authorization response...';
+                
+                // Parse URL parameters FIRST
+                const urlParams = new URLSearchParams(window.location.search);
+                const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                
+                // Check if we have an authorization code
+                const hasCode = urlParams.has('code');
+                const hasError = urlParams.has('error');
+                const hasCodeInHash = hashParams.has('code');
+                const hasErrorInHash = hashParams.has('error');
+                
+                console.log('[Redirect Handler] Checking for authorization code...');
+                console.log('[Redirect Handler] Has code (query):', hasCode);
+                console.log('[Redirect Handler] Has error (query):', hasError);
+                console.log('[Redirect Handler] Has code (hash):', hasCodeInHash);
+                console.log('[Redirect Handler] Has error (hash):', hasErrorInHash);
+                console.log('[Redirect Handler] All query params:', Array.from(urlParams.entries()));
+                console.log('[Redirect Handler] All hash params:', Array.from(hashParams.entries()));
+                
+                // Check for errors in query or hash
+                const finalHasError = hasError || hasErrorInHash;
+                if (finalHasError) {
+                    const error = urlParams.get('error') || hashParams.get('error');
+                    const errorDescription = urlParams.get('error_description') || hashParams.get('error_description') || urlParams.get('error_uri') || hashParams.get('error_uri') || 'Unknown error';
+                    const errorUri = urlParams.get('error_uri') || hashParams.get('error_uri');
+                    
+                    console.error('[Redirect Handler] OAuth Error:', {
+                        error: error,
+                        error_description: errorDescription,
+                        error_uri: errorUri,
+                        full_url: window.location.href,
+                        all_params: Array.from(urlParams.entries())
+                    });
+                    
+                    // Provide helpful error messages based on error type
+                    let helpfulMessage = errorDescription;
+                    if (error === 'invalid_request') {
+                        // Oracle Health "code-required" error means missing launch parameter - requires EHR Launch
+                        if (errorDescription.includes('code-required') || errorUri?.includes('code-required')) {
+                            helpfulMessage = 'Oracle Health requires EHR Launch (with launch parameter). Standalone Launch is not supported. You must launch from Oracle Health EHR sandbox.';
+                        } else {
+                            helpfulMessage = 'Invalid request - Check that redirect URI matches Code Console exactly. Redirect URI should be: http://localhost:8080/redirect.html';
+                        }
+                    } else if (error === 'unauthorized_client') {
+                        helpfulMessage = 'Unauthorized client - Check that Client ID is correct and app is registered in Code Console';
+                    } else if (error === 'access_denied') {
+                        helpfulMessage = 'Access denied - User declined authorization';
+                    }
+                    
+                    throw new Error(`Authorization failed: ${error} - ${helpfulMessage}`);
+                }
+                
+                // Check both query params and hash for code
+                const finalHasCode = hasCode || hasCodeInHash;
+                // Note: finalHasError already defined above
+                
+                if (!finalHasCode && !finalHasError) {
+                    console.warn('[Redirect Handler] ⚠️ No authorization code or error found');
+                    console.warn('[Redirect Handler] Full URL:', window.location.href);
+                    console.warn('[Redirect Handler] Query params:', Array.from(urlParams.entries()));
+                    console.warn('[Redirect Handler] Hash params:', Array.from(hashParams.entries()));
+                    
+                    // Show helpful message to user
+                    statusEl.textContent = '⚠️ No authorization code found';
+                    errorEl.style.display = 'block';
+                    errorEl.innerHTML = `
+                        <strong>No Authorization Code Received</strong><br><br>
+                        <p>The URL doesn't contain an authorization code. Current URL: <code>${window.location.href}</code></p>
+                        <p><strong>This usually means one of these:</strong></p>
+                        <ol style="text-align: left; margin: 10px 0;">
+                            <li><strong>You didn't complete OAuth login</strong> - Did you see Oracle Health's login page? Did you log in and approve?</li>
+                            <li><strong>Redirect URI mismatch</strong> - Check Code Console redirect URI matches exactly: <code>http://localhost:8080/redirect.html</code></li>
+                            <li><strong>Oracle Health rejected request</strong> - Check Safari Console for error details</li>
+                        </ol>
+                        <p><strong>Next Steps:</strong></p>
+                        <ol style="text-align: left; margin: 10px 0;">
+                            <li>Go to: <a href="/debug-smart.html" style="color: white; text-decoration: underline;">http://localhost:8080/debug-smart.html</a></li>
+                            <li>Click "Test Full Launch"</li>
+                            <li>Copy the authorization URL</li>
+                            <li>Paste it in Safari</li>
+                            <li><strong>IMPORTANT:</strong> You should see Oracle Health login page</li>
+                            <li>Log in with your sandbox credentials</li>
+                            <li>Click "Authorize" or "Approve" button</li>
+                            <li>You should then be redirected to: <code>http://localhost:8080/redirect.html?code=XXXXX</code></li>
+                        </ol>
+                        <p style="margin-top: 15px;"><strong>Check Safari Console (Cmd+Option+C) for detailed logs</strong></p>
+                    `;
+                    
+                    // Don't throw error - show helpful UI instead
+                    console.log('[Redirect Handler] Showing helpful error message to user');
+                    return;
+                }
+                
+                // Use code from query or hash
+                const authCode = urlParams.get('code') || hashParams.get('code');
+                if (authCode) {
+                    console.log('[Redirect Handler] Authorization code found:', authCode.substring(0, 20) + '...');
+                }
+                
+                statusEl.textContent = 'Exchanging authorization code for access token...';
+                console.log('[Redirect Handler] Step 1: Calling FHIR.oauth2.ready()...');
+                console.log('[Redirect Handler] This will extract code from URL and exchange for token');
+                
+                // Get configuration from environment or URL
+                // fhirclient stores PKCE state in localStorage, but we need to pass config
+                const fhirBaseUrl = new URLSearchParams(window.location.search).get('iss') || 
+                                    sessionStorage.getItem('smart_fhir_base_url') ||
+                                    'https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d';
+                const clientId = sessionStorage.getItem('smart_client_id') || 
+                                'eb36ea98-c4e4-47ae-a002-1357fb97d176';
+                
+                console.log('[Redirect Handler] Config:', { fhirBaseUrl, clientId });
+                
+                // Initialize SMART client - this will handle the OAuth callback
+                // fhir.oauth2.ready() will:
+                // 1. Extract code from URL
+                // 2. Retrieve PKCE code_verifier from storage
+                // 3. Exchange code for token
+                // 4. Store token securely
+                let client;
+                try {
+                    // Pass the FHIR base URL so fhirclient can find PKCE state
+                    // If iss is in URL, fhirclient will auto-detect it
+                    if (urlParams.has('iss')) {
+                        console.log('[Redirect Handler] Using iss from URL for discovery');
+                        client = await FHIR.oauth2.ready();
+                    } else {
+                        // Standalone launch - need to pass config
+                        console.log('[Redirect Handler] Standalone launch - passing config to ready()');
+                        client = await FHIR.oauth2.ready({
+                            clientId: clientId,
+                            redirectUri: window.location.origin + '/redirect.html',
+                            iss: fhirBaseUrl
+                        });
+                    }
+                    console.log('[Redirect Handler] Step 2: Token exchange successful!');
+                } catch (readyError) {
+                    console.error('[Redirect Handler] FHIR.oauth2.ready() failed:', readyError);
+                    console.error('[Redirect Handler] Error details:', {
+                        message: readyError.message,
+                        name: readyError.name,
+                        stack: readyError.stack,
+                        url: window.location.href,
+                        hasCode: urlParams.has('code'),
+                        hasIss: urlParams.has('iss')
+                    });
+                    
+                    // More helpful error message
+                    let errorMsg = `Token exchange failed: ${readyError.message}`;
+                    if (readyError.message.includes('code_verifier') || readyError.message.includes('PKCE')) {
+                        errorMsg += '\n\nPKCE state not found. This usually means:\n';
+                        errorMsg += '1. You didn\'t use fhirclient.authorize() to start OAuth\n';
+                        errorMsg += '2. Or browser storage was cleared between authorize() and redirect\n';
+                        errorMsg += '3. Or you\'re using a different browser/tab than where authorize() was called';
+                    }
+                    
+                    throw new Error(errorMsg);
+                }
+                
+                console.log('[Redirect Handler] Token exchange successful!');
+                console.log('[Redirect Handler] Client state:', {
+                    patientId: client.patient?.id,
+                    serverUrl: client.state?.serverUrl,
+                    userId: client.user?.id
+                });
+                
+                statusEl.textContent = '✅ Authentication successful!';
+                successEl.style.display = 'block';
+                successEl.innerHTML = `
+                    <strong>Token exchange successful!</strong><br>
+                    Patient ID: ${client.patient?.id || 'N/A'}<br>
+                    <small>Redirecting to main app...</small>
+                `;
+                
+                // Store auth state in sessionStorage for the main app
+                sessionStorage.setItem('smart_authenticated', 'true');
+                if (client.patient?.id) {
+                    sessionStorage.setItem('smart_patient_id', client.patient.id);
+                }
+                if (client.state?.serverUrl) {
+                    sessionStorage.setItem('smart_server_url', client.state.serverUrl);
+                }
+                
+                console.log('[Redirect Handler] Auth state stored in sessionStorage');
+                console.log('[Redirect Handler] Redirecting to main app in 1.5 seconds...');
+                
+                // Redirect to main app (remove /redirect from URL)
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+                
+            } catch (error) {
+                // Re-parse URL params in case they weren't defined earlier
+                const urlParamsFinal = new URLSearchParams(window.location.search);
+                const hashParamsFinal = new URLSearchParams(window.location.hash.substring(1));
+                
+                console.error('[Redirect Handler] SMART authentication failed:', error);
+                console.error('[Redirect Handler] Error details:', {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack,
+                    full_url: window.location.href
+                });
+                
+                errorEl.style.display = 'block';
+                
+                // Check if this is an OAuth error from Oracle Health
+                const oauthError = urlParamsFinal.get('error') || hashParamsFinal.get('error');
+                if (oauthError) {
+                    const oauthErrorDesc = urlParamsFinal.get('error_description') || hashParamsFinal.get('error_description') || 'Unknown error';
+                    const errorUri = urlParamsFinal.get('error_uri') || hashParamsFinal.get('error_uri');
+                    
+                    // Check if it's the "code-required" error
+                    const isCodeRequired = errorUri?.includes('code-required') || oauthErrorDesc.includes('code-required');
+                    
+                    errorEl.innerHTML = `
+                        <strong>OAuth Error from Oracle Health</strong><br><br>
+                        <p><strong>Error:</strong> ${oauthError}</p>
+                        <p><strong>Description:</strong> ${oauthErrorDesc}</p>
+                        ${isCodeRequired ? `
+                            <div style="margin-top: 15px; padding: 15px; background: rgba(255,255,255,0.25); border-radius: 4px; border: 2px solid rgba(255,255,255,0.5);">
+                                <strong>⚠️ "code-required" Error - Likely Scope Issue</strong><br>
+                                <p style="margin-top: 10px;">The "code-required" error usually means:</p>
+                                <ul style="text-align: left; margin: 10px 0; padding-left: 20px;">
+                                    <li><strong>Using 'launch' scope in Standalone Launch</strong> - Remove 'launch' scope for standalone</li>
+                                    <li>Wrong FHIR base URL (should be fhir-ehr-code.cerner.com for secure sandbox)</li>
+                                    <li>Redirect URI mismatch</li>
+                                </ul>
+                                <p style="margin-top: 10px;"><strong>✅ For Standalone Launch:</strong></p>
+                                <ul style="text-align: left; margin: 10px 0; padding-left: 20px;">
+                                    <li>Use scopes: <code>openid fhirUser patient/*.read</code> (NO 'launch')</li>
+                                    <li>Use secure sandbox: <code>fhir-ehr-code.cerner.com</code></li>
+                                    <li>Redirect URI must match Code Console exactly</li>
+                                </ul>
+                                <p style="margin-top: 15px; font-size: 13px; color: rgba(255,255,255,0.9);">
+                                    <strong>Alternative:</strong> Use Code Console Sandbox Launcher - it provides launch parameter for EHR Launch testing.
+                                </p>
+                            </div>
+                        ` : ''}
+                        <p style="margin-top: 15px;"><strong>Common causes:</strong></p>
+                        <ul style="text-align: left; margin: 10px 0;">
+                            <li>Redirect URI mismatch (must be exactly: http://localhost:8080/redirect.html)</li>
+                            <li>Client ID mismatch</li>
+                            <li>App not configured for Standalone Launch in Code Console</li>
+                        </ul>
+                        <p style="margin-top: 15px;">Try using the <a href="/debug-smart.html" style="color: #a7c7ed; text-decoration: underline;">SMART Debug Tool</a> for Standalone Launch.</p>
+                    `;
+                } else {
+                    errorEl.innerHTML = `
+                        <strong>Authentication Failed</strong><br><br>
+                        <p>Error: ${error.message}</p>
+                        <p style="margin-top: 10px;">Please verify your app registration in Oracle Health Code Console and try again.</p>
+                        <p style="margin-top: 10px;"><strong>Debugging Info:</strong></p>
+                        <pre style="font-size: 11px; text-align: left;">URL: ${window.location.href}
+Path: ${window.location.pathname}
+Search: ${window.location.search}
+Has Code: ${urlParamsFinal.has('code')}
+Has Error: ${urlParamsFinal.has('error')}</pre>
+                    `;
+                }
+                statusEl.textContent = '❌ Authentication failed';
+                
+                // Show retry option
+                setTimeout(() => {
+                    const retryBtn = document.createElement('button');
+                    retryBtn.textContent = 'Retry Launch';
+                    retryBtn.style.cssText = 'margin-top: 1rem; padding: 0.5rem 1rem; background: white; color: #667eea; border: none; border-radius: 5px; cursor: pointer;';
+                    retryBtn.onclick = () => window.location.href = '/debug-smart.html';
+                    document.querySelector('.container').appendChild(retryBtn);
+                }, 2000);
+            }
+        })();
+    </script>
+</body>
+</html>

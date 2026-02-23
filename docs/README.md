@@ -536,10 +536,23 @@ Proprietary - All rights reserved
 
 ## Resources
 
-- [Oracle Health FHIR Documentation](https://docs.oracle.com/en/industries/health/millennium-platform-apis/)
+### Oracle Health Documentation
+- [Oracle Health Millennium Platform APIs](https://docs.oracle.com/en/industries/health/millennium-platform-apis/index.html)
+- [Authorization Framework](https://docs.oracle.com/en/industries/health/millennium-platform-apis/millennium-authorization-framework/#authorization)
+- [FHIR R4 APIs](https://docs.oracle.com/en/industries/health/millennium-platform-apis/mfrap/r4_overview.html)
+- [SMART Applications](https://docs.oracle.com/en/industries/health/millennium-platform-apis/smart-applications.html)
+- [Oracle Health Developer Forums](https://forums.oracle.com/ords/apexds/domain/dev-community)
+
+### Standards & Specifications
 - [SMART on FHIR Specification](http://hl7.org/fhir/smart-app-launch/)
 - [FHIR R4 Specification](https://www.hl7.org/fhir/R4/)
-- [Agentic Patterns Catalog](./docs/AGENTS-README.md)
+- [HL7 FHIR Website](https://www.hl7.org/fhir/)
+
+### Project Documentation
+- [Agentic Patterns Catalog](./AGENTS-README.md)
+- [Oracle Health Compliance Guide](./ORACLE_HEALTH_COMPLIANCE.md)
+- [Testing Guide](./TESTING.md)
+- [Sandbox Access Guide](./SANDBOX_ACCESS.md)
 
 ## Support
 

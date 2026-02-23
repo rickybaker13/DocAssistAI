@@ -24,7 +24,7 @@ class AIService {
     maxTokens?: number;
     systemPrompt?: string;
     patientContext?: string;
-  }): Promise<AIResponse> {
+  }, useRAG: boolean = true): Promise<AIResponse> {
     // Add system prompt if provided
     const messageList: AIMessage[] = options?.systemPrompt
       ? [{ role: 'system', content: options.systemPrompt }, ...messages]
@@ -44,6 +44,7 @@ class AIService {
     const requestBody = {
       messages: messageList,
       patientContext: options?.patientContext,
+      useRAG, // Enable RAG by default
       options: {
         temperature: options?.temperature ?? 0.7,
         maxTokens: options?.maxTokens,
@@ -81,9 +82,9 @@ class AIService {
   }
 
   /**
-   * Query patient data with AI
+   * Query patient data with AI (with optional RAG)
    */
-  async queryPatientData(question: string, patientContext: string): Promise<string> {
+  async queryPatientData(question: string, patientContext: string, useRAG: boolean = true): Promise<string> {
     const messages: AIMessage[] = [
       {
         role: 'user',
@@ -92,11 +93,41 @@ class AIService {
     ];
 
     const response = await this.chat(messages, {
-      patientContext, // Backend handles system prompt with patient context
+      patientContext, // Backend will use RAG if available, otherwise use full context
       temperature: 0.3, // Lower temperature for more factual responses
-    });
+    }, useRAG);
 
     return response.content;
+  }
+
+  /**
+   * Index patient data for RAG
+   */
+  async indexPatientData(patientSummary: any): Promise<void> {
+    try {
+      const response = await axios.post(
+        `${this.backendUrl}/api/ai/index-patient-data`,
+        { patientSummary },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || 'Failed to index patient data');
+      }
+
+      console.log('[RAG] Patient data indexed:', response.data.data);
+    } catch (error: any) {
+      console.error('RAG indexing error:', error);
+      throw new Error(
+        error.response?.data?.error ||
+        error.message ||
+        'Failed to index patient data for RAG'
+      );
+    }
   }
 
   /**

@@ -5,7 +5,13 @@
  */
 
 import { PatientSummary } from '../../types';
-import { createMockPatientSummary } from '../../utils/mockData';
+import {
+  createComprehensiveMockPatientSummary,
+  createFluidIOObservations,
+  createImagingReports,
+  createProcedures,
+  createClinicalNotes,
+} from '../../utils/comprehensiveMockData';
 
 class MockFhirService {
   /**
@@ -17,66 +23,76 @@ class MockFhirService {
 
   /**
    * Get mock patient summary
+   * Uses comprehensive mock data for realistic testing
    */
   async getPatientSummary(patientId: string): Promise<PatientSummary> {
     // Simulate network delay
     await this.delay(500);
     
-    console.log(`[MOCK] Fetching patient summary for patient: ${patientId}`);
-    return createMockPatientSummary();
+    console.log(`[MOCK] Fetching comprehensive patient summary for patient: ${patientId}`);
+    const summary = createComprehensiveMockPatientSummary();
+    
+    // Add extended data
+    return {
+      ...summary,
+      fluidIO: createFluidIOObservations(),
+      imagingReports: createImagingReports(),
+      procedures: createProcedures(),
+      clinicalNotes: createClinicalNotes(),
+    };
   }
 
   /**
    * Get mock patient
    */
-  async getPatient(patientId: string) {
+  async getPatient(_patientId: string) {
     await this.delay(300);
-    const summary = createMockPatientSummary();
+    const summary = createComprehensiveMockPatientSummary();
     return summary.patient;
   }
 
   /**
    * Get mock conditions
    */
-  async getConditions(patientId: string) {
+  async getConditions(_patientId: string) {
     await this.delay(400);
-    const summary = createMockPatientSummary();
+    const summary = createComprehensiveMockPatientSummary();
     return summary.conditions;
   }
 
   /**
    * Get mock medications
    */
-  async getMedications(patientId: string) {
+  async getMedications(_patientId: string) {
     await this.delay(400);
-    const summary = createMockPatientSummary();
+    const summary = createComprehensiveMockPatientSummary();
     return summary.medications;
   }
 
   /**
    * Get mock labs
    */
-  async getLabs(patientId: string) {
+  async getLabs(_patientId: string) {
     await this.delay(400);
-    const summary = createMockPatientSummary();
+    const summary = createComprehensiveMockPatientSummary();
     return summary.recentLabs;
   }
 
   /**
    * Get mock vitals
    */
-  async getVitals(patientId: string) {
+  async getVitals(_patientId: string) {
     await this.delay(400);
-    const summary = createMockPatientSummary();
+    const summary = createComprehensiveMockPatientSummary();
     return summary.recentVitals;
   }
 
   /**
    * Get mock allergies
    */
-  async getAllergies(patientId: string) {
+  async getAllergies(_patientId: string) {
     await this.delay(300);
-    const summary = createMockPatientSummary();
+    const summary = createComprehensiveMockPatientSummary();
     return summary.allergies;
   }
 }
