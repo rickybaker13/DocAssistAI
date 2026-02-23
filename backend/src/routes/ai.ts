@@ -10,6 +10,7 @@ import { patientDataIndexer } from '../services/rag/patientDataIndexer.js';
 import { ragService } from '../services/rag/ragService.js';
 import { estimateTokens, countMessageTokens, formatTokenCount, analyzeMessages } from '../utils/tokenCounter.js';
 import { contextStore } from '../services/signal/contextStore.js';
+import type { ClinicalEvent } from '../services/signal/fhirNormalizer.js';
 
 const router = Router();
 
@@ -38,14 +39,14 @@ router.post('/chat', async (req: Request, res: Response) => {
 
     // ── Signal Engine: inject chart-grounded context ──────────────────────────
     const sessionId = (req.headers['x-session-id'] || req.headers['x-patient-id'] || '') as string;
-    const cached = contextStore.get(sessionId);
+    const cached = sessionId ? contextStore.get(sessionId) : null;
 
     let chartContext = '';
     if (cached?.timeline?.events?.length) {
       const events = cached.timeline.events.slice(0, 200);
       chartContext = events
-        .map((e: any) =>
-          `[${e.timestamp}] ${(e.type as string).toUpperCase()} | ${e.label}: ${e.value ?? ''} ${e.unit ?? ''}${e.isAbnormal ? ' ABNORMAL' : ''}`
+        .map((e: ClinicalEvent) =>
+          `[${e.timestamp}] ${e.type.toUpperCase()} | ${e.label}: ${e.value ?? ''} ${e.unit ?? ''}${e.isAbnormal ? ' ABNORMAL' : ''}`
         )
         .join('\n');
     }
@@ -59,6 +60,9 @@ Be concise and clinically precise. Do not speculate or add information not prese
 
 PATIENT CHART DATA:
 ${chartContext}`;
+    } else {
+      // No verified chart data — instruct AI not to make patient-specific claims
+      request.patientContext = `You are a critical care physician AI assistant. No verified patient chart data is currently loaded for this session. Answer general medical questions only. Do NOT make patient-specific claims or reference specific lab values, vital signs, or clinical findings for any individual patient.`;
     }
 
     const cited = !!chartContext;

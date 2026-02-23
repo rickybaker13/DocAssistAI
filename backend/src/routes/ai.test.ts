@@ -142,6 +142,12 @@ describe('Chart-grounded chat endpoint', () => {
     expect(result.status).toBe(200);
     expect(result.body).toHaveProperty('cited', true);
     expect(result.body).toHaveProperty('data');
+
+    // Verify chart data was injected into the AI call
+    const aiCallArgs = chatSpy.mock.calls[0]; // first call
+    const patientContextArg = aiCallArgs[0]; // first arg is the ChatRequest object
+    // The timeline event "MAP" should appear in the patientContext
+    expect(JSON.stringify(patientContextArg)).toContain('MAP');
   });
 
   it('returns cited: false when no cached timeline exists for the session', async () => {
