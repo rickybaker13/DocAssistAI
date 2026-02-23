@@ -29,6 +29,7 @@
     }
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@types/multer": "^2.0.0",
     "axios": "^1.6.2",
     "bcryptjs": "^3.0.3",

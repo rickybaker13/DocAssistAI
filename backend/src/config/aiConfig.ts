@@ -10,12 +10,16 @@ dotenv.config();
 export interface AIConfig {
   provider: 'external' | 'self-hosted';
   external?: {
-    type: 'openai' | 'openrouter';
+    type: 'openai' | 'openrouter' | 'anthropic';
     openai?: {
       apiKey: string;
       model: string;
     };
     openrouter?: {
+      apiKey: string;
+      model: string;
+    };
+    anthropic?: {
       apiKey: string;
       model: string;
     };
@@ -30,7 +34,7 @@ export interface AIConfig {
 export const aiConfig: AIConfig = {
   provider: (process.env.AI_PROVIDER || 'external') as 'external' | 'self-hosted',
   external: {
-    type: (process.env.EXTERNAL_AI_TYPE || 'openrouter') as 'openai' | 'openrouter',
+    type: (process.env.EXTERNAL_AI_TYPE || 'anthropic') as 'openai' | 'openrouter' | 'anthropic',
     openai: {
       apiKey: process.env.OPENAI_API_KEY || '',
       model: process.env.OPENAI_MODEL || 'gpt-4',
@@ -38,6 +42,10 @@ export const aiConfig: AIConfig = {
     openrouter: {
       apiKey: process.env.OPENROUTER_API_KEY || '',
       model: process.env.OPENROUTER_MODEL || 'openrouter/auto',
+    },
+    anthropic: {
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+      model: process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022',
     },
   },
   selfHosted: {
@@ -63,6 +71,10 @@ export function validateAIConfig(): { valid: boolean; error?: string } {
     } else if (aiConfig.external.type === 'openrouter') {
       if (!aiConfig.external.openrouter?.apiKey) {
         return { valid: false, error: 'OpenRouter API key not configured' };
+      }
+    } else if (aiConfig.external.type === 'anthropic') {
+      if (!aiConfig.external.anthropic?.apiKey) {
+        return { valid: false, error: 'Anthropic API key not configured' };
       }
     }
   } else if (aiConfig.provider === 'self-hosted') {
