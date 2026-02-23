@@ -37,7 +37,7 @@ export class ScribeNoteModel {
     ).get(id, userId) ?? null) as ScribeNote | null;
   }
 
-  update(id: string, userId: string, fields: Partial<Pick<ScribeNote, 'transcript' | 'status' | 'patient_label'>>): void {
+  update(id: string, userId: string, fields: Partial<Pick<ScribeNote, 'transcript' | 'status' | 'patient_label' | 'verbosity'>>): void {
     const keys = Object.keys(fields);
     for (const key of keys) {
       if (!ScribeNoteModel.ALLOWED_UPDATE_COLUMNS.has(key)) {
