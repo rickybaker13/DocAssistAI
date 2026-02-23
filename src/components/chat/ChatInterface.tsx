@@ -1,9 +1,34 @@
 import { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { useChatStore } from '../../stores/chatStore';
 import { usePatientStore } from '../../stores/patientStore';
 import { aiService } from '../../services/ai/aiService';
 import { ChatMessage } from '../../types';
 import LoadingSpinner from '../common/LoadingSpinner';
+
+/**
+ * Renders an AI response string with inline citation chips.
+ * [Source: <label>, <timestamp>] tags are highlighted as blue monospace chips.
+ */
+const renderWithCitations = (text: string): React.ReactNode => {
+  const parts = text.split(/(\[Source:[^\]]+\])/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.startsWith('[Source:') ? (
+          <span
+            key={i}
+            className="inline-block text-xs bg-blue-100 text-blue-700 rounded px-1.5 py-0.5 ml-1 font-mono"
+          >
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  );
+};
 
 export default function ChatInterface() {
   const { messages, addMessage, isLoading, setLoading, setError } = useChatStore();
@@ -24,24 +49,102 @@ export default function ChatInterface() {
     
     const context = [
       `Patient: ${patientSummary.patient.name?.[0]?.given?.join(' ') || 'Unknown'} ${patientSummary.patient.name?.[0]?.family || ''}`,
-      `DOB: ${patientSummary.patient.birthDate || 'Unknown'}`,
+      `MRN: ${patientSummary.patient.identifier?.[0]?.value || 'Unknown'}`,
+      `DOB: ${patientSummary.patient.birthDate || 'Unknown'} (Age: ${patientSummary.patient.birthDate ? Math.floor((new Date().getTime() - new Date(patientSummary.patient.birthDate).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : 'Unknown'})`,
       `Gender: ${patientSummary.patient.gender || 'Unknown'}`,
+      `\n=== ADMISSION INFORMATION ===`,
+      `Admission Date: ${(patientSummary.recentEncounters || patientSummary.encounters || [])?.[0]?.period?.start ? new Date((patientSummary.recentEncounters || patientSummary.encounters || [])[0].period.start).toLocaleDateString() : '2 weeks ago'}`,
+      `Current Location: ${(patientSummary.recentEncounters || patientSummary.encounters || [])?.find(e => e.status === 'active')?.class?.display || 'Inpatient Floor'}`,
     ];
 
     if (patientSummary.conditions.length > 0) {
-      context.push(`\nConditions: ${patientSummary.conditions.map(c => c.code?.text || 'Unknown').join(', ')}`);
+      context.push(`\n=== ACTIVE CONDITIONS ===`);
+      patientSummary.conditions.forEach(c => {
+        const onset = c.onsetDateTime ? new Date(c.onsetDateTime).toLocaleDateString() : 'Unknown';
+        const status = c.clinicalStatus?.coding?.[0]?.display || 'Unknown';
+        context.push(`- ${c.code?.text || 'Unknown'} (${status}, Onset: ${onset})`);
+      });
     }
 
     if (patientSummary.medications.length > 0) {
-      context.push(`\nMedications: ${patientSummary.medications.map(m => m.medicationCodeableConcept?.text || 'Unknown').join(', ')}`);
+      context.push(`\n=== CURRENT MEDICATIONS ===`);
+      patientSummary.medications.forEach(m => {
+        const medName = m.medicationCodeableConcept?.text || 'Unknown';
+        const status = m.status || 'Unknown';
+        context.push(`- ${medName} (${status})`);
+      });
     }
 
     if (patientSummary.allergies.length > 0) {
-      context.push(`\nAllergies: ${patientSummary.allergies.map(a => a.code?.text || 'Unknown').join(', ')}`);
+      context.push(`\n=== ALLERGIES ===`);
+      patientSummary.allergies.forEach(a => {
+        const allergen = a.code?.text || 'Unknown';
+        const severity = a.criticality || 'Unknown';
+        const reaction = a.reaction?.[0]?.manifestation?.[0]?.text || 'Unknown';
+        context.push(`- ${allergen} (${severity} severity, Reaction: ${reaction})`);
+      });
     }
 
-    if (patientSummary.recentLabs.length > 0) {
-      context.push(`\nRecent Labs: ${patientSummary.recentLabs.slice(0, 5).map(l => `${l.code?.text}: ${l.valueQuantity?.value || 'N/A'}`).join(', ')}`);
+    const labs = patientSummary.recentLabs || patientSummary.labResults || [];
+    if (labs.length > 0) {
+      context.push(`\n=== RECENT LABORATORY RESULTS (Last 10) ===`);
+      labs.slice(0, 10).forEach(l => {
+        const labName = l.code?.text || 'Unknown';
+        const value = l.valueQuantity ? `${l.valueQuantity.value} ${l.valueQuantity.unit}` : l.valueString || 'N/A';
+        const date = l.effectiveDateTime ? new Date(l.effectiveDateTime).toLocaleDateString() : 'Unknown';
+        context.push(`- ${labName}: ${value} (${date})`);
+      });
+    }
+
+    const vitals = patientSummary.recentVitals || patientSummary.vitalSigns || [];
+    if (vitals.length > 0) {
+      context.push(`\n=== RECENT VITAL SIGNS (Last 5) ===`);
+      vitals.slice(0, 5).forEach(v => {
+        const vitalName = v.code?.text || 'Unknown';
+        const value = v.valueQuantity ? `${v.valueQuantity.value} ${v.valueQuantity.unit}` : 
+                      v.component ? `${v.component[0]?.valueQuantity?.value}/${v.component[1]?.valueQuantity?.value} ${v.component[0]?.valueQuantity?.unit}` : 'N/A';
+        const date = v.effectiveDateTime ? new Date(v.effectiveDateTime).toLocaleString() : 'Unknown';
+        context.push(`- ${vitalName}: ${value} (${date})`);
+      });
+    }
+
+    if (patientSummary.fluidIO && patientSummary.fluidIO.length > 0) {
+      context.push(`\n=== FLUID INTAKE/OUTPUT (Last 3 days) ===`);
+      patientSummary.fluidIO.slice(-6).forEach(io => {
+        const type = io.code?.text || 'Unknown';
+        const value = io.valueQuantity ? `${io.valueQuantity.value} ${io.valueQuantity.unit}` : 'N/A';
+        const date = io.effectiveDateTime ? new Date(io.effectiveDateTime).toLocaleDateString() : 'Unknown';
+        context.push(`- ${type}: ${value} (${date})`);
+      });
+    }
+
+    if (patientSummary.imagingReports && patientSummary.imagingReports.length > 0) {
+      context.push(`\n=== IMAGING STUDIES ===`);
+      patientSummary.imagingReports.forEach(img => {
+        const study = img.code?.text || 'Unknown';
+        const date = img.effectiveDateTime ? new Date(img.effectiveDateTime).toLocaleDateString() : 'Unknown';
+        const conclusion = img.conclusion || 'No conclusion';
+        context.push(`- ${study} (${date}): ${conclusion.substring(0, 100)}...`);
+      });
+    }
+
+    if (patientSummary.procedures && patientSummary.procedures.length > 0) {
+      context.push(`\n=== PROCEDURES ===`);
+      patientSummary.procedures.forEach(proc => {
+        const procName = proc.code?.text || 'Unknown';
+        const date = proc.performedDateTime ? new Date(proc.performedDateTime).toLocaleDateString() : 'Unknown';
+        const status = proc.status || 'Unknown';
+        context.push(`- ${procName} (${date}, Status: ${status})`);
+      });
+    }
+
+    if (patientSummary.clinicalNotes && patientSummary.clinicalNotes.length > 0) {
+      context.push(`\n=== CLINICAL NOTES SUMMARY ===`);
+      const noteTypes = new Set(patientSummary.clinicalNotes.map(n => n.type));
+      noteTypes.forEach(type => {
+        const count = patientSummary.clinicalNotes!.filter(n => n.type === type).length;
+        context.push(`- ${type}: ${count} notes`);
+      });
     }
 
     return context.join('\n');
@@ -65,7 +168,8 @@ export default function ChatInterface() {
 
     try {
       const patientContext = formatPatientContext();
-      const response = await aiService.queryPatientData(input, patientContext);
+      // Use RAG by default (backend will handle retrieval)
+      const response = await aiService.queryPatientData(input, patientContext, true);
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -118,7 +222,11 @@ export default function ChatInterface() {
                   : 'bg-gray-100 text-gray-900'
               }`}
             >
-              <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+              <p className="text-sm whitespace-pre-wrap">
+                {message.role === 'assistant'
+                  ? renderWithCitations(message.content)
+                  : message.content}
+              </p>
               <p className="text-xs mt-1 opacity-70">
                 {message.timestamp.toLocaleTimeString()}
               </p>
