@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import Database from 'better-sqlite3';
 import { getDb } from '../database/db';
 import { PREBUILT_SECTIONS } from '../database/prebuiltSections';
 
@@ -48,14 +49,14 @@ export class ScribeSectionTemplateModel {
     ).get(id, userId) ?? null) as ScribeSectionTemplate | null;
   }
 
-  update(id: string, userId: string, fields: { name?: string; promptHint?: string }): void {
-    getDb().prepare(
+  update(id: string, userId: string, fields: { name?: string; promptHint?: string }): Database.RunResult {
+    return getDb().prepare(
       'UPDATE scribe_section_templates SET name = COALESCE(?, name), prompt_hint = COALESCE(?, prompt_hint), updated_at = ? WHERE id = ? AND user_id = ? AND is_prebuilt = 0'
     ).run(fields.name ?? null, fields.promptHint ?? null, new Date().toISOString(), id, userId);
   }
 
-  delete(id: string, userId: string): void {
-    getDb().prepare(
+  delete(id: string, userId: string): Database.RunResult {
+    return getDb().prepare(
       'DELETE FROM scribe_section_templates WHERE id = ? AND user_id = ? AND is_prebuilt = 0'
     ).run(id, userId);
   }

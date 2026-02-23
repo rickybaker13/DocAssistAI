@@ -16,6 +16,8 @@ export interface ScribeNoteSection {
 }
 
 export class ScribeNoteSectionModel {
+  private static readonly ALLOWED_UPDATE_COLUMNS = new Set(['content', 'confidence', 'focused_ai_result', 'chat_insertions', 'display_order']);
+
   create(input: { noteId: string; sectionName: string; displayOrder: number; promptHint?: string }): ScribeNoteSection {
     const id = randomUUID();
     getDb().prepare(
@@ -44,8 +46,20 @@ export class ScribeNoteSectionModel {
     return (getDb().prepare('SELECT * FROM scribe_note_sections WHERE id = ?').get(id) ?? null) as ScribeNoteSection | null;
   }
 
+  /**
+   * Updates a section by ID.
+   * IMPORTANT: Does NOT verify user ownership of the section.
+   * Callers MUST verify that the parent note belongs to the user before calling this.
+   * Use: noteModel.findById(note_id, userId) before calling update().
+   */
   update(id: string, fields: Partial<Pick<ScribeNoteSection, 'content' | 'confidence' | 'focused_ai_result' | 'chat_insertions' | 'display_order'>>): void {
-    const sets = Object.keys(fields).map(k => `${k} = ?`).join(', ');
+    const keys = Object.keys(fields);
+    for (const key of keys) {
+      if (!ScribeNoteSectionModel.ALLOWED_UPDATE_COLUMNS.has(key)) {
+        throw new Error(`Invalid column: ${key}`);
+      }
+    }
+    const sets = keys.map(k => `${k} = ?`).join(', ');
     getDb().prepare(
       `UPDATE scribe_note_sections SET ${sets}, updated_at = ? WHERE id = ?`
     ).run(...Object.values(fields), new Date().toISOString(), id);

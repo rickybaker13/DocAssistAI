@@ -14,6 +14,8 @@ export interface ScribeNote {
 }
 
 export class ScribeNoteModel {
+  private static readonly ALLOWED_UPDATE_COLUMNS = new Set(['transcript', 'status', 'patient_label']);
+
   create(input: { userId: string; noteType: string; patientLabel?: string }): ScribeNote {
     const id = randomUUID();
     getDb().prepare(
@@ -35,7 +37,13 @@ export class ScribeNoteModel {
   }
 
   update(id: string, userId: string, fields: Partial<Pick<ScribeNote, 'transcript' | 'status' | 'patient_label'>>): void {
-    const sets = Object.keys(fields).map(k => `${k} = ?`).join(', ');
+    const keys = Object.keys(fields);
+    for (const key of keys) {
+      if (!ScribeNoteModel.ALLOWED_UPDATE_COLUMNS.has(key)) {
+        throw new Error(`Invalid column: ${key}`);
+      }
+    }
+    const sets = keys.map(k => `${k} = ?`).join(', ');
     const vals = [...Object.values(fields), new Date().toISOString(), id, userId];
     getDb().prepare(
       `UPDATE scribe_notes SET ${sets}, updated_at = ? WHERE id = ? AND user_id = ?`
@@ -43,9 +51,10 @@ export class ScribeNoteModel {
   }
 
   softDelete(id: string, userId: string): void {
+    const now = new Date().toISOString();
     getDb().prepare(
       'UPDATE scribe_notes SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?'
-    ).run(new Date().toISOString(), new Date().toISOString(), id, userId);
+    ).run(now, now, id, userId);
   }
 
   private findByIdUnchecked(id: string): ScribeNote | null {

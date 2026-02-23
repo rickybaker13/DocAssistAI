@@ -29,12 +29,14 @@ router.post('/', (req: Request, res: Response) => {
 
 router.put('/:id', (req: Request, res: Response) => {
   const { name, promptHint } = req.body;
-  model.update(req.params.id, req.scribeUserId!, { name, promptHint });
+  const result = model.update(req.params.id, req.scribeUserId!, { name, promptHint });
+  if (result.changes === 0) return res.status(404).json({ error: 'Template not found or cannot be modified' }) as any;
   return res.json({ ok: true });
 });
 
 router.delete('/:id', (req: Request, res: Response) => {
-  model.delete(req.params.id, req.scribeUserId!);
+  const result = model.delete(req.params.id, req.scribeUserId!);
+  if (result.changes === 0) return res.status(404).json({ error: 'Template not found or cannot be deleted' }) as any;
   return res.json({ ok: true });
 });
 
