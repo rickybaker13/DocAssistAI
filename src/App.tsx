@@ -25,6 +25,8 @@ import { ScribeAuthGuard } from './components/scribe-standalone/ScribeAuthGuard'
 import { ScribeLoginPage } from './components/scribe-standalone/ScribeLoginPage';
 import { ScribeRegisterPage } from './components/scribe-standalone/ScribeRegisterPage';
 import { NoteBuilderPage } from './components/scribe-standalone/NoteBuilderPage';
+import { ScribeRecordPage } from './components/scribe-standalone/ScribeRecordPage';
+import { ScribeNotePage } from './components/scribe-standalone/ScribeNotePage';
 
 function ExistingApp() {
   const { isAuthenticated, setAuthenticated, setLoading, setError, error } = useAuthStore();
@@ -494,6 +496,8 @@ function App() {
         >
           <Route index element={<Navigate to="/scribe/dashboard" replace />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
+          <Route path="note/:id/record" element={<ScribeRecordPage />} />
+          <Route path="note/:id" element={<ScribeNotePage />} />
         </Route>
         <Route path="*" element={<ExistingApp />} />
       </Routes>
