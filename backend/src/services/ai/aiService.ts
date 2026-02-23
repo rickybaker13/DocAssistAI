@@ -7,6 +7,7 @@ import { getAIProvider } from './providerFactory.js';
 import { AIMessage, AIResponse, ChatRequest, DocumentRequest } from '../../types/index.js';
 import { redactPHI } from '../../middleware/phiProtection.js';
 import { logAIServiceUsage } from '../audit/auditLogger.js';
+import { estimateTokens, countMessageTokens, formatTokenCount, analyzeMessages } from '../../utils/tokenCounter.js';
 
 export class AIService {
   /**
@@ -32,17 +33,38 @@ export class AIService {
           : request.patientContext;
 
         // Add system prompt with patient context
-        const systemPrompt: AIMessage = {
-          role: 'system',
-          content: `You are a clinical assistant helping healthcare providers understand patient data.
+        const systemPromptContent = `You are a clinical assistant helping healthcare providers understand patient data.
 Use the following patient information to answer questions accurately and concisely.
 Always cite specific data points when possible.
 
 Patient Context:
-${patientContext}`,
+${patientContext}`;
+
+        const systemPrompt: AIMessage = {
+          role: 'system',
+          content: systemPromptContent,
         };
 
         messages = [systemPrompt, ...messages];
+        
+        // Log system prompt size
+        const systemPromptTokens = estimateTokens(systemPromptContent);
+        console.log(`[AI Service] System prompt: ${formatTokenCount(systemPromptTokens)}`);
+      }
+
+      // Analyze and log all messages before sending
+      const messageAnalysis = analyzeMessages(messages);
+      console.log(`\n[AI Service] Final Message Analysis:`);
+      console.log(`  Total tokens: ${formatTokenCount(messageAnalysis.totalTokens)}`);
+      console.log(`  Tokens by role:`);
+      Object.entries(messageAnalysis.byRole).forEach(([role, tokens]) => {
+        console.log(`    ${role}: ${formatTokenCount(tokens)} (${messageAnalysis.messageCounts[role]} message(s))`);
+      });
+      
+      // Log first 200 chars of system prompt for debugging
+      const systemMsg = messages.find(m => m.role === 'system');
+      if (systemMsg) {
+        console.log(`  System prompt preview: "${systemMsg.content.substring(0, 200)}..."`);
       }
 
       // Call AI provider

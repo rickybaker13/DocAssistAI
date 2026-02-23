@@ -5,6 +5,7 @@ import ConditionsList from './ConditionsList';
 import MedicationsList from './MedicationsList';
 import AllergiesList from './AllergiesList';
 import RecentLabs from './RecentLabs';
+import ClinicalNotesList from './ClinicalNotesList';
 
 export default function PatientDashboard() {
   const { patientSummary, isLoading } = usePatientStore();
@@ -57,10 +58,18 @@ export default function PatientDashboard() {
       )}
 
       {/* Recent Labs */}
-      {patientSummary.recentLabs.length > 0 && (
+      {(patientSummary.recentLabs || patientSummary.labResults || []).length > 0 && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Laboratory Results</h2>
-          <RecentLabs labs={patientSummary.recentLabs} />
+          <RecentLabs labs={patientSummary.recentLabs || patientSummary.labResults || []} />
+        </div>
+      )}
+
+      {/* Clinical Notes */}
+      {(patientSummary.clinicalNotes || []).length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Clinical Notes</h2>
+          <ClinicalNotesList notes={patientSummary.clinicalNotes || []} />
         </div>
       )}
     </div>

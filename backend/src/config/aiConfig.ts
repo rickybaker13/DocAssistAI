@@ -37,7 +37,7 @@ export const aiConfig: AIConfig = {
     },
     openrouter: {
       apiKey: process.env.OPENROUTER_API_KEY || '',
-      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4-turbo-preview',
+      model: process.env.OPENROUTER_MODEL || 'openrouter/auto',
     },
   },
   selfHosted: {

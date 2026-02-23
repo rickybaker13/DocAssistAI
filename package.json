@@ -9,14 +9,19 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "axios": "^1.6.2",
+    "fhirclient": "^2.5.0",
+    "pdfjs-dist": "^5.4.449",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "fhirclient": "^2.5.0",
-    "zustand": "^4.4.7",
+    "react-pdf": "^10.2.0",
     "recharts": "^2.10.3",
-    "axios": "^1.6.2"
+    "zustand": "^4.4.7"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@typescript-eslint/eslint-plugin": "^6.14.0",
@@ -26,10 +31,11 @@
     "eslint": "^8.55.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "jsdom": "^28.1.0",
     "postcss": "^8.4.32",
     "tailwindcss": "^3.3.6",
     "typescript": "^5.2.2",
-    "vite": "^5.0.8"
+    "vite": "^5.0.8",
+    "vitest": "^4.0.18"
   }
 }
-

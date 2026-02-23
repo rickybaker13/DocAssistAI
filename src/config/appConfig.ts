@@ -9,7 +9,7 @@ export const appConfig = {
   fhirBaseUrl: import.meta.env.VITE_FHIR_BASE_URL || '',
   authBaseUrl: import.meta.env.VITE_AUTH_BASE_URL || 'https://authorization.cerner.com',
   clientId: import.meta.env.VITE_CLIENT_ID || '',
-  redirectUri: import.meta.env.VITE_REDIRECT_URI || 'http://localhost:8080/redirect',
+  redirectUri: import.meta.env.VITE_REDIRECT_URI || 'http://localhost:8080/redirect.html',
   
   // Backend Configuration
   backendUrl: import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000',

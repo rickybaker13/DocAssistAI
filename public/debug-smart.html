@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMART Debug Tool - DocAssistAI</title>
+    <script src="https://cdn.jsdelivr.net/npm/fhirclient@2.6.3/build/fhir-client.min.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { color: #333; margin-top: 0; }
+        h2 { color: #666; font-size: 18px; margin-top: 30px; }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #ddd;
+            background: #f9f9f9;
+        }
+        .step.success { border-color: #4caf50; background: #e8f5e9; }
+        .step.error { border-color: #f44336; background: #ffebee; }
+        .step.pending { border-color: #ff9800; background: #fff3e0; }
+        button {
+            background: #1976d2;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #1565c0; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .config {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+        }
+        .config-item {
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 SMART Connection Debug Tool</h1>
+        <p>This tool will help diagnose SMART on FHIR connection issues step by step.</p>
+        
+        <div class="config">
+            <h3>Current Configuration:</h3>
+            <div class="config-item" id="config-display">Loading...</div>
+        </div>
+
+        <h2>Step 1: Configuration Check</h2>
+        <div class="step pending" id="step1">
+            <strong>Checking configuration...</strong>
+            <div id="step1-result"></div>
+        </div>
+
+        <h2>Step 2: FHIR Metadata Endpoint</h2>
+        <div class="step pending" id="step2">
+            <strong>Testing FHIR metadata endpoint...</strong>
+            <button onclick="testMetadata()">Test Metadata</button>
+            <div id="step2-result"></div>
+        </div>
+
+        <h2>Step 3: SMART Configuration Discovery</h2>
+        <div class="step pending" id="step3">
+            <strong>Testing /.well-known/smart-configuration...</strong>
+            <button onclick="testSmartConfig()">Test Discovery</button>
+            <div id="step3-result"></div>
+        </div>
+
+        <h2>Step 4: Authorization URL Construction</h2>
+        <div class="step pending" id="step4">
+            <strong>Testing authorization URL...</strong>
+            <button onclick="testAuthUrl()">Test Auth URL</button>
+            <div id="step4-result"></div>
+        </div>
+
+        <h2>Step 5: Full SMART Launch</h2>
+        <div class="step pending" id="step5">
+            <strong>Attempting full SMART launch...</strong>
+            <button onclick="testFullLaunch()">Launch SMART</button>
+            <div id="step5-result"></div>
+        </div>
+
+        <h2>Browser Console</h2>
+        <div class="step">
+            <p><strong>Open browser console (F12) to see detailed logs</strong></p>
+            <p>All steps log detailed information to help diagnose issues.</p>
+        </div>
+    </div>
+
+    <script>
+        // Get config from URL params or use defaults
+        const urlParams = new URLSearchParams(window.location.search);
+        const config = {
+            fhirBaseUrl: urlParams.get('fhirBaseUrl') || 'https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d',
+            clientId: urlParams.get('clientId') || 'eb36ea98-c4e4-47ae-a002-1357fb97d176',
+            redirectUri: urlParams.get('redirectUri') || 'http://localhost:8080/redirect.html',
+            tenantId: urlParams.get('tenantId') || 'ec2458f2-1e24-41c8-b71b-0e701af7583d',
+        };
+
+        // Display config
+        document.getElementById('config-display').innerHTML = `
+            FHIR Base URL: <strong>${config.fhirBaseUrl}</strong><br>
+            Client ID: <strong>${config.clientId}</strong><br>
+            Redirect URI: <strong>${config.redirectUri}</strong><br>
+            Tenant ID: <strong>${config.tenantId}</strong>
+        `;
+
+        // Step 1: Configuration Check
+        function checkConfig() {
+            const step1 = document.getElementById('step1');
+            const step1Result = document.getElementById('step1-result');
+            
+            const missing = [];
+            if (!config.fhirBaseUrl) missing.push('FHIR Base URL');
+            if (!config.clientId) missing.push('Client ID');
+            if (!config.redirectUri) missing.push('Redirect URI');
+            
+            if (missing.length > 0) {
+                step1.className = 'step error';
+                step1Result.innerHTML = `<p style="color: #c62828;">❌ Missing: ${missing.join(', ')}</p>`;
+            } else {
+                step1.className = 'step success';
+                step1Result.innerHTML = '<p style="color: #2e7d32;">✅ All configuration present</p>';
+            }
+        }
+
+        // Step 2: Test Metadata
+        async function testMetadata() {
+            const step2 = document.getElementById('step2');
+            const step2Result = document.getElementById('step2-result');
+            step2.className = 'step pending';
+            step2Result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                console.log('[Debug] Testing metadata endpoint:', `${config.fhirBaseUrl}/metadata`);
+                const response = await fetch(`${config.fhirBaseUrl}/metadata`, {
+                    headers: {
+                        'Accept': 'application/fhir+json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    step2.className = 'step success';
+                    step2Result.innerHTML = `
+                        <p style="color: #2e7d32;">✅ Metadata endpoint accessible</p>
+                        <pre>${JSON.stringify({ status: response.status, fhirVersion: data.fhirVersion }, null, 2)}</pre>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                step2.className = 'step error';
+                step2Result.innerHTML = `<p style="color: #c62828;">❌ Failed: ${error.message}</p>`;
+                console.error('[Debug] Metadata test failed:', error);
+            }
+        }
+
+        // Step 3: Test SMART Config Discovery
+        async function testSmartConfig() {
+            const step3 = document.getElementById('step3');
+            const step3Result = document.getElementById('step3-result');
+            step3.className = 'step pending';
+            step3Result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                const smartConfigUrl = `${config.fhirBaseUrl}/.well-known/smart-configuration`;
+                console.log('[Debug] Testing SMART config:', smartConfigUrl);
+                const response = await fetch(smartConfigUrl, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    step3.className = 'step success';
+                    step3Result.innerHTML = `
+                        <p style="color: #2e7d32;">✅ SMART configuration discovered</p>
+                        <pre>${JSON.stringify({
+                            authorization_endpoint: data.authorization_endpoint,
+                            token_endpoint: data.token_endpoint,
+                            capabilities: data.capabilities
+                        }, null, 2)}</pre>
+                    `;
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                step3.className = 'step error';
+                step3Result.innerHTML = `<p style="color: #c62828;">❌ Failed: ${error.message}</p>`;
+                console.error('[Debug] SMART config test failed:', error);
+            }
+        }
+
+        // Step 4: Test Auth URL
+        function testAuthUrl() {
+            const step4 = document.getElementById('step4');
+            const step4Result = document.getElementById('step4-result');
+            step4.className = 'step pending';
+            step4Result.innerHTML = '<p>Testing...</p>';
+
+            try {
+                // Try using fhirclient to build auth URL
+                console.log('[Debug] Testing fhirclient authorize...');
+                console.log('[Debug] Config:', config);
+                
+                // This will redirect, so we'll catch it
+                FHIR.oauth2.authorize({
+                    clientId: config.clientId,
+                    redirectUri: config.redirectUri,
+                    scope: 'openid fhirUser launch patient/*.read patient/*.write user/*.read offline_access',
+                    iss: config.fhirBaseUrl,
+                }).then(() => {
+                    step4.className = 'step success';
+                    step4Result.innerHTML = '<p style="color: #2e7d32;">✅ Authorization initiated (check if redirected)</p>';
+                }).catch(error => {
+                    step4.className = 'step error';
+                    step4Result.innerHTML = `<p style="color: #c62828;">❌ Failed: ${error.message}</p>`;
+                    console.error('[Debug] Auth URL test failed:', error);
+                });
+            } catch (error) {
+                step4.className = 'step error';
+                step4Result.innerHTML = `<p style="color: #c62828;">❌ Failed: ${error.message}</p>`;
+                console.error('[Debug] Auth URL test failed:', error);
+            }
+        }
+
+        // Step 5: Full Launch
+        async function testFullLaunch() {
+            const step5 = document.getElementById('step5');
+            const step5Result = document.getElementById('step5-result');
+            step5.className = 'step pending';
+            step5Result.innerHTML = '<p>Attempting launch...</p>';
+
+            console.log('[Debug Step 5] ========================================');
+            console.log('[Debug Step 5] Starting full SMART launch test');
+            console.log('[Debug Step 5] Config:', JSON.stringify(config, null, 2));
+
+            try {
+                // First, let's check what the authorization URL would be
+                console.log('[Debug Step 5] Step 1: Fetching SMART configuration...');
+                const smartConfigUrl = `${config.fhirBaseUrl}/.well-known/smart-configuration`;
+                console.log('[Debug Step 5] SMART Config URL:', smartConfigUrl);
+                
+                const smartConfigResponse = await fetch(smartConfigUrl);
+                console.log('[Debug Step 5] SMART Config Response Status:', smartConfigResponse.status);
+                
+                if (!smartConfigResponse.ok) {
+                    throw new Error(`Failed to fetch SMART config: ${smartConfigResponse.status} ${smartConfigResponse.statusText}`);
+                }
+                
+                const smartConfig = await smartConfigResponse.json();
+                console.log('[Debug Step 5] SMART Config:', JSON.stringify(smartConfig, null, 2));
+                console.log('[Debug Step 5] Authorization Endpoint:', smartConfig.authorization_endpoint);
+                
+                // Build authorization URL manually to see what it looks like
+                // NOTE: We're building this manually for display, but fhirclient handles PKCE automatically
+                // Oracle Health requires PKCE (code_challenge) which fhirclient generates
+                const authUrl = new URL(smartConfig.authorization_endpoint);
+                authUrl.searchParams.set('response_type', 'code');
+                authUrl.searchParams.set('client_id', config.clientId);
+                authUrl.searchParams.set('redirect_uri', config.redirectUri);
+                authUrl.searchParams.set('scope', 'openid fhirUser launch patient/*.read patient/*.write user/*.read offline_access');
+                authUrl.searchParams.set('aud', config.fhirBaseUrl);
+                
+                // Note: PKCE parameters (code_challenge, code_challenge_method) are required by SMART spec
+                // fhirclient.authorize() generates these automatically, but manual URL won't have them
+                console.log('[Debug Step 5] WARNING: Manual URL is missing PKCE parameters!');
+                console.log('[Debug Step 5] fhirclient.authorize() will add PKCE automatically');
+                
+                console.log('[Debug Step 5] Built Authorization URL:', authUrl.toString());
+                
+                // IMPORTANT: Manual URL construction is missing PKCE parameters!
+                // Oracle Health requires PKCE (code_challenge) per SMART spec
+                // We MUST use fhirclient.authorize() which handles PKCE automatically
+                
+                step5.className = 'step success';
+                step5Result.innerHTML = `
+                    <p style="color: #2e7d32;"><strong>✅ Ready to Launch OAuth!</strong></p>
+                    <p><strong>Note:</strong> Manual URL construction is missing PKCE parameters required by Oracle Health.</p>
+                    <p>We'll use fhirclient.authorize() which handles PKCE automatically.</p>
+                    <div style="margin-top: 15px;">
+                        <button id="smart-launch-btn" style="background: #4caf50; padding: 12px 24px; font-size: 16px; font-weight: bold; cursor: pointer; border: none; border-radius: 4px; color: white;">
+                            🚀 Launch OAuth with fhirclient (Includes PKCE)
+                        </button>
+                    </div>
+                    <p style="margin-top: 10px; font-size: 12px; color: #666;">
+                        <strong>This button uses fhirclient.authorize() which:</strong>
+                    </p>
+                    <ul style="text-align: left; font-size: 11px; color: #666;">
+                        <li>Generates PKCE code_challenge automatically</li>
+                        <li>Stores code_verifier for token exchange</li>
+                        <li>Handles redirect properly</li>
+                    </ul>
+                    <p style="margin-top: 10px; font-size: 11px; color: #999;">
+                        After clicking, you'll be taken to Oracle Health login. After logging in, you'll be redirected back.
+                    </p>
+                `;
+                
+                // Use fhirclient.authorize() which handles PKCE properly
+                const launchBtn = document.getElementById('smart-launch-btn');
+                launchBtn.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    console.log('[Debug Step 5] Smart launch button clicked!');
+                    console.log('[Debug Step 5] Using fhirclient.authorize() with PKCE...');
+                    
+                    step5Result.innerHTML += '<p style="margin-top: 10px; color: #666;">Redirecting to Oracle Health...</p>';
+                    
+                    try {
+                        // Store config in sessionStorage so redirect.html can access it
+                        sessionStorage.setItem('smart_fhir_base_url', config.fhirBaseUrl);
+                        sessionStorage.setItem('smart_client_id', config.clientId);
+                        console.log('[Debug Step 5] Stored config in sessionStorage for redirect handler');
+                        
+                        // Use fhirclient.authorize() - it handles PKCE automatically
+                        // This will:
+                        // 1. Generate PKCE code_challenge and code_verifier
+                        // 2. Store code_verifier in localStorage
+                        // 3. Redirect to authorization endpoint
+                        // NOTE: For Standalone Launch, do NOT include 'launch' scope
+                        // 'launch' scope is only for EHR Launch flows
+                        await FHIR.oauth2.authorize({
+                            clientId: config.clientId,
+                            redirectUri: config.redirectUri,
+                            scope: 'openid fhirUser patient/*.read patient/*.write user/*.read offline_access',
+                            iss: config.fhirBaseUrl,
+                        });
+                        
+                        // If we get here, redirect didn't happen (unusual)
+                        console.warn('[Debug Step 5] authorize() returned without redirecting');
+                        step5Result.innerHTML += '<p style="color: #c62828; margin-top: 10px;">❌ Redirect didn\'t happen. Check console for errors.</p>';
+                    } catch (authError) {
+                        // Redirect errors are expected - the page will navigate away
+                        console.log('[Debug Step 5] authorize() initiated redirect (this is expected)');
+                        console.log('[Debug Step 5] PKCE state stored in localStorage');
+                        // Page will navigate, so we won't see any further messages
+                    }
+                });
+                
+                console.log('[Debug Step 5] Smart launch button displayed. Waiting for user click...');
+                console.log('[Debug Step 5] This will use fhirclient.authorize() with proper PKCE support.');
+                
+                // Don't try automatic redirect - wait for user to click button
+                return; // Exit here - don't continue execution
+                
+            } catch (error) {
+                console.error('[Debug Step 5] ========================================');
+                console.error('[Debug Step 5] ERROR:', error);
+                console.error('[Debug Step 5] Error message:', error.message);
+                console.error('[Debug Step 5] Error name:', error.name);
+                console.error('[Debug Step 5] Error stack:', error.stack);
+                console.error('[Debug Step 5] ========================================');
+                
+                step5.className = 'step error';
+                step5Result.innerHTML = `
+                    <p style="color: #c62828;">❌ Failed: ${error.message}</p>
+                    <p><strong>Full error logged to console. Check Safari Console (Cmd+Option+C)</strong></p>
+                    <details style="margin-top: 10px; text-align: left;">
+                        <summary style="cursor: pointer; color: #666;">Click to see error details</summary>
+                        <pre style="font-size: 11px; max-height: 200px; overflow: auto; background: #f5f5f5; padding: 10px; margin-top: 5px;">${JSON.stringify({
+                            message: error.message,
+                            name: error.name,
+                            stack: error.stack?.split('\n').slice(0, 5).join('\n')
+                        }, null, 2)}</pre>
+                    </details>
+                `;
+            }
+        }
+
+        // Initialize
+        checkConfig();
+    </script>
+</body>
+</html>
+

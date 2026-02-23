@@ -12,6 +12,10 @@ import { validateAIConfig } from './config/aiConfig.js';
 import { phiProtectionMiddleware } from './middleware/phiProtection.js';
 import { auditMiddleware } from './middleware/audit.js';
 import aiRoutes from './routes/ai.js';
+import transcribeRoutes from './routes/transcribe.js';
+import discoveryRoutes from './routes/discovery.js';
+import signalRouter from './routes/signal.js';
+import populationRouter from './routes/population.js';
 
 dotenv.config();
 
@@ -20,10 +24,31 @@ const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// CORS configuration - allow frontend origin
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Allow localhost origins (dev mode)
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+    
+    // Allow configured frontend URL
+    if (origin === FRONTEND_URL) {
+      return callback(null, true);
+    }
+    
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Patient-Id', 'X-User-Id', 'X-Session-Id'],
 }));
 
 // Rate limiting
@@ -51,6 +76,10 @@ if (!configValidation.valid) {
 
 // Routes
 app.use('/api/ai', aiRoutes);
+app.use('/api/ai', transcribeRoutes);
+app.use('/api/discovery', discoveryRoutes);
+app.use('/api/signal', signalRouter);
+app.use('/api/population', populationRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
@@ -89,4 +118,3 @@ app.listen(PORT, () => {
     console.warn(`⚠️  Warning: ${configValidation.error}`);
   }
 });
-
