@@ -83,7 +83,7 @@ export const ScribePanel: React.FC = () => {
         error?: string;
       };
 
-      if (data.success && data.data?.document?.content) {
+      if (data.success && data.data?.document?.content != null) {
         setGeneratedNote(data.data.document.content);
       } else {
         setError(data.error ?? 'Note generation failed');
@@ -120,7 +120,8 @@ export const ScribePanel: React.FC = () => {
           id="note-type-select"
           value={noteType}
           onChange={(e) => setNoteType(e.target.value as NoteType)}
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={isGenerating}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {NOTE_TYPES.map((type) => (
             <option key={type} value={type}>
