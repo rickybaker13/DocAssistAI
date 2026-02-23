@@ -39,10 +39,10 @@ describe('ScribeNotePage', () => {
     expect(screen.getAllByText(/90%/i).length).toBeGreaterThan(0);
   });
 
-  it('has a Copy All button', async () => {
+  it('has a Copy Note button', async () => {
     renderPage();
     await waitFor(() => screen.getByText('HPI'));
-    expect(screen.getByRole('button', { name: /copy all/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /copy note/i })).toBeInTheDocument();
   });
 
   it('has a Focused AI button on each section', async () => {

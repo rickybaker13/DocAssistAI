@@ -65,7 +65,7 @@ export const useScribeBuilderStore = create<ScribeBuilderState>()(
         });
       },
 
-      clearCanvas: () => set({ canvasSections: [] }),
+      clearCanvas: () => set({ canvasSections: [], selectedTemplateId: null }),
       setNoteType: (noteType) => set({ noteType }),
       setPatientLabel: (patientLabel) => set({ patientLabel }),
       setVerbosity: (verbosity) => set({ verbosity }),

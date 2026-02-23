@@ -21,11 +21,11 @@ export function useNoteTemplates(noteType: string) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTemplates = useCallback(() => {
-    if (!noteType) return;
+  const fetchTemplates = useCallback((): Promise<void> => {
+    if (!noteType) return Promise.resolve();
     setLoading(true);
     setError(null);
-    fetch(`${getBackendUrl()}/api/scribe/note-templates?noteType=${encodeURIComponent(noteType)}`, {
+    return fetch(`${getBackendUrl()}/api/scribe/note-templates?noteType=${encodeURIComponent(noteType)}`, {
       credentials: 'include',
     })
       .then(r => {
@@ -48,7 +48,7 @@ export function useNoteTemplates(noteType: string) {
         body: JSON.stringify({ noteType, name, verbosity, sections }),
       });
       if (!res.ok) throw new Error('Failed to save template');
-      fetchTemplates();
+      await fetchTemplates();
     },
     [noteType, fetchTemplates]
   );
@@ -60,7 +60,7 @@ export function useNoteTemplates(noteType: string) {
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to delete template');
-      fetchTemplates();
+      await fetchTemplates();
     },
     [fetchTemplates]
   );

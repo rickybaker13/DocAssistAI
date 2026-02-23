@@ -114,6 +114,9 @@ export const ScribeNotePage: React.FC = () => {
     setEdits(prev => ({ ...prev, [id]: content }));
   }, []);
 
+  // UI-only: removes section from local display state.
+  // Persisted sections (real UUIDs) are not deleted from the backend until a future
+  // endpoint (DELETE /api/scribe/notes/:noteId/sections/:sectionId) is implemented.
   const handleDeleteSection = (sectionId: string) => {
     setSections(prev => prev.filter(s => s.id !== sectionId));
     setEdits(prev => {
