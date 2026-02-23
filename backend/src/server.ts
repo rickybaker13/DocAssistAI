@@ -20,6 +20,7 @@ import cookieParser from 'cookie-parser';
 import scribeAuthRouter from './routes/scribeAuth.js';
 import scribeNotesRouter from './routes/scribeNotes.js';
 import scribeTemplatesRouter from './routes/scribeTemplates.js';
+import scribeAiRouter from './routes/scribeAi.js';
 
 dotenv.config();
 
@@ -88,6 +89,7 @@ app.use('/api/population', populationRouter);
 app.use('/api/scribe/auth', scribeAuthRouter);
 app.use('/api/scribe/notes', scribeNotesRouter);
 app.use('/api/scribe/templates', scribeTemplatesRouter);
+app.use('/api/ai/scribe', scribeAiRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
