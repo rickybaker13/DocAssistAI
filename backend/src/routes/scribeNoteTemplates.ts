@@ -6,24 +6,20 @@ const router = Router();
 router.use(scribeAuthMiddleware);
 const model = new ScribeNoteTemplateModel();
 
-let seeded = false;
-function ensureSeeded() {
-  if (!seeded) { model.seedSystem(); seeded = true; }
-}
+model.seedSystem();
 
 router.get('/', (req: Request, res: Response) => {
   const { noteType } = req.query;
   if (!noteType || typeof noteType !== 'string') {
     return res.status(400).json({ error: 'noteType query parameter is required' }) as any;
   }
-  ensureSeeded();
   return res.json({ templates: model.listForUser(req.scribeUserId!, noteType) });
 });
 
 router.post('/', (req: Request, res: Response) => {
   const { noteType, name, verbosity, sections } = req.body;
-  if (!noteType || !name) {
-    return res.status(400).json({ error: 'noteType and name are required' }) as any;
+  if (!noteType || typeof noteType !== 'string' || !name || typeof name !== 'string') {
+    return res.status(400).json({ error: 'noteType and name are required and must be strings' }) as any;
   }
   const validVerbosity = ['brief', 'standard', 'detailed'];
   const resolvedVerbosity = validVerbosity.includes(verbosity) ? verbosity : 'standard';
