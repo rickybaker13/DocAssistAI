@@ -15,6 +15,8 @@ export type Procedure = fhir.Procedure;
 export type AllergyIntolerance = fhir.AllergyIntolerance;
 export type Immunization = fhir.Immunization;
 export type CarePlan = fhir.CarePlan;
+export type DocumentReference = fhir.DocumentReference;
+export type Communication = fhir.Communication;
 export type Bundle = fhir.Bundle;
 
 // SMART Launch Context
@@ -50,6 +52,11 @@ export interface PatientSummary {
   recentVitals: Observation[];
   allergies: AllergyIntolerance[];
   recentEncounters: Encounter[];
+  // Extended data (optional, for comprehensive mock data)
+  fluidIO?: Observation[];
+  imagingReports?: DiagnosticReport[];
+  procedures?: Procedure[];
+  clinicalNotes?: any[];
 }
 
 // Chat Types
@@ -76,3 +83,65 @@ export interface GeneratedDocument {
   generatedAt: Date;
 }
 
+// Discovery Types
+export interface NormalizedNote {
+  id: string;
+  type: string;
+  author: string;
+  date: string;
+  content: string;
+  source: 'DocumentReference' | 'Communication';
+  metadata?: {
+    category?: string[];
+    status?: string;
+    subject?: string;
+  };
+}
+
+export interface NoteTypeAnalysis {
+  type: string;
+  count: number;
+  sampleNotes: NormalizedNote[];
+  providers: string[];
+  dateRange: {
+    earliest: string;
+    latest: string;
+  };
+}
+
+export interface ProviderTypeAnalysis {
+  provider: string;
+  role?: string;
+  service?: string;
+  count: number;
+  noteTypes: string[];
+}
+
+export interface DiscoveryReport {
+  totalNotes: number;
+  noteTypes: NoteTypeAnalysis[];
+  providerTypes: ProviderTypeAnalysis[];
+  dateRange: {
+    earliest: string;
+    latest: string;
+  };
+  generatedAt: string;
+}
+
+
+// ICU Patient Data — comprehensive parallel fetch result
+export interface ICUPatientData {
+  patient: Patient;
+  conditions: Condition[];
+  medications: MedicationRequest[];
+  medicationAdmins: any[];
+  labs: Observation[];
+  vitals: Observation[];
+  encounters: Encounter[];
+  allergies: AllergyIntolerance[];
+  diagnosticReports: DiagnosticReport[];
+  procedures: Procedure[];
+  notes: any[];
+  deviceMetrics: any[];
+  fetchedAt: string;
+}
