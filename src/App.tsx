@@ -315,8 +315,7 @@ function App() {
               <p className="text-sm text-gray-600 mt-1">Clinical Assistant powered by AI</p>
             </div>
             <div className="flex items-center gap-4">
-              {import.meta.env.DEV && (
-                <div className="flex gap-2">
+              <div className="flex gap-2">
                   <button
                     onClick={() => setActiveView('briefing')}
                     className={`px-3 py-1 text-sm font-medium rounded ${
@@ -328,46 +327,6 @@ function App() {
                     Briefing
                   </button>
                   <button
-                    onClick={() => setActiveView('main')}
-                    className={`px-3 py-1 text-sm font-medium rounded ${
-                      activeView === 'main'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Main
-                  </button>
-                  <button
-                    onClick={() => setActiveView('discovery')}
-                    className={`px-3 py-1 text-sm font-medium rounded ${
-                      activeView === 'discovery'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Discovery
-                  </button>
-                  <button
-                    onClick={() => setActiveView('explorer')}
-                    className={`px-3 py-1 text-sm font-medium rounded ${
-                      activeView === 'explorer'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Resource Explorer
-                  </button>
-                  <button
-                    onClick={() => setActiveView('notes')}
-                    className={`px-3 py-1 text-sm font-medium rounded ${
-                      activeView === 'notes'
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                    }`}
-                  >
-                    Clinical Notes
-                  </button>
-                  <button
                     onClick={() => setActiveView('scribe')}
                     className={`px-3 py-1 text-sm font-medium rounded ${
                       activeView === 'scribe'
@@ -377,8 +336,51 @@ function App() {
                   >
                     Scribe
                   </button>
+                  <button
+                    onClick={() => setActiveView('main')}
+                    className={`px-3 py-1 text-sm font-medium rounded ${
+                      activeView === 'main'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Chat
+                  </button>
+                  {import.meta.env.DEV && (
+                    <>
+                      <button
+                        onClick={() => setActiveView('discovery')}
+                        className={`px-3 py-1 text-sm font-medium rounded ${
+                          activeView === 'discovery'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Discovery
+                      </button>
+                      <button
+                        onClick={() => setActiveView('explorer')}
+                        className={`px-3 py-1 text-sm font-medium rounded ${
+                          activeView === 'explorer'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Resource Explorer
+                      </button>
+                      <button
+                        onClick={() => setActiveView('notes')}
+                        className={`px-3 py-1 text-sm font-medium rounded ${
+                          activeView === 'notes'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        Clinical Notes
+                      </button>
+                    </>
+                  )}
                 </div>
-              )}
               {shouldUseMockData() && (
                 <div className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
                   MOCK DATA MODE
