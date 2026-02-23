@@ -28,6 +28,7 @@ export const FocusedAIPanel: React.FC<Props> = ({ section, transcript, onClose, 
 
   useEffect(() => {
     if (!section) return;
+    const controller = new AbortController();
     setResult(null);
     setLoading(true);
     setError(null);
@@ -35,15 +36,24 @@ export const FocusedAIPanel: React.FC<Props> = ({ section, transcript, onClose, 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
+      signal: controller.signal,
       body: JSON.stringify({
         sectionName: section.section_name,
         content: section.content || '',
         transcript: transcript.slice(0, 1000),
       }),
     })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`AI request failed (${r.status})`);
+        return r.json();
+      })
       .then(d => { setResult(d); setLoading(false); })
-      .catch(e => { setError(e instanceof Error ? e.message : 'Error'); setLoading(false); });
+      .catch(e => {
+        if (e.name === 'AbortError') return;
+        setError(e instanceof Error ? e.message : 'Error');
+        setLoading(false);
+      });
+    return () => controller.abort();
   }, [section?.id]);
 
   if (!section) return null;
@@ -59,7 +69,7 @@ export const FocusedAIPanel: React.FC<Props> = ({ section, transcript, onClose, 
             <h2 className="font-semibold text-gray-900">⚡ Focused AI</h2>
             <p className="text-xs text-gray-500">{section.section_name}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl">×</button>
         </div>
 
         <div className="p-4 space-y-4">

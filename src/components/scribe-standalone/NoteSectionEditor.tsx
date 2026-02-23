@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface Section {
   id: string;
@@ -22,14 +22,11 @@ function ConfidenceBadge({ confidence }: { confidence: number | null }) {
 }
 
 export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocusedAI }) => {
-  const [content, setContent] = useState(section.content || '');
-
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
     onChange(section.id, e.target.value);
   };
 
-  const copySection = () => navigator.clipboard.writeText(content);
+  const copySection = () => navigator.clipboard.writeText(section.content || '');
 
   return (
     <div className={`border rounded-xl overflow-hidden ${section.confidence !== null && section.confidence < 0.5 ? 'border-yellow-300' : 'border-gray-200'}`}>
@@ -46,16 +43,16 @@ export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocuse
           >
             ⚡ Focused AI
           </button>
-          <button onClick={copySection} className="text-xs text-gray-400 hover:text-gray-600 px-1" title="Copy section">
+          <button onClick={copySection} aria-label="Copy section" className="text-xs text-gray-400 hover:text-gray-600 px-1" title="Copy section">
             ⎘
           </button>
         </div>
       </div>
       <textarea
-        value={content}
+        value={section.content || ''}
         onChange={handleChange}
         className="w-full px-3 py-2 text-sm font-mono focus:outline-none resize-none min-h-[80px]"
-        rows={Math.max(3, Math.ceil((content.length || 1) / 80))}
+        rows={Math.max(3, Math.ceil(((section.content || '').length || 1) / 80))}
       />
     </div>
   );

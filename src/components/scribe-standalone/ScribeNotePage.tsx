@@ -28,11 +28,16 @@ export const ScribeNotePage: React.FC = () => {
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [focusedSection, setFocusedSection] = useState<SectionData | null>(null);
 
   useEffect(() => {
+    if (!noteId) { setLoading(false); return; }
     fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, { credentials: 'include' })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load note (${r.status})`);
+        return r.json();
+      })
       .then(d => {
         setNote(d.note);
         setSections(d.sections || []);
@@ -41,7 +46,10 @@ export const ScribeNotePage: React.FC = () => {
         setEdits(initial);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e: unknown) => {
+        setError(e instanceof Error ? e.message : 'Failed to load note');
+        setLoading(false);
+      });
   }, [noteId]);
 
   const handleSectionChange = useCallback((id: string, content: string) => {
@@ -64,15 +72,22 @@ export const ScribeNotePage: React.FC = () => {
   };
 
   const handleFinalize = async () => {
+    if (!noteId) return;
     setSaving(true);
-    await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ status: 'finalized' }),
-    });
-    setSaving(false);
-    navigate('/scribe/dashboard');
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'finalized' }),
+      });
+      if (!res.ok) throw new Error('Failed to finalize note');
+      navigate('/scribe/dashboard');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to finalize');
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (loading) return (
@@ -85,6 +100,7 @@ export const ScribeNotePage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
+      {error && <div className="text-red-500 p-4 bg-red-50 rounded-lg text-sm">{error}</div>}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-gray-900">

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth';
 import { ScribeNoteModel } from '../models/scribeNote';
 import { ScribeNoteSectionModel } from '../models/scribeNoteSection';
+import { getDb } from '../database/db';
 
 const router = Router();
 router.use(scribeAuthMiddleware);
@@ -58,20 +59,33 @@ router.post('/:id/sections', (req: Request, res: Response) => {
     return res.status(400).json({ error: 'sections array required' }) as any;
   }
 
-  // Delete existing sections for clean replacement
-  sectionModel.deleteForNote(note.id);
+  for (let i = 0; i < sections.length; i++) {
+    const s = sections[i];
+    if (typeof s.name !== 'string' || s.name.trim() === '') {
+      return res.status(400).json({ error: `sections[${i}].name is required` }) as any;
+    }
+    if (s.confidence !== null && s.confidence !== undefined) {
+      if (typeof s.confidence !== 'number' || s.confidence < 0 || s.confidence > 1) {
+        return res.status(400).json({ error: `sections[${i}].confidence must be 0–1` }) as any;
+      }
+    }
+  }
 
-  const created = sectionModel.bulkCreate(
-    sections.map((s: any, i: number) => ({
-      noteId: note.id,
-      sectionName: s.name,
-      displayOrder: i,
-      promptHint: s.promptHint || null,
-      content: s.content || null,
-      confidence: s.confidence ?? null,
-    }))
-  );
-
+  const db = getDb();
+  const replaceSections = db.transaction(() => {
+    sectionModel.deleteForNote(note.id);
+    return sectionModel.bulkCreate(
+      sections.map((s: any, i: number) => ({
+        noteId: note.id,
+        sectionName: s.name,
+        displayOrder: i,
+        promptHint: s.promptHint || null,
+        content: s.content || null,
+        confidence: s.confidence ?? null,
+      }))
+    );
+  });
+  const created = replaceSections();
   return res.status(201).json({ sections: created });
 });
 

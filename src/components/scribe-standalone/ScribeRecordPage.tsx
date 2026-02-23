@@ -14,16 +14,19 @@ export const ScribeRecordPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState('');
 
+  if (!noteId) return <div className="text-red-500 p-4">Invalid note ID.</div>;
+
   const handleTranscript = async (transcript: string) => {
     setPhase('generating');
     setStatusMsg('Generating note sections...');
     try {
-      await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
+      const putRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ transcript }),
       });
+      if (!putRes.ok) throw new Error('Failed to save transcript');
 
       const genRes = await fetch(`${getBackendUrl()}/api/ai/scribe/generate`, {
         method: 'POST',
@@ -38,12 +41,16 @@ export const ScribeRecordPage: React.FC = () => {
       const genData = await genRes.json();
       if (!genRes.ok) throw new Error(genData.error || 'Generation failed');
 
-      await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}/sections`, {
+      const saveRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}/sections`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify({ sections: genData.sections }),
       });
+      if (!saveRes.ok) {
+        const saveData = await saveRes.json().catch(() => ({}));
+        throw new Error((saveData as any).error || 'Failed to save generated sections');
+      }
 
       navigate(`/scribe/note/${noteId}`);
     } catch (e: unknown) {
