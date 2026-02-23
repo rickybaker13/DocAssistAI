@@ -8,7 +8,7 @@ export interface NoteTemplate {
   user_id: string | null;
   note_type: string;
   name: string;
-  verbosity: string;
+  verbosity: 'brief' | 'standard' | 'detailed';
   sections: string; // JSON string
   created_at: string;
 }
@@ -22,9 +22,12 @@ export class ScribeNoteTemplateModel {
     const insert = getDb().prepare(
       'INSERT INTO note_templates (id, user_id, note_type, name, verbosity, sections) VALUES (?, NULL, ?, ?, ?, ?)'
     );
-    for (const t of SYSTEM_NOTE_TEMPLATES) {
-      insert.run(randomUUID(), t.noteType, t.name, t.verbosity, JSON.stringify(t.sections));
-    }
+    const insertAll = getDb().transaction(() => {
+      for (const t of SYSTEM_NOTE_TEMPLATES) {
+        insert.run(randomUUID(), t.noteType, t.name, t.verbosity, JSON.stringify(t.sections));
+      }
+    });
+    insertAll();
   }
 
   listSystem(noteType: string): NoteTemplate[] {
@@ -45,7 +48,7 @@ export class ScribeNoteTemplateModel {
     userId: string;
     noteType: string;
     name: string;
-    verbosity: string;
+    verbosity: 'brief' | 'standard' | 'detailed';
     sections: Array<{ name: string; promptHint: string | null }>;
   }): NoteTemplate {
     const id = randomUUID();
