@@ -12,6 +12,7 @@ interface Props {
   section: Section;
   onChange: (id: string, content: string) => void;
   onFocusedAI: (section: Section) => void;
+  onDelete?: () => void;  // NEW — optional
 }
 
 function ConfidenceBadge({ confidence }: { confidence: number | null }) {
@@ -21,7 +22,7 @@ function ConfidenceBadge({ confidence }: { confidence: number | null }) {
   return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${color}`}>{pct}%</span>;
 }
 
-export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocusedAI }) => {
+export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocusedAI, onDelete }) => {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     onChange(section.id, e.target.value);
   };
@@ -46,6 +47,16 @@ export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocuse
           <button onClick={copySection} aria-label="Copy section" className="text-xs text-gray-400 hover:text-gray-600 px-1" title="Copy section">
             ⎘
           </button>
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              aria-label={`Delete ${section.section_name} section`}
+              className="text-xs text-gray-300 hover:text-red-400 px-1 transition-colors"
+              title="Remove section"
+            >
+              ×
+            </button>
+          )}
         </div>
       </div>
       <textarea
