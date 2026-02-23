@@ -6,6 +6,7 @@ export interface ScribeNote {
   user_id: string;
   note_type: string;
   patient_label: string | null;
+  verbosity: string;
   transcript: string | null;
   status: string;
   deleted_at: string | null;
@@ -14,13 +15,13 @@ export interface ScribeNote {
 }
 
 export class ScribeNoteModel {
-  private static readonly ALLOWED_UPDATE_COLUMNS = new Set(['transcript', 'status', 'patient_label']);
+  private static readonly ALLOWED_UPDATE_COLUMNS = new Set(['transcript', 'status', 'patient_label', 'verbosity']);
 
-  create(input: { userId: string; noteType: string; patientLabel?: string }): ScribeNote {
+  create(input: { userId: string; noteType: string; patientLabel?: string; verbosity?: string }): ScribeNote {
     const id = randomUUID();
     getDb().prepare(
-      'INSERT INTO scribe_notes (id, user_id, note_type, patient_label) VALUES (?, ?, ?, ?)'
-    ).run(id, input.userId, input.noteType, input.patientLabel ?? null);
+      'INSERT INTO scribe_notes (id, user_id, note_type, patient_label, verbosity) VALUES (?, ?, ?, ?, ?)'
+    ).run(id, input.userId, input.noteType, input.patientLabel ?? null, input.verbosity ?? 'standard');
     return this.findByIdUnchecked(id)!;
   }
 

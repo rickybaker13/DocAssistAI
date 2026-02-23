@@ -52,4 +52,14 @@ describe('ScribeNoteModel', () => {
     const found = noteModel.findById(note.id, userId);
     expect(found).toBeNull();
   });
+
+  it('creates a note with verbosity', () => {
+    const note = noteModel.create({ userId, noteType: 'progress_note', verbosity: 'brief' });
+    expect(note.verbosity).toBe('brief');
+  });
+
+  it('defaults verbosity to standard when not provided', () => {
+    const note = noteModel.create({ userId, noteType: 'progress_note' });
+    expect(note.verbosity).toBe('standard');
+  });
 });

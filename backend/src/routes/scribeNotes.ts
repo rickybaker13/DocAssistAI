@@ -16,9 +16,16 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 router.post('/', (req: Request, res: Response) => {
-  const { noteType, patientLabel } = req.body;
+  const { noteType, patientLabel, verbosity } = req.body;
   if (!noteType) return res.status(400).json({ error: 'noteType is required' }) as any;
-  const note = noteModel.create({ userId: req.scribeUserId!, noteType, patientLabel });
+  const validVerbosity = ['brief', 'standard', 'detailed'];
+  const resolvedVerbosity = validVerbosity.includes(verbosity) ? verbosity : 'standard';
+  const note = noteModel.create({
+    userId: req.scribeUserId!,
+    noteType,
+    patientLabel,
+    verbosity: resolvedVerbosity,
+  });
   return res.status(201).json({ note });
 });
 
