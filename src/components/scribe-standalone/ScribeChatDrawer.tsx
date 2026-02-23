@@ -10,6 +10,7 @@ interface Section {
 }
 
 interface ChatMessage {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
 }
@@ -20,16 +21,22 @@ interface Props {
   onInsert: (sectionId: string, text: string) => void;
 }
 
+const makeId = () =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
 export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert }) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ghostState, setGhostState] = useState<{
-    answerIdx: number;
+    answerId: string;
     selectedSection: string;
     ghostWritten: string | null;
     loadingGhost: boolean;
+    ghostError: string | null;
   } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +49,7 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+    setMessages(prev => [...prev, { id: makeId(), role: 'user', content: userMsg }]);
     setLoading(true);
     try {
       const res = await fetch(`${getBackendUrl()}/api/ai/chat`, {
@@ -52,25 +59,27 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
         body: JSON.stringify({ message: userMsg }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.response || data.error || 'No response' }]);
+      setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content: data.response || data.error || 'No response' }]);
     } catch (e: unknown) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error: ' + (e instanceof Error ? e.message : 'Unknown error') }]);
+      setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content: 'Error: ' + (e instanceof Error ? e.message : 'Unknown error') }]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddToNote = (answerIdx: number) => {
-    setGhostState({ answerIdx, selectedSection: sections[0]?.id || '', ghostWritten: null, loadingGhost: false });
+  const handleAddToNote = (messageId: string) => {
+    setGhostState({ answerId: messageId, selectedSection: sections[0]?.id || '', ghostWritten: null, loadingGhost: false, ghostError: null });
   };
 
   const handleGhostWrite = async () => {
     if (!ghostState) return;
-    const answer = messages[ghostState.answerIdx].content;
+    const answerMsg = messages.find(m => m.id === ghostState.answerId);
+    if (!answerMsg) return;
+    const answer = answerMsg.content;
     const section = sections.find(s => s.id === ghostState.selectedSection);
     if (!section) return;
 
-    setGhostState(prev => prev ? { ...prev, loadingGhost: true } : null);
+    setGhostState(prev => prev ? { ...prev, loadingGhost: true, ghostError: null } : null);
     try {
       const res = await fetch(`${getBackendUrl()}/api/ai/scribe/ghost-write`, {
         method: 'POST',
@@ -87,7 +96,7 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
       const data = await res.json();
       setGhostState(prev => prev ? { ...prev, ghostWritten: data.ghostWritten, loadingGhost: false } : null);
     } catch (e: unknown) {
-      setGhostState(prev => prev ? { ...prev, ghostWritten: null, loadingGhost: false } : null);
+      setGhostState(prev => prev ? { ...prev, ghostWritten: null, loadingGhost: false, ghostError: e instanceof Error ? e.message : 'Ghost-write failed' } : null);
     }
   };
 
@@ -124,13 +133,13 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
             {messages.length === 0 && (
               <p className="text-sm text-gray-400 text-center py-4">Ask a clinical question about this patient or encounter.</p>
             )}
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+            {messages.map((msg) => (
+              <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-800'}`}>
                   {msg.content}
                   {msg.role === 'assistant' && (
                     <button
-                      onClick={() => handleAddToNote(i)}
+                      onClick={() => handleAddToNote(msg.id)}
                       aria-label="Add to note"
                       className="block mt-1 text-xs text-blue-600 hover:underline"
                     >
@@ -173,14 +182,17 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
                   <p className="text-xs font-medium text-purple-700">Preview:</p>
                   <p className="text-sm bg-green-50 border border-green-200 rounded p-2 text-green-800">{ghostState.ghostWritten}</p>
                   <div className="flex gap-2">
-                    <button onClick={handleConfirmInsert} className="flex-1 text-sm bg-green-600 text-white rounded-lg py-1.5 hover:bg-green-700">
+                    <button onClick={handleConfirmInsert} aria-label="Confirm insert into note" className="flex-1 text-sm bg-green-600 text-white rounded-lg py-1.5 hover:bg-green-700">
                       Confirm ✓
                     </button>
-                    <button onClick={() => setGhostState(null)} className="text-sm text-gray-400 hover:text-gray-600 px-2">
+                    <button onClick={() => setGhostState(null)} aria-label="Cancel ghost-write" className="text-sm text-gray-400 hover:text-gray-600 px-2">
                       Cancel
                     </button>
                   </div>
                 </div>
+              )}
+              {ghostState.ghostError && (
+                <p className="text-xs text-red-600">{ghostState.ghostError}</p>
               )}
             </div>
           )}
