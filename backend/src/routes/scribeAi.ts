@@ -135,7 +135,7 @@ Keep each field concise. Suggestions should be actionable one-liners.`;
       const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      parsed = { analysis: text, citations: [], suggestions: [] };
+      parsed = { analysis: text, citations: [], suggestions: [], confidence_breakdown: '' };
     }
 
     return res.json(parsed);

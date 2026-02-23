@@ -36,12 +36,12 @@ describe('Scribe AI Routes', () => {
 
   describe('POST /generate', () => {
     it('generates sections from transcript', async () => {
-      mockAiChat.mockResolvedValueOnce(JSON.stringify({
+      mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
         sections: [
           { name: 'HPI', content: 'Patient presents with chest pain.', confidence: 0.9 },
           { name: 'Assessment', content: 'Likely ACS.', confidence: 0.85 },
         ],
-      }));
+      }) });
 
       const res = await request(app)
         .post('/api/ai/scribe/generate')
@@ -82,12 +82,12 @@ describe('Scribe AI Routes', () => {
 
   describe('POST /focused', () => {
     it('returns focused analysis for a section', async () => {
-      mockAiChat.mockResolvedValueOnce(JSON.stringify({
+      mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
         analysis: 'Deep analysis of the section.',
         citations: [{ guideline: 'Surviving Sepsis Campaign', recommendation: 'Use norepinephrine first-line' }],
         suggestions: ['Consider adding MAP targets'],
         confidence_breakdown: 'Content well-supported',
-      }));
+      }) });
 
       const res = await request(app)
         .post('/api/ai/scribe/focused')
@@ -107,7 +107,7 @@ describe('Scribe AI Routes', () => {
 
   describe('POST /ghost-write', () => {
     it('returns ghost-written text in physician voice', async () => {
-      mockAiChat.mockResolvedValueOnce('We will obtain MRI brain with DWI protocol to evaluate for acute ischemic stroke.');
+      mockAiChat.mockResolvedValueOnce({ content: 'We will obtain MRI brain with DWI protocol to evaluate for acute ischemic stroke.' });
 
       const res = await request(app)
         .post('/api/ai/scribe/ghost-write')
