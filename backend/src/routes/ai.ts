@@ -11,6 +11,8 @@ import { ragService } from '../services/rag/ragService.js';
 import { estimateTokens, countMessageTokens, formatTokenCount, analyzeMessages } from '../utils/tokenCounter.js';
 import { contextStore } from '../services/signal/contextStore.js';
 import type { ClinicalEvent } from '../services/signal/fhirNormalizer.js';
+import { buildCoWriterPrompt } from '../services/cowriter/noteBuilder.js';
+import { logAIServiceUsage } from '../services/audit/auditLogger.js';
 
 const router = Router();
 
@@ -167,80 +169,79 @@ ${chartContext}`;
 
 /**
  * POST /api/ai/generate-document
- * Document generation endpoint (new agent-based system)
+ * Co-Writer: Chart-grounded clinical note generation using Signal Engine context
  */
 router.post('/generate-document', async (req: Request, res: Response) => {
   try {
-    // New agent-based document generation
-    const { templateRouter } = await import('../services/document/templateRouter.js');
-    const { documentGenerator } = await import('../services/document/documentGenerator.js');
-    const { documentCritic } = await import('../services/document/documentCritic.js');
+    const { template = 'Progress Note', context: additionalContext, patientData } = req.body;
+    const sessionId = (req.headers['x-session-id'] || req.headers['x-patient-id'] || '') as string;
 
-    const documentRequest = {
-      noteType: req.body.noteType || 'progress_note',
-      userContext: req.body.userContext || {
-        role: 'MD',
-        service: 'Internal Medicine',
-      },
-      patientId: req.body.patientId || 'unknown',
-      date: req.body.date || new Date().toISOString(),
-    };
+    // Get cached timeline if available
+    const cached = sessionId ? contextStore.get(sessionId) : null;
 
-    const patientSummary = req.body.patientSummary;
-
-    if (!patientSummary) {
-      return res.status(400).json({
-        error: 'Patient summary is required',
-      });
+    let timelineData = '';
+    if (cached?.timeline?.events?.length) {
+      timelineData = cached.timeline.events
+        .slice(0, 300)
+        .map((e: ClinicalEvent) =>
+          `[${e.timestamp}] ${e.type.toUpperCase()} | ${e.label}: ${e.value ?? ''} ${e.unit ?? ''}${e.isAbnormal ? ' ABNORMAL' : ''}`
+        )
+        .join('\n');
+    } else if (patientData) {
+      timelineData = JSON.stringify(patientData).slice(0, 10000);
     }
 
-    // Step 1: Route to template (Pattern 2)
-    const template = templateRouter.route(documentRequest);
+    const prompt = buildCoWriterPrompt(template, timelineData, additionalContext);
 
-    // Step 2-7: Generate document (Pattern 1: Prompt Chaining)
-    const generatedDoc = await documentGenerator.generateDocument(documentRequest, patientSummary, template);
-
-    // Step 8: Quality check (Pattern 4: Reflection)
-    const qualityCheck = await documentCritic.reviewDocument(generatedDoc, template);
+    // Build a ChatRequest with the co-writer prompt as the user message
+    const chatRequest: ChatRequest = {
+      messages: [{ role: 'user', content: prompt }],
+    };
 
     // Get context from middleware
-    const context = (req as any).phiContext || {};
+    const phiContext = (req as any).phiContext || {};
     const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
 
-    // Log usage
-    const { logAIServiceUsage } = await import('../services/audit/auditLogger.js');
+    const aiResponse = await aiService.chat(chatRequest, {
+      userId: phiContext.userId,
+      patientId: phiContext.patientId || sessionId,
+      ipAddress,
+    });
+
+    const rawResponse = aiResponse.content;
+
+    let parsed: unknown;
+    try {
+      // Strip markdown code fences if present
+      const cleaned = rawResponse.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
+      parsed = JSON.parse(cleaned);
+    } catch {
+      parsed = {
+        noteType: template,
+        sections: [{ name: 'Note', content: rawResponse, sources: [] }],
+        generatedAt: new Date().toISOString(),
+      };
+    }
+
     logAIServiceUsage(
-      context.userId,
-      context.patientId,
-      'document-generator',
+      phiContext.userId,
+      phiContext.patientId || sessionId,
+      'co-writer',
       '/api/ai/generate-document',
       ipAddress,
       true,
       undefined,
       {
-        templateId: template.id,
-        noteType: documentRequest.noteType,
-        qualityScore: qualityCheck.score,
+        noteType: template,
+        hasCachedTimeline: !!cached,
       }
     );
 
-    res.json({
-      success: true,
-      data: {
-        document: generatedDoc,
-        qualityCheck,
-        template: {
-          id: template.id,
-          name: template.name,
-        },
-      },
-    });
-  } catch (error: any) {
-    console.error('Document generation error:', error);
-    res.status(500).json({
-      success: false,
-      error: error.message || 'Failed to generate document',
-    });
+    res.json({ document: parsed, noteType: template });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Document generation failed';
+    console.error('Co-Writer document generation error:', err);
+    res.status(500).json({ error: message });
   }
 });
 

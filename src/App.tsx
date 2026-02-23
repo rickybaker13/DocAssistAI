@@ -15,6 +15,7 @@ import ResourceExplorer from './components/explorer/ResourceExplorer';
 import ClinicalNotesViewer from './components/notes/ClinicalNotesViewer';
 import { ScribePanel } from './components/scribe/ScribePanel';
 import { BriefingPanel } from './components/briefing/BriefingPanel';
+import { CoWriterPanel } from './components/cowriter/CoWriterPanel';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorMessage from './components/common/ErrorMessage';
 import ConnectionStatus from './components/common/ConnectionStatus';
@@ -23,7 +24,7 @@ function App() {
   const { isAuthenticated, setAuthenticated, setLoading, setError, error } = useAuthStore();
   const { setPatientSummary, setLoading: setPatientLoading } = usePatientStore();
   const [isInitializing, setIsInitializing] = useState(true);
-  const [activeView, setActiveView] = useState<'briefing' | 'main' | 'discovery' | 'explorer' | 'notes' | 'scribe'>('briefing');
+  const [activeView, setActiveView] = useState<'briefing' | 'main' | 'discovery' | 'explorer' | 'notes' | 'scribe' | 'cowriter'>('briefing');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -337,6 +338,16 @@ function App() {
                     Scribe
                   </button>
                   <button
+                    onClick={() => setActiveView('cowriter')}
+                    className={`px-3 py-1 text-sm font-medium rounded ${
+                      activeView === 'cowriter'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Co-Writer
+                  </button>
+                  <button
                     onClick={() => setActiveView('main')}
                     className={`px-3 py-1 text-sm font-medium rounded ${
                       activeView === 'main'
@@ -420,6 +431,14 @@ function App() {
               <p className="text-sm text-gray-600 mt-1">Record and generate clinical notes with AI</p>
             </div>
             <ScribePanel />
+          </div>
+        ) : activeView === 'cowriter' ? (
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Co-Writer</h2>
+              <p className="text-sm text-gray-600 mt-1">Chart-grounded note generation with editable sections</p>
+            </div>
+            <CoWriterPanel />
           </div>
         ) : (
           <div className="space-y-6">
