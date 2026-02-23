@@ -10,7 +10,6 @@ describe('WhisperService', () => {
     const svc = new WhisperService();
     jest.spyOn(svc as any, 'callWhisper').mockResolvedValue('Patient presents with shortness of breath.');
     const result = await svc.transcribe(Buffer.from('fake'), 'audio/webm');
-    expect(typeof result).toBe('string');
-    expect(result.length).toBeGreaterThan(0);
+    expect(result).toBe('Patient presents with shortness of breath.');
   });
 });
