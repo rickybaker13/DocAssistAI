@@ -14,6 +14,7 @@ import NoteDiscovery from './components/discovery/NoteDiscovery';
 import ResourceExplorer from './components/explorer/ResourceExplorer';
 import ClinicalNotesViewer from './components/notes/ClinicalNotesViewer';
 import { ScribePanel } from './components/scribe/ScribePanel';
+import { BriefingPanel } from './components/briefing/BriefingPanel';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import ErrorMessage from './components/common/ErrorMessage';
 import ConnectionStatus from './components/common/ConnectionStatus';
@@ -22,7 +23,7 @@ function App() {
   const { isAuthenticated, setAuthenticated, setLoading, setError, error } = useAuthStore();
   const { setPatientSummary, setLoading: setPatientLoading } = usePatientStore();
   const [isInitializing, setIsInitializing] = useState(true);
-  const [activeView, setActiveView] = useState<'main' | 'discovery' | 'explorer' | 'notes' | 'scribe'>('main');
+  const [activeView, setActiveView] = useState<'briefing' | 'main' | 'discovery' | 'explorer' | 'notes' | 'scribe'>('briefing');
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -317,6 +318,16 @@ function App() {
               {import.meta.env.DEV && (
                 <div className="flex gap-2">
                   <button
+                    onClick={() => setActiveView('briefing')}
+                    className={`px-3 py-1 text-sm font-medium rounded ${
+                      activeView === 'briefing'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Briefing
+                  </button>
+                  <button
                     onClick={() => setActiveView('main')}
                     className={`px-3 py-1 text-sm font-medium rounded ${
                       activeView === 'main'
@@ -386,7 +397,15 @@ function App() {
           </div>
         )}
 
-        {activeView === 'discovery' ? (
+        {activeView === 'briefing' ? (
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-900">Patient Briefing</h2>
+              <p className="text-sm text-gray-600 mt-1">AI-generated ICU patient signal briefing</p>
+            </div>
+            <BriefingPanel />
+          </div>
+        ) : activeView === 'discovery' ? (
           <NoteDiscovery />
         ) : activeView === 'explorer' ? (
           <ResourceExplorer />
