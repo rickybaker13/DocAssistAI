@@ -48,4 +48,31 @@ router.delete('/:id', (req: Request, res: Response) => {
   return res.json({ ok: true });
 });
 
+// POST /api/scribe/notes/:id/sections — bulk save AI-generated sections
+router.post('/:id/sections', (req: Request, res: Response) => {
+  const note = noteModel.findById(req.params.id, req.scribeUserId!);
+  if (!note) return res.status(404).json({ error: 'Note not found' }) as any;
+
+  const { sections } = req.body;
+  if (!Array.isArray(sections) || sections.length === 0) {
+    return res.status(400).json({ error: 'sections array required' }) as any;
+  }
+
+  // Delete existing sections for clean replacement
+  sectionModel.deleteForNote(note.id);
+
+  const created = sectionModel.bulkCreate(
+    sections.map((s: any, i: number) => ({
+      noteId: note.id,
+      sectionName: s.name,
+      displayOrder: i,
+      promptHint: s.promptHint || null,
+      content: s.content || null,
+      confidence: s.confidence ?? null,
+    }))
+  );
+
+  return res.status(201).json({ sections: created });
+});
+
 export default router;

@@ -84,4 +84,25 @@ describe('Scribe Notes Routes', () => {
     const res = await request(app).get('/api/scribe/notes');
     expect(res.status).toBe(401);
   });
+
+  it('POST /:id/sections — bulk saves generated sections', async () => {
+    const createRes = await request(app)
+      .post('/api/scribe/notes')
+      .set('Cookie', authCookie)
+      .send({ noteType: 'progress_note' });
+    const noteId = createRes.body.note.id;
+
+    const res = await request(app)
+      .post(`/api/scribe/notes/${noteId}/sections`)
+      .set('Cookie', authCookie)
+      .send({
+        sections: [
+          { name: 'HPI', content: 'Patient presents with...', confidence: 0.9, promptHint: '' },
+          { name: 'Assessment', content: 'Likely pneumonia.', confidence: 0.85, promptHint: '' },
+        ],
+      });
+    expect(res.status).toBe(201);
+    expect(Array.isArray(res.body.sections)).toBe(true);
+    expect(res.body.sections).toHaveLength(2);
+  });
 });
