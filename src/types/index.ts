@@ -129,6 +129,22 @@ export interface DiscoveryReport {
 }
 
 
+// Signal / Briefing Types — shared between BriefingPanel and SignalDomainCard
+export interface SignalDomain {
+  name: string;
+  findings: string[];
+  trend?: 'improving' | 'worsening' | 'stable' | 'new';
+}
+
+export interface PatientSignal {
+  headline: string;
+  domains: SignalDomain[];
+  pending: string[];
+  stable: string[];
+  generatedAt: string;
+  timeWindowHours: number;
+}
+
 // ICU Patient Data — comprehensive parallel fetch result
 export interface ICUPatientData {
   patient: Patient;

@@ -1,10 +1,5 @@
 import React from 'react';
-
-interface Domain {
-  name: string;
-  findings: string[];
-  trend?: string;
-}
+import { SignalDomain } from '../../types';
 
 const DOMAIN_ICONS: Record<string, string> = {
   hemodynamics: '❤️',
@@ -29,7 +24,7 @@ const TREND_ARROWS: Record<string, string> = {
   new: '★',
 };
 
-export const SignalDomainCard: React.FC<{ domain: Domain }> = ({ domain }) => (
+export const SignalDomainCard: React.FC<{ domain: SignalDomain }> = ({ domain }) => (
   <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
     <div className="flex items-center gap-2 mb-2">
       <span className="text-lg">{DOMAIN_ICONS[domain.name] || '📋'}</span>
