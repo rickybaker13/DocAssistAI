@@ -184,7 +184,7 @@ class FHIRClientService {
   async getDocumentReferences(patientId: string): Promise<DocumentReference[]> {
     const bundle = await this.fetchBundle(FHIR_QUERIES.getDocumentReferences(patientId));
     const documents = (bundle.entry || []).map((entry: BundleEntry) => entry.resource as DocumentReference);
-    
+
     // Validate that each document belongs to the correct patient
     const validatedDocuments = documents.filter((doc: DocumentReference) => {
       const subjectRef = doc.subject?.reference;
@@ -192,22 +192,22 @@ class FHIRClientService {
         console.warn(`[FHIR Client] DocumentReference ${doc.id} has no subject reference - filtering out`);
         return false;
       }
-      
+
       // Extract patient ID from reference (format: "Patient/123456" or just "123456")
       const refPatientId = subjectRef.replace('Patient/', '').split('/')[0];
       if (refPatientId !== patientId) {
         console.warn(`[FHIR Client] DocumentReference ${doc.id} belongs to different patient: ${refPatientId} (expected: ${patientId}) - filtering out`);
         return false;
       }
-      
+
       return true;
     });
-    
+
     if (validatedDocuments.length < documents.length) {
       const filteredCount = documents.length - validatedDocuments.length;
       console.warn(`[FHIR Client] Filtered out ${filteredCount} DocumentReference(s) that don't match patient ${patientId}`);
     }
-    
+
     return validatedDocuments;
   }
 
@@ -227,6 +227,7 @@ class FHIRClientService {
    * Get medication administrations (drip titrations, PRN doses — critical in ICU)
    * @param patientId - Patient ID
    * @param count - Maximum number of results (default: 100)
+   * Note: MedicationAdministration is not in the existing type imports; using any[].
    */
   async getMedicationAdministrations(patientId: string, count = 100): Promise<any[]> {
     const bundle = await this.fetchBundle(
@@ -236,15 +237,23 @@ class FHIRClientService {
   }
 
   /**
-   * Get device metrics (ventilator settings, hemodynamic monitoring)
+   * Get device/ventilator metrics as Observations with vital-signs category.
+   * Cerner exposes device/ventilator data as Observations, not DeviceMetric resources.
+   * DeviceMetric is not in Cerner's patient-compartment FHIR API, and
+   * "DeviceMetric?patient=" is not a valid FHIR R4 search parameter.
+   * This intentionally overlaps with getVitals — the Signal Engine can deduplicate.
    * @param patientId - Patient ID
    * @param count - Maximum number of results (default: 200)
    */
-  async getDeviceMetrics(patientId: string, count = 200): Promise<any[]> {
+  async getDeviceMetrics(patientId: string, count = 200): Promise<Observation[]> {
+    // Cerner exposes device/ventilator data as Observations, not DeviceMetric resources
+    // DeviceMetric is not in Cerner's patient-compartment FHIR API
     const bundle = await this.fetchBundle(
-      `DeviceMetric?patient=${patientId}&_count=${count}`
+      `Observation?patient=${patientId}&category=vital-signs&_sort=-date&_count=${count}`
     );
-    return (bundle.entry || []).map((entry: BundleEntry) => entry.resource);
+    return (bundle.entry || [])
+      .map((entry: BundleEntry) => entry?.resource)
+      .filter(Boolean) as Observation[];
   }
 
   /**
@@ -252,18 +261,30 @@ class FHIRClientService {
    * @param patientId - Patient ID
    * @param count - Maximum number of results (default: 20)
    */
-  async getClinicalNotes(patientId: string, count = 20): Promise<any[]> {
+  async getClinicalNotes(patientId: string, count = 20): Promise<DocumentReference[]> {
     const bundle = await this.fetchBundle(
       `DocumentReference?patient=${patientId}&_sort=-date&_count=${count}`
     );
-    return (bundle.entry || []).map((entry: BundleEntry) => entry.resource);
+    return (bundle.entry || []).map((entry: BundleEntry) => entry.resource as DocumentReference);
   }
 
   /**
-   * Get comprehensive ICU patient data in a single parallel fetch
-   * Pulls all relevant resources simultaneously and returns a typed ICUPatientData object
+   * Get comprehensive ICU patient data in a single parallel fetch.
+   * Core clinical resources fail-fast if unavailable.
+   * Optional/device-specific resources (medicationAdmins, deviceMetrics, notes)
+   * degrade gracefully — returning empty arrays — so a single unsupported
+   * resource type (e.g. DeviceMetric on Cerner) does not abort the entire call.
    */
   async getICUPatientData(patientId: string): Promise<ICUPatientData> {
+    // safeGet wraps optional resource fetches: logs a warning and returns []
+    // instead of propagating the error through Promise.all.
+    const safeGet = <T>(p: Promise<T[]>, label: string): Promise<T[]> =>
+      p.catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[FhirClientService] Optional resource "${label}" unavailable: ${msg}`);
+        return [] as T[];
+      });
+
     const [
       patient,
       conditions,
@@ -278,18 +299,22 @@ class FHIRClientService {
       notes,
       deviceMetrics,
     ] = await Promise.all([
+      // Core clinical resources — fail-fast if missing
       this.getPatient(patientId),
       this.getConditions(patientId),
       this.getMedications(patientId),
-      this.getMedicationAdministrations(patientId),
+      // Optional/device-specific resource — degrades gracefully
+      safeGet(this.getMedicationAdministrations(patientId), 'MedicationAdministration'),
+      // Core clinical resources (continued) — fail-fast if missing
       this.getLabs(patientId),
       this.getVitals(patientId),
       this.getEncounters(patientId),
       this.getAllergies(patientId),
       this.getDiagnosticReports(patientId),
       this.getProcedures(patientId),
-      this.getClinicalNotes(patientId),
-      this.getDeviceMetrics(patientId),
+      // Optional/device-specific resources — degrade gracefully
+      safeGet(this.getClinicalNotes(patientId), 'DocumentReference (clinical notes)'),
+      safeGet(this.getDeviceMetrics(patientId), 'DeviceMetric (Observation/vital-signs)'),
     ]);
 
     return {
