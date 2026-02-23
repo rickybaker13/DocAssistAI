@@ -23,6 +23,9 @@ export const ScribeLayout: React.FC = () => {
             <Link to="/scribe/templates" className="text-sm text-gray-600 hover:text-blue-600 transition-colors">
               Sections
             </Link>
+            <Link to="/scribe/note/new" className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors">
+              + New Note
+            </Link>
             <button onClick={handleLogout} className="text-sm text-gray-500 hover:text-red-500 transition-colors">
               Sign out
             </button>
