@@ -9,7 +9,7 @@ type Phase = 'record' | 'generating' | 'error';
 export const ScribeRecordPage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canvasSections, noteType } = useScribeBuilderStore();
+  const { canvasSections, noteType, verbosity } = useScribeBuilderStore();
   const [phase, setPhase] = useState<Phase>('record');
   const [error, setError] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState('');
@@ -36,6 +36,7 @@ export const ScribeRecordPage: React.FC = () => {
           transcript,
           sections: canvasSections.map(s => ({ name: s.name, promptHint: s.promptHint || '' })),
           noteType,
+          verbosity,
         }),
       });
       const genData = await genRes.json();
