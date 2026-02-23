@@ -1,6 +1,10 @@
 import Database from 'better-sqlite3';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { CREATE_TABLES } from './migrations.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DB_PATH = process.env.DATABASE_URL || path.join(__dirname, '../../../data/scribe.db');
 
