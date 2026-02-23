@@ -1,14 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-
-interface Note {
-  id: string;
-  note_type: string;
-  patient_label: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { Note } from './types';
 
 interface Props {
   note: Note;
@@ -21,7 +13,7 @@ function formatNoteType(t: string): string {
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export const NoteCard: React.FC<Props> = ({ note, onDelete }) => {

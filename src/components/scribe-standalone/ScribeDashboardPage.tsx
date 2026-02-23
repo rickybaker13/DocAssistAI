@@ -2,15 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NoteCard } from './NoteCard';
 import { getBackendUrl } from '../../config/appConfig';
-
-interface Note {
-  id: string;
-  note_type: string;
-  patient_label: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
+import type { Note } from './types';
 
 const STATUS_FILTERS = ['All', 'Draft', 'Finalized'] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
@@ -32,8 +24,17 @@ export const ScribeDashboardPage: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    await fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, { method: 'DELETE', credentials: 'include' });
-    setNotes(prev => prev.filter(n => n.id !== id));
+    try {
+      const r = await fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setNotes(prev => prev.filter(n => n.id !== id));
+    } catch (e: unknown) {
+      // Note remains in list if delete failed — user can try again
+      console.error('Failed to delete note:', e instanceof Error ? e.message : e);
+    }
   };
 
   const filtered = notes.filter(n => {

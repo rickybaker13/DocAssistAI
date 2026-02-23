@@ -43,6 +43,7 @@ describe('ScribeDashboardPage', () => {
     await waitFor(() => screen.getByText('Bed 3'));
     fireEvent.click(screen.getByRole('button', { name: /^finalized$/i }));
     await waitFor(() => expect(screen.queryByText('Bed 3')).not.toBeInTheDocument());
+    expect(screen.getAllByText(/h and p/i).length).toBeGreaterThan(0);
   });
 
   it('deletes a note on confirm', async () => {
