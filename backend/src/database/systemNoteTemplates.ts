@@ -1,7 +1,7 @@
 export interface SystemNoteTemplate {
-  noteType: string;
+  noteType: 'progress_note' | 'h_and_p' | 'transfer_note' | 'accept_note' | 'consult_note' | 'discharge_summary' | 'procedure_note';
   name: string;
-  verbosity: 'standard';
+  verbosity: 'brief' | 'standard' | 'detailed';
   sections: Array<{ name: string; promptHint: string | null }>;
 }
 
