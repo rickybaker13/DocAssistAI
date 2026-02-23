@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
 
@@ -15,10 +16,21 @@ const COOKIE_OPTS = {
   maxAge: 7 * 24 * 60 * 60 * 1000,
 };
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test', // Don't rate limit tests
+});
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // POST /api/scribe/auth/register
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', authLimiter, async (req: Request, res: Response) => {
   const { email, password, name, specialty } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
+  if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' }) as any;
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' }) as any;
   if (userModel.findByEmail(email)) return res.status(409).json({ error: 'Email already registered' }) as any;
 
@@ -30,7 +42,7 @@ router.post('/register', async (req: Request, res: Response) => {
 });
 
 // POST /api/scribe/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', authLimiter, async (req: Request, res: Response) => {
   const { email, password, rememberMe } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
   const user = userModel.findByEmail(email);

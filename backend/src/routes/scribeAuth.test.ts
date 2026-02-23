@@ -33,6 +33,11 @@ describe('Scribe Auth Routes', () => {
     expect(res.status).toBe(400);
   });
 
+  it('POST /register — rejects invalid email format', async () => {
+    const res = await request(app).post('/api/scribe/auth/register').send({ email: 'not-an-email', password: 'password123' });
+    expect(res.status).toBe(400);
+  });
+
   it('POST /login — succeeds with correct credentials', async () => {
     await request(app).post('/api/scribe/auth/register').send({ email: 'login@test.com', password: 'goodpass1' });
     const res = await request(app).post('/api/scribe/auth/login').send({ email: 'login@test.com', password: 'goodpass1' });
