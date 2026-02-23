@@ -15,6 +15,7 @@ import aiRoutes from './routes/ai.js';
 import transcribeRoutes from './routes/transcribe.js';
 import discoveryRoutes from './routes/discovery.js';
 import signalRouter from './routes/signal.js';
+import populationRouter from './routes/population.js';
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/ai', transcribeRoutes);
 app.use('/api/discovery', discoveryRoutes);
 app.use('/api/signal', signalRouter);
+app.use('/api/population', populationRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
