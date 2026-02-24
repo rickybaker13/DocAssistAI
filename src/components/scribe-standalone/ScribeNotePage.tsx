@@ -145,7 +145,7 @@ export const ScribeNotePage: React.FC = () => {
       ...prev,
       [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + suggestion,
     }));
-    setFocusedSection(null);
+    // setFocusedSection(null) removed; panel only closes on explicit × click
   };
 
   const handleChatInsert = (sectionId: string, text: string) => {

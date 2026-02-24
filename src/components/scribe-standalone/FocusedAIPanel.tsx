@@ -157,8 +157,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
     if (!suggestionFlow || suggestionFlow.phase !== 'preview') return;
     onApplySuggestion(suggestionFlow.sectionId, suggestionFlow.noteText);
     setSuggestionFlow(null);
-    onClose();
-  }, [suggestionFlow, onApplySuggestion, onClose]);
+    // onClose() removed; panel stays open for further additions
+  }, [suggestionFlow, onApplySuggestion]);
 
   const handleFreeTextSubmit = useCallback(() => {
     if (!freeTextValue.trim()) return;

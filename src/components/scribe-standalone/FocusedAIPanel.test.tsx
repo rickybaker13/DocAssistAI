@@ -298,6 +298,33 @@ describe('FocusedAIPanel', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 
+  it('does not call onClose after confirming a suggestion', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Ischemic stroke, left MCA territory.' }),
+    });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="Ischemic stroke left MCA."
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByRole('button', { name: /add to note/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /add to note/i })[0]);
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onApplySuggestion).toHaveBeenCalledWith('sec-1', 'Ischemic stroke, left MCA territory.');
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({
