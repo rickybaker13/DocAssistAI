@@ -393,6 +393,50 @@ describe('FocusedAIPanel', () => {
     expect(firstCheckbox).toBeChecked();
   });
 
+  it('"Select all" button selects all suggestions', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+
+    const checkboxes = screen.getAllByRole('checkbox');
+    checkboxes.forEach(cb => expect(cb).toBeChecked());
+  });
+
+  it('"Add selected (N)" button appears when suggestions are checked', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getAllByRole('checkbox'));
+    // Before checking: button absent
+    expect(screen.queryByRole('button', { name: /add selected/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByRole('checkbox')[0]);
+    // After checking one: button appears with count
+    expect(screen.getByRole('button', { name: /add selected \(1\)/i })).toBeInTheDocument();
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({

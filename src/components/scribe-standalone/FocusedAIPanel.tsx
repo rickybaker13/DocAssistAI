@@ -46,6 +46,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [freeTextValue, setFreeTextValue] = useState('');
   const [addedSuggestionIndices, setAddedSuggestionIndices] = useState<Set<number>>(new Set());
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
+  const batchQueueRef = useRef<number[]>([]);
+  const [batchTotal, setBatchTotal] = useState(0);
   const flowAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -143,6 +145,31 @@ export const FocusedAIPanel: React.FC<Props> = ({
     startSuggestionProcessing(suggestion, index);
   }, [section, suggestionFlow, startSuggestionProcessing]);
 
+  const handleSelectAll = useCallback(() => {
+    if (!result) return;
+    const allUnaddedIndices = result.suggestions
+      .map((_, i) => i)
+      .filter(i => !addedSuggestionIndices.has(i));
+    setSelectedSuggestions(
+      selectedSuggestions.size === allUnaddedIndices.length
+        ? new Set()
+        : new Set(allUnaddedIndices)
+    );
+  }, [result, addedSuggestionIndices, selectedSuggestions]);
+
+  const handleBatchAdd = useCallback(() => {
+    if (!section || !result || selectedSuggestions.size === 0) return;
+    const indices = [...selectedSuggestions]
+      .filter(i => !addedSuggestionIndices.has(i))
+      .sort((a, b) => a - b);
+    if (indices.length === 0) return;
+    const [first, ...rest] = indices;
+    batchQueueRef.current = rest;
+    setBatchTotal(indices.length);
+    setSelectedSuggestions(new Set());
+    startSuggestionProcessing(result.suggestions[first], first);
+  }, [section, result, selectedSuggestions, addedSuggestionIndices, startSuggestionProcessing]);
+
   const handleOptionSelected = useCallback(async (option: string) => {
     if (!suggestionFlow || suggestionFlow.phase !== 'clarify') return;
     const { suggestion, sectionId, suggestionIndex } = suggestionFlow;
@@ -236,7 +263,19 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
                 {result.suggestions?.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Suggestions</h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-gray-500 uppercase">Suggestions</h3>
+                      {result.suggestions.length > 0 && (
+                        <button
+                          onClick={handleSelectAll}
+                          className="text-xs text-blue-600 hover:underline"
+                        >
+                          {selectedSuggestions.size > 0 && selectedSuggestions.size === result.suggestions.filter((_, i) => !addedSuggestionIndices.has(i)).length
+                            ? 'Deselect all'
+                            : 'Select all'}
+                        </button>
+                      )}
+                    </div>
                     {result.suggestions.map((s, i) => (
                       <div key={i} className={`flex items-center gap-2 text-sm py-1 ${addedSuggestionIndices.has(i) ? 'opacity-50' : ''}`}>
                         <input
@@ -262,6 +301,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
                         )}
                       </div>
                     ))}
+                    {selectedSuggestions.size > 0 && (
+                      <button
+                        onClick={handleBatchAdd}
+                        className="mt-3 w-full py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                      >
+                        Add selected ({selectedSuggestions.size}) →
+                      </button>
+                    )}
                   </div>
                 )}
               </>
