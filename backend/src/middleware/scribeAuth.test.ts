@@ -1,3 +1,4 @@
+import { jest } from '@jest/globals';
 import jwt from 'jsonwebtoken';
 import { scribeAuthMiddleware } from './scribeAuth.js';
 
