@@ -295,8 +295,8 @@ Return one of these two JSON shapes:
     if (!parsed.ready && (!parsed.question || !Array.isArray(parsed.options))) {
       return res.status(500).json({ error: 'AI response missing question/options for ready=false' }) as any;
     }
-    if (!parsed.ready && Array.isArray(parsed.options) && parsed.options.length !== 3) {
-      return res.status(500).json({ error: `AI returned ${parsed.options.length} options; expected exactly 3` }) as any;
+    if (!parsed.ready && Array.isArray(parsed.options) && parsed.options.length < 1) {
+      return res.status(500).json({ error: 'AI returned no options for the clarifying question' }) as any;
     }
 
     return res.json(parsed);

@@ -269,12 +269,62 @@ describe('Scribe AI Routes', () => {
       expect(res.status).toBe(500);
     });
 
-    it('returns 500 if AI returns wrong number of options', async () => {
+    it('passes through response when AI returns 2 options instead of 3', async () => {
       mockAiChat.mockResolvedValueOnce({
         content: JSON.stringify({
           ready: false,
           question: 'What type of stroke?',
-          options: ['Ischemic', 'Hemorrhagic'], // only 2 — should be rejected
+          options: ['Ischemic', 'Hemorrhagic'],
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type',
+          sectionName: 'Assessment',
+          transcript: 'Patient with neuro deficits.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ready).toBe(false);
+      expect(res.body.options).toEqual(['Ischemic', 'Hemorrhagic']);
+    });
+
+    it('passes through response when AI returns 4 options (old escape-option habit)', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          ready: false,
+          question: 'What type of stroke?',
+          options: ['Ischemic', 'Hemorrhagic', 'Embolic', 'Not yet determined'],
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type',
+          sectionName: 'Assessment',
+          transcript: 'Patient with neuro deficits.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ready).toBe(false);
+      expect(res.body.options.length).toBe(4);
+    });
+
+    it('returns 500 if AI returns empty options array', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          ready: false,
+          question: 'What type of stroke?',
+          options: [],
         }),
       } as any);
 
@@ -290,7 +340,7 @@ describe('Scribe AI Routes', () => {
         });
 
       expect(res.status).toBe(500);
-      expect(res.body.error).toMatch(/expected exactly 3/i);
+      expect(res.body.error).toMatch(/no options/i);
     });
   });
 });
