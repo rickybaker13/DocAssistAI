@@ -276,6 +276,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                         </button>
                       ))}
                       <button
+                        aria-label="Other — enter a custom answer"
                         onClick={() => { setShowFreeText(true); setFreeTextValue(''); }}
                         className="px-3 py-1.5 rounded-full text-sm text-gray-500 border border-dashed border-gray-300 hover:border-blue-400 hover:text-blue-600 transition-colors"
                       >
@@ -318,6 +319,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                       ← back
                     </button>
                     <button
+                      aria-label="Cancel"
                       onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); }}
                       className="text-xs text-gray-400 hover:text-gray-600"
                     >
