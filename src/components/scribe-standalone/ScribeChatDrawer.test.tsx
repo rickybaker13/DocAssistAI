@@ -19,12 +19,12 @@ describe('ScribeChatDrawer', () => {
   });
 
   it('renders a floating chat button when closed', () => {
-    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" onInsert={onInsert} />);
+    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" verbosity="standard" onInsert={onInsert} />);
     expect(screen.getByRole('button', { name: /chat/i })).toBeInTheDocument();
   });
 
   it('opens the drawer when chat button is clicked', () => {
-    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" onInsert={onInsert} />);
+    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" verbosity="standard" onInsert={onInsert} />);
     fireEvent.click(screen.getByRole('button', { name: /chat/i }));
     expect(screen.getByPlaceholderText(/ask a clinical question/i)).toBeInTheDocument();
   });
@@ -32,10 +32,10 @@ describe('ScribeChatDrawer', () => {
   it('sends message and shows AI response', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ response: 'MRI brain with DWI is indicated.' }),
+      json: async () => ({ success: true, cited: false, data: { content: 'MRI brain with DWI is indicated.' } }),
     });
 
-    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" onInsert={onInsert} />);
+    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" verbosity="standard" onInsert={onInsert} />);
     fireEvent.click(screen.getByRole('button', { name: /chat/i }));
     const input = screen.getByPlaceholderText(/ask a clinical question/i);
     fireEvent.change(input, { target: { value: 'What MRI should I order?' } });
@@ -47,10 +47,10 @@ describe('ScribeChatDrawer', () => {
   it('shows Add to Note button after AI responds', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ response: 'Some AI answer.' }),
+      json: async () => ({ success: true, cited: false, data: { content: 'Some AI answer.' } }),
     });
 
-    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" onInsert={onInsert} />);
+    render(<ScribeChatDrawer sections={mockSections} noteType="progress_note" verbosity="standard" onInsert={onInsert} />);
     fireEvent.click(screen.getByRole('button', { name: /chat/i }));
     const input = screen.getByPlaceholderText(/ask a clinical question/i);
     fireEvent.change(input, { target: { value: 'Question' } });

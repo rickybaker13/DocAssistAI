@@ -18,6 +18,7 @@ interface ChatMessage {
 interface Props {
   sections: Section[];
   noteType: string;
+  verbosity: string;
   onInsert: (sectionId: string, text: string) => void;
 }
 
@@ -26,7 +27,7 @@ const makeId = () =>
     ? crypto.randomUUID()
     : Math.random().toString(36).slice(2);
 
-export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert }) => {
+export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosity, onInsert }) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -49,17 +50,34 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
     if (!input.trim() || loading) return;
     const userMsg = input.trim();
     setInput('');
-    setMessages(prev => [...prev, { id: makeId(), role: 'user', content: userMsg }]);
+
+    const newUserMsg: ChatMessage = { id: makeId(), role: 'user', content: userMsg };
+    const updatedMessages = [...messages, newUserMsg];
+    setMessages(updatedMessages);
     setLoading(true);
+
     try {
+      // Build a brief note context so the AI knows what encounter this is about
+      const noteContext = [
+        `Note type: ${noteType}`,
+        sections.length > 0
+          ? `Current note sections:\n${sections.map(s => `- ${s.section_name}: ${(s.content || '').slice(0, 200)}`).join('\n')}`
+          : '',
+      ].filter(Boolean).join('\n');
+
       const res = await fetch(`${getBackendUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ message: userMsg }),
+        body: JSON.stringify({
+          messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
+          patientContext: noteContext,
+        }),
       });
       const data = await res.json();
-      setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content: data.response || data.error || 'No response' }]);
+      // Response shape: { success, cited, data: { content: string } } or { error: string }
+      const content = data.data?.content || data.error || 'No response';
+      setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content }]);
     } catch (e: unknown) {
       setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content: 'Error: ' + (e instanceof Error ? e.message : 'Unknown error') }]);
     } finally {
@@ -90,6 +108,7 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, onInsert
           destinationSection: section.section_name,
           existingContent: section.content || '',
           noteType,
+          verbosity,
         }),
       });
       if (!res.ok) throw new Error(`Ghost-write failed (${res.status})`);
