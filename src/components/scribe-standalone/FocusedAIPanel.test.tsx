@@ -527,6 +527,51 @@ describe('FocusedAIPanel', () => {
     expect(screen.queryByRole('button', { name: /confirm/i })).not.toBeInTheDocument();
   });
 
+  it('clears batch queue if a fetch error occurs mid-batch', async () => {
+    const batchResult = {
+      ...focusedResult,
+      suggestions: [
+        'Document stroke type (ischemic vs hemorrhagic)',
+        'Document vascular territory',
+      ],
+    };
+
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => batchResult });
+    // First resolve-suggestion succeeds
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Ischemic stroke.' }),
+    });
+    // Second resolve-suggestion returns a server error
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500 });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    // Select all, start batch
+    await waitFor(() => screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add selected/i }));
+
+    // Confirm first item — triggers auto-advance to second
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    // Second item fails — error message shown, overlay dismissed
+    await waitFor(() => expect(screen.queryByRole('button', { name: /confirm/i })).not.toBeInTheDocument());
+    // First suggestion was applied
+    expect(onApplySuggestion).toHaveBeenCalledTimes(1);
+    expect(onApplySuggestion).toHaveBeenCalledWith('sec-1', 'Ischemic stroke.');
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({

@@ -128,6 +128,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
       if (e instanceof Error && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
       setSuggestionFlow(null);
+      batchQueueRef.current = [];
+      setBatchTotal(0);
     }
   }, [section, transcript, noteType, verbosity]);
 
