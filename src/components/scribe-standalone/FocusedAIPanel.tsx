@@ -80,7 +80,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
   }, [section?.id]);
 
   const handleAddToNote = useCallback(async (suggestion: string) => {
-    if (!section) return;
+    if (!section || suggestionFlow !== null) return;
     setSuggestionFlow({ phase: 'loading', suggestion, sectionId: section.id });
     try {
       const controller = new AbortController();
@@ -117,7 +117,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
       setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
       setSuggestionFlow(null);
     }
-  }, [section, transcript, noteType, verbosity]);
+  }, [section, suggestionFlow, transcript, noteType, verbosity]);
 
   const handleOptionSelected = useCallback(async (option: string) => {
     if (!suggestionFlow || suggestionFlow.phase !== 'clarify') return;
