@@ -317,7 +317,7 @@ describe('FocusedAIPanel', () => {
     );
 
     await waitFor(() => screen.getByRole('button', { name: /add to note/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /add to note/i })[0]);
+    fireEvent.click(screen.getByRole('button', { name: /add to note/i }));
     await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
     fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
 
