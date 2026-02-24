@@ -42,6 +42,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestionFlow, setSuggestionFlow] = useState<SuggestionFlow>(null);
+  const [showFreeText, setShowFreeText] = useState(false);
+  const [freeTextValue, setFreeTextValue] = useState('');
   const flowAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -111,6 +113,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
           question: data.question,
           options: data.options,
         });
+        setShowFreeText(false);
+        setFreeTextValue('');
       }
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return;
@@ -155,6 +159,13 @@ export const FocusedAIPanel: React.FC<Props> = ({
     setSuggestionFlow(null);
     onClose();
   }, [suggestionFlow, onApplySuggestion, onClose]);
+
+  const handleFreeTextSubmit = useCallback(() => {
+    if (!freeTextValue.trim()) return;
+    handleOptionSelected(freeTextValue.trim());
+    setShowFreeText(false);
+    setFreeTextValue('');
+  }, [freeTextValue, handleOptionSelected]);
 
   if (!section) return null;
 
@@ -251,23 +262,69 @@ export const FocusedAIPanel: React.FC<Props> = ({
             {suggestionFlow.phase === 'clarify' && (
               <>
                 <p className="text-sm font-semibold text-gray-900">{suggestionFlow.question}</p>
-                <div className="flex flex-wrap gap-2">
-                  {suggestionFlow.options.map(opt => (
+
+                {!showFreeText ? (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {suggestionFlow.options.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => handleOptionSelected(opt)}
+                          className="px-3 py-1.5 rounded-full text-sm text-gray-800 border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => { setShowFreeText(true); setFreeTextValue(''); }}
+                        className="px-3 py-1.5 rounded-full text-sm text-gray-500 border border-dashed border-gray-300 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                      >
+                        Other…
+                      </button>
+                    </div>
                     <button
-                      key={opt}
-                      onClick={() => handleOptionSelected(opt)}
-                      className="px-3 py-1.5 rounded-full text-sm text-gray-800 border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
+                      className="text-xs text-gray-400 hover:text-gray-600"
                     >
-                      {opt}
+                      Cancel
                     </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
-                >
-                  Cancel
-                </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={freeTextValue}
+                        onChange={e => setFreeTextValue(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleFreeTextSubmit(); }}
+                        placeholder="Type your answer…"
+                        autoFocus
+                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={handleFreeTextSubmit}
+                        disabled={!freeTextValue.trim()}
+                        aria-label="Submit"
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                      >
+                        Submit
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setShowFreeText(false)}
+                      aria-label="Back"
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      ← back
+                    </button>
+                    <button
+                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); }}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
               </>
             )}
 
