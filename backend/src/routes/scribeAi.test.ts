@@ -268,5 +268,29 @@ describe('Scribe AI Routes', () => {
 
       expect(res.status).toBe(500);
     });
+
+    it('returns 500 if AI returns wrong number of options', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          ready: false,
+          question: 'What type of stroke?',
+          options: ['Ischemic', 'Hemorrhagic'], // only 2 — should be rejected
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type',
+          sectionName: 'Assessment',
+          transcript: 'Patient with neuro deficits.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
+        });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toMatch(/expected exactly 3/i);
+    });
   });
 });
