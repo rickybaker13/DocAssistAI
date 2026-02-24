@@ -238,8 +238,13 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
   const systemPrompt = `You are a clinical documentation AI for a ${specialty} physician. Your job is to convert a documentation suggestion into actual physician note text.
 
 First, search the provided transcript and existing section content for the clinical detail referenced in the suggestion.
-- If the detail is present in the transcript or unambiguously stated in the existing section content → write the note text and return ready=true.
-- If the detail is absent from the transcript and not unambiguously stated in the existing section content → return ready=false with a single focused question and 2–4 quick-select options. Always include a "Not yet determined" escape option.
+- If the detail is present or unambiguously inferable → write the note text and return ready=true.
+- If a clinically critical detail is genuinely absent → return ready=false with a single focused clinical question and exactly 3 options.
+
+Rules for options when ready=false:
+- Provide exactly 3 options — the most clinically common and specific answers to your question given this case context.
+- Options must be real clinical values (e.g. "Left MCA", "HFrEF", "EF 35%") — not vague placeholders.
+- Do NOT include escape options like "Not yet determined", "Unknown", or "Other" — the UI provides a free-text fallback.
 
 Rules for note text when ready=true:
 ${verbosityInstruction}
@@ -257,7 +262,7 @@ ${transcript ? `Transcript excerpt:\n"${transcript.slice(0, 800)}"` : ''}
 
 Return one of these two JSON shapes:
 { "ready": true, "noteText": "..." }
-{ "ready": false, "question": "...", "options": ["...", "...", "Not yet determined"] }`;
+{ "ready": false, "question": "...", "options": ["<specific value>", "<specific value>", "<specific value>"] }`;
 
   try {
     const raw = await aiService.chat(

@@ -179,7 +179,7 @@ describe('Scribe AI Routes', () => {
         content: JSON.stringify({
           ready: false,
           question: 'What type of stroke?',
-          options: ['Ischemic', 'Hemorrhagic', 'Not yet determined'],
+          options: ['Ischemic', 'Hemorrhagic', 'Embolic'],
         }),
       } as any);
 
@@ -199,7 +199,7 @@ describe('Scribe AI Routes', () => {
       expect(res.body.ready).toBe(false);
       expect(typeof res.body.question).toBe('string');
       expect(Array.isArray(res.body.options)).toBe(true);
-      expect(res.body.options.length).toBeGreaterThanOrEqual(2);
+      expect(res.body.options.length).toBe(3);
     });
 
     it('returns 400 if suggestion is missing', async () => {
@@ -225,12 +225,12 @@ describe('Scribe AI Routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('includes a "Not yet determined" escape option in clarify response', async () => {
+    it('ready=false options do not include generic escape text', async () => {
       mockAiChat.mockResolvedValueOnce({
         content: JSON.stringify({
           ready: false,
-          question: 'What type of stroke?',
-          options: ['Ischemic', 'Hemorrhagic', 'Not yet determined'],
+          question: 'What artery was involved?',
+          options: ['Left MCA', 'Right MCA', 'Basilar artery'],
         }),
       } as any);
 
@@ -238,13 +238,20 @@ describe('Scribe AI Routes', () => {
         .post('/api/ai/scribe/resolve-suggestion')
         .set('Cookie', authCookie)
         .send({
-          suggestion: 'Document stroke type',
+          suggestion: 'Document vascular territory',
           sectionName: 'Assessment',
-          transcript: 'Patient has neuro deficits.',
+          transcript: 'Patient with acute stroke symptoms.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
         });
 
       expect(res.status).toBe(200);
-      expect(res.body.options).toContain('Not yet determined');
+      expect(res.body.ready).toBe(false);
+      expect(res.body.options.length).toBe(3);
+      const escapeTerms = ['not yet', 'unknown', 'not determined', 'tbd'];
+      res.body.options.forEach((opt: string) => {
+        expect(escapeTerms.some(t => opt.toLowerCase().includes(t))).toBe(false);
+      });
     });
 
     it('returns 500 when AI returns non-JSON', async () => {
