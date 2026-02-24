@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface Section {
@@ -14,22 +14,40 @@ interface FocusedResult {
   confidence_breakdown?: string;
 }
 
+type SuggestionFlow =
+  | { phase: 'loading'; suggestion: string; sectionId: string }
+  | { phase: 'clarify'; suggestion: string; sectionId: string; question: string; options: string[] }
+  | { phase: 'resolving'; suggestion: string; sectionId: string; selectedOption: string }
+  | { phase: 'preview'; sectionId: string; noteText: string }
+  | null;
+
 interface Props {
   section: Section | null;
   transcript: string;
+  noteType: string;
+  verbosity: string;
   onClose: () => void;
-  onApplySuggestion: (sectionId: string, suggestion: string) => void;
+  onApplySuggestion: (sectionId: string, noteText: string) => void;
 }
 
-export const FocusedAIPanel: React.FC<Props> = ({ section, transcript, onClose, onApplySuggestion }) => {
+export const FocusedAIPanel: React.FC<Props> = ({
+  section,
+  transcript,
+  noteType,
+  verbosity,
+  onClose,
+  onApplySuggestion,
+}) => {
   const [result, setResult] = useState<FocusedResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [suggestionFlow, setSuggestionFlow] = useState<SuggestionFlow>(null);
 
   useEffect(() => {
     if (!section) return;
     const controller = new AbortController();
     setResult(null);
+    setSuggestionFlow(null);
     setLoading(true);
     setError(null);
     fetch(`${getBackendUrl()}/api/ai/scribe/focused`, {
@@ -56,71 +74,217 @@ export const FocusedAIPanel: React.FC<Props> = ({ section, transcript, onClose, 
     return () => controller.abort();
   }, [section?.id]);
 
+  const handleAddToNote = useCallback(async (suggestion: string) => {
+    if (!section) return;
+    setSuggestionFlow({ phase: 'loading', suggestion, sectionId: section.id });
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/ai/scribe/resolve-suggestion`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          suggestion,
+          sectionName: section.section_name,
+          existingContent: section.content || '',
+          transcript: transcript.slice(0, 800),
+          noteType,
+          verbosity,
+        }),
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      const data = await res.json();
+      if (data.ready) {
+        setSuggestionFlow({ phase: 'preview', sectionId: section.id, noteText: data.noteText });
+      } else {
+        setSuggestionFlow({
+          phase: 'clarify',
+          suggestion,
+          sectionId: section.id,
+          question: data.question,
+          options: data.options,
+        });
+      }
+    } catch {
+      setSuggestionFlow(null);
+    }
+  }, [section, transcript, noteType, verbosity]);
+
+  const handleOptionSelected = useCallback(async (option: string) => {
+    if (!suggestionFlow || suggestionFlow.phase !== 'clarify') return;
+    const { suggestion, sectionId } = suggestionFlow;
+    setSuggestionFlow({ phase: 'resolving', suggestion, sectionId, selectedOption: option });
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/ai/scribe/ghost-write`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          chatAnswer: `${suggestion}. ${option}.`,
+          destinationSection: section?.section_name || '',
+          existingContent: section?.content || '',
+          noteType,
+          verbosity,
+        }),
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      const data = await res.json();
+      setSuggestionFlow({ phase: 'preview', sectionId, noteText: data.ghostWritten });
+    } catch {
+      setSuggestionFlow(null);
+    }
+  }, [suggestionFlow, section, noteType, verbosity]);
+
+  const handleConfirm = useCallback(() => {
+    if (!suggestionFlow || suggestionFlow.phase !== 'preview') return;
+    onApplySuggestion(suggestionFlow.sectionId, suggestionFlow.noteText);
+    setSuggestionFlow(null);
+    onClose();
+  }, [suggestionFlow, onApplySuggestion, onClose]);
+
   if (!section) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
-      <div
-        className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-gray-900">⚡ Focused AI</h2>
-            <p className="text-xs text-gray-500">{section.section_name}</p>
-          </div>
-          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl">×</button>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {loading && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
-              Analyzing...
+    <>
+      {/* Main panel */}
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
+        <div
+          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-900">⚡ Focused AI</h2>
+              <p className="text-xs text-gray-500">{section.section_name}</p>
             </div>
-          )}
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+            <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+          </div>
 
-          {result && (
-            <>
-              <div>
-                <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">Analysis</h3>
-                <p className="text-sm text-gray-800">{result.analysis}</p>
+          <div className="p-4 space-y-4">
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+                Analyzing...
               </div>
+            )}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
 
-              {result.citations?.length > 0 && (
+            {result && (
+              <>
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Guideline Citations</h3>
-                  {result.citations.map((c, i) => (
-                    <div key={i} className="bg-blue-50 rounded-lg p-2 mb-2 text-sm">
-                      <p className="font-medium text-blue-800">{c.guideline} {c.year && `(${c.year})`}</p>
-                      <p className="text-blue-700 text-xs mt-0.5">{c.recommendation}</p>
-                    </div>
-                  ))}
+                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">Analysis</h3>
+                  <p className="text-sm text-gray-800">{result.analysis}</p>
                 </div>
-              )}
 
-              {result.suggestions?.length > 0 && (
-                <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Suggestions</h3>
-                  {result.suggestions.map((s, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm py-1">
-                      <span className="text-orange-500 mt-0.5">•</span>
-                      <span className="flex-1 text-gray-700">{s}</span>
-                      <button
-                        onClick={() => onApplySuggestion(section.id, s)}
-                        className="text-xs text-blue-600 hover:underline flex-shrink-0"
-                      >
-                        Add to note
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+                {result.citations?.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Guideline Citations</h3>
+                    {result.citations.map((c, i) => (
+                      <div key={i} className="bg-blue-50 rounded-lg p-2 mb-2 text-sm">
+                        <p className="font-medium text-blue-800">{c.guideline}{c.year && ` (${c.year})`}</p>
+                        <p className="text-blue-700 text-xs mt-0.5">{c.recommendation}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {result.suggestions?.length > 0 && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Suggestions</h3>
+                    {result.suggestions.map((s, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm py-1">
+                        <span className="text-orange-500 mt-0.5">•</span>
+                        <span className="flex-1 text-gray-700">{s}</span>
+                        <button
+                          onClick={() => handleAddToNote(s)}
+                          aria-label="Add to note"
+                          className="text-xs text-blue-600 hover:underline flex-shrink-0"
+                        >
+                          Add to note
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Suggestion flow overlay */}
+      {suggestionFlow && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+
+            {/* Loading phase */}
+            {suggestionFlow.phase === 'loading' && (
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
+                <span>Preparing note text...</span>
+              </div>
+            )}
+
+            {/* Clarify phase */}
+            {suggestionFlow.phase === 'clarify' && (
+              <>
+                <p className="text-sm font-semibold text-gray-900">{suggestionFlow.question}</p>
+                <div className="flex flex-wrap gap-2">
+                  {suggestionFlow.options.map(opt => (
+                    <button
+                      key={opt}
+                      onClick={() => handleOptionSelected(opt)}
+                      className="px-3 py-1.5 rounded-full text-sm border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setSuggestionFlow(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+
+            {/* Resolving phase */}
+            {suggestionFlow.phase === 'resolving' && (
+              <div className="flex items-center gap-3 text-sm text-gray-600">
+                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
+                <span>Writing note text...</span>
+              </div>
+            )}
+
+            {/* Preview phase */}
+            {suggestionFlow.phase === 'preview' && (
+              <>
+                <p className="text-xs font-semibold text-gray-500 uppercase">Preview</p>
+                <p className="text-sm bg-green-50 border border-green-200 rounded-lg p-3 text-green-900">
+                  {suggestionFlow.noteText}
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleConfirm}
+                    aria-label="Confirm insert into note"
+                    className="flex-1 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors"
+                  >
+                    Confirm ✓
+                  </button>
+                  <button
+                    onClick={() => setSuggestionFlow(null)}
+                    aria-label="Cancel"
+                    className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
+
+          </div>
+        </div>
+      )}
+    </>
   );
 };
