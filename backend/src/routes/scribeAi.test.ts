@@ -216,5 +216,50 @@ describe('Scribe AI Routes', () => {
         .send({ suggestion: 'x', sectionName: 'Assessment' });
       expect(res.status).toBe(401);
     });
+
+    it('returns 400 if sectionName is missing', async () => {
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({ suggestion: 'Document stroke type' });
+      expect(res.status).toBe(400);
+    });
+
+    it('includes a "Not yet determined" escape option in clarify response', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          ready: false,
+          question: 'What type of stroke?',
+          options: ['Ischemic', 'Hemorrhagic', 'Not yet determined'],
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type',
+          sectionName: 'Assessment',
+          transcript: 'Patient has neuro deficits.',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.options).toContain('Not yet determined');
+    });
+
+    it('returns 500 when AI returns non-JSON', async () => {
+      mockAiChat.mockResolvedValueOnce({ content: 'Sorry, I cannot help with that.' } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type',
+          sectionName: 'Assessment',
+          transcript: 'Patient has neuro deficits.',
+        });
+
+      expect(res.status).toBe(500);
+    });
   });
 });

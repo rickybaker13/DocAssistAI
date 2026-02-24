@@ -221,6 +221,7 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
     transcript = '',
     noteType = 'progress_note',
     verbosity = 'standard',
+    specialty = 'Medicine',
   } = req.body;
 
   if (!suggestion || !sectionName) {
@@ -234,11 +235,11 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
       ? 'If ready, write in complete clinical prose with full reasoning.'
       : 'If ready, write 1–2 concise clinical sentences with medical abbreviations where natural.';
 
-  const systemPrompt = `You are a clinical documentation AI. Your job is to convert a documentation suggestion into actual physician note text.
+  const systemPrompt = `You are a clinical documentation AI for a ${specialty} physician. Your job is to convert a documentation suggestion into actual physician note text.
 
 First, search the provided transcript and existing section content for the clinical detail referenced in the suggestion.
-- If you find the detail → write the note text and return ready=true.
-- If a clinically critical detail is genuinely absent and cannot be inferred → return ready=false with a single focused question and 2–4 quick-select options. Always include a "Not yet determined" or equivalent escape option.
+- If the detail is present in the transcript or unambiguously stated in the existing section content → write the note text and return ready=true.
+- If the detail is absent from the transcript and not unambiguously stated in the existing section content → return ready=false with a single focused question and 2–4 quick-select options. Always include a "Not yet determined" escape option.
 
 Rules for note text when ready=true:
 ${verbosityInstruction}
@@ -250,6 +251,7 @@ Return ONLY valid JSON. No markdown fences. No extra text.`;
 
 Section: ${sectionName}
 Note type: ${noteType}
+Specialty: ${specialty}
 ${existingContent ? `Existing section content:\n"${existingContent.slice(0, 400)}"` : ''}
 ${transcript ? `Transcript excerpt:\n"${transcript.slice(0, 800)}"` : ''}
 
@@ -275,7 +277,18 @@ Return one of these two JSON shapes:
       const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch {
-      parsed = { ready: true, noteText: text.trim() };
+      return res.status(500).json({ error: 'AI returned unexpected non-JSON response' }) as any;
+    }
+
+    // Runtime shape validation
+    if (typeof parsed.ready !== 'boolean') {
+      return res.status(500).json({ error: 'AI response missing required "ready" field' }) as any;
+    }
+    if (parsed.ready && typeof parsed.noteText !== 'string') {
+      return res.status(500).json({ error: 'AI response missing noteText for ready=true' }) as any;
+    }
+    if (!parsed.ready && (!parsed.question || !Array.isArray(parsed.options))) {
+      return res.status(500).json({ error: 'AI response missing question/options for ready=false' }) as any;
     }
 
     return res.json(parsed);
