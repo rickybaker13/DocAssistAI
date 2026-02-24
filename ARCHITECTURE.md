@@ -260,6 +260,25 @@ AI:       Configured provider (external or self-hosted)
 - [ ] Real-time audit log monitoring
 - [ ] Backend API for FHIR operations (optional)
 
+## Scribe Module
+
+Scribe is a standalone AI-powered clinical documentation module within DocAssistAI.
+
+**Auth:** JWT-based (`scribeAuth` middleware), separate from SMART on FHIR. Cookies, 7-day expiry.
+
+**Backend routes** (`backend/src/routes/`):
+- `scribe.ts` — note CRUD, template management (`/api/scribe/...`)
+- `scribeAi.ts` — AI endpoints: focused analysis, ghost-write, resolve-suggestion (`/api/ai/scribe/...`)
+- `scribeAuth.ts` — login/logout/me (`/api/scribe/auth/...`)
+
+**Frontend** (`src/components/scribe-standalone/`):
+- `ScribeNotePage` — note editor with section management
+- `FocusedAIPanel` — per-section AI analysis with clarify/preview overlay flow
+- `ScribeChatDrawer` — floating chat with ghost-write insert
+- `NoteBuilderPage` — template selection + verbosity preference
+
+**DB** (`backend/data/scribe.db`): SQLite via better-sqlite3. Schema in `backend/src/database/migrations.ts`. New columns added via `COLUMN_MIGRATIONS` array, not `CREATE TABLE IF NOT EXISTS`.
+
 ## References
 
 - [SMART on FHIR Specification](http://hl7.org/fhir/smart-app-launch/)

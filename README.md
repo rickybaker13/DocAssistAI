@@ -89,6 +89,7 @@ npm run dev
 - ✅ Flexible AI provider support
 - ✅ Comprehensive audit logging
 - ✅ Mock data for local development
+- ✅ **Scribe** — AI-powered clinical note authoring with templates, verbosity control, and smart suggestion resolution
 
 ## Next Steps
 
