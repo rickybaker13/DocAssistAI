@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface Section {
@@ -42,6 +42,11 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestionFlow, setSuggestionFlow] = useState<SuggestionFlow>(null);
+  const flowAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { flowAbortRef.current?.abort(); };
+  }, []);
 
   useEffect(() => {
     if (!section) return;
@@ -78,10 +83,13 @@ export const FocusedAIPanel: React.FC<Props> = ({
     if (!section) return;
     setSuggestionFlow({ phase: 'loading', suggestion, sectionId: section.id });
     try {
+      const controller = new AbortController();
+      flowAbortRef.current = controller;
       const res = await fetch(`${getBackendUrl()}/api/ai/scribe/resolve-suggestion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           suggestion,
           sectionName: section.section_name,
@@ -104,7 +112,9 @@ export const FocusedAIPanel: React.FC<Props> = ({
           options: data.options,
         });
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return;
+      setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
       setSuggestionFlow(null);
     }
   }, [section, transcript, noteType, verbosity]);
@@ -114,10 +124,13 @@ export const FocusedAIPanel: React.FC<Props> = ({
     const { suggestion, sectionId } = suggestionFlow;
     setSuggestionFlow({ phase: 'resolving', suggestion, sectionId, selectedOption: option });
     try {
+      const controller = new AbortController();
+      flowAbortRef.current = controller;
       const res = await fetch(`${getBackendUrl()}/api/ai/scribe/ghost-write`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           chatAnswer: `${suggestion}. ${option}.`,
           destinationSection: section?.section_name || '',
@@ -129,7 +142,9 @@ export const FocusedAIPanel: React.FC<Props> = ({
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       const data = await res.json();
       setSuggestionFlow({ phase: 'preview', sectionId, noteText: data.ghostWritten });
-    } catch {
+    } catch (e) {
+      if (e instanceof Error && e.name === 'AbortError') return;
+      setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
       setSuggestionFlow(null);
     }
   }, [suggestionFlow, section, noteType, verbosity]);
@@ -213,7 +228,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
       {/* Suggestion flow overlay */}
       {suggestionFlow && (
-        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 px-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
 
             {/* Loading phase */}
@@ -224,7 +239,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <span>Preparing note text...</span>
                 </div>
                 <button
-                  onClick={() => setSuggestionFlow(null)}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -248,7 +263,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   ))}
                 </div>
                 <button
-                  onClick={() => setSuggestionFlow(null)}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -264,7 +279,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <span>Writing note text...</span>
                 </div>
                 <button
-                  onClick={() => setSuggestionFlow(null)}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -288,7 +303,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     Confirm ✓
                   </button>
                   <button
-                    onClick={() => setSuggestionFlow(null)}
+                    onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
                     aria-label="Cancel"
                     className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl"
                   >
