@@ -15,10 +15,10 @@ interface FocusedResult {
 }
 
 type SuggestionFlow =
-  | { phase: 'loading'; suggestion: string; sectionId: string }
-  | { phase: 'clarify'; suggestion: string; sectionId: string; question: string; options: string[] }
-  | { phase: 'resolving'; suggestion: string; sectionId: string; selectedOption: string }
-  | { phase: 'preview'; sectionId: string; noteText: string }
+  | { phase: 'loading'; suggestion: string; sectionId: string; suggestionIndex: number }
+  | { phase: 'clarify'; suggestion: string; sectionId: string; question: string; options: string[]; suggestionIndex: number }
+  | { phase: 'resolving'; suggestion: string; sectionId: string; selectedOption: string; suggestionIndex: number }
+  | { phase: 'preview'; sectionId: string; noteText: string; suggestionIndex: number }
   | null;
 
 interface Props {
@@ -44,6 +44,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [suggestionFlow, setSuggestionFlow] = useState<SuggestionFlow>(null);
   const [showFreeText, setShowFreeText] = useState(false);
   const [freeTextValue, setFreeTextValue] = useState('');
+  const [addedSuggestionIndices, setAddedSuggestionIndices] = useState<Set<number>>(new Set());
   const flowAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -81,9 +82,10 @@ export const FocusedAIPanel: React.FC<Props> = ({
     return () => controller.abort();
   }, [section?.id]);
 
-  const handleAddToNote = useCallback(async (suggestion: string) => {
-    if (!section || suggestionFlow !== null) return;
-    setSuggestionFlow({ phase: 'loading', suggestion, sectionId: section.id });
+  // Core async processing — no guard, called by both single and batch flows
+  const startSuggestionProcessing = useCallback(async (suggestion: string, index: number) => {
+    if (!section) return;
+    setSuggestionFlow({ phase: 'loading', suggestion, sectionId: section.id, suggestionIndex: index });
     try {
       const controller = new AbortController();
       flowAbortRef.current = controller;
@@ -104,7 +106,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       const data = await res.json();
       if (data.ready) {
-        setSuggestionFlow({ phase: 'preview', sectionId: section.id, noteText: data.noteText });
+        setSuggestionFlow({ phase: 'preview', sectionId: section.id, noteText: data.noteText, suggestionIndex: index });
       } else {
         setSuggestionFlow({
           phase: 'clarify',
@@ -112,6 +114,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
           sectionId: section.id,
           question: data.question,
           options: data.options,
+          suggestionIndex: index,
         });
         setShowFreeText(false);
         setFreeTextValue('');
@@ -121,12 +124,18 @@ export const FocusedAIPanel: React.FC<Props> = ({
       setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
       setSuggestionFlow(null);
     }
-  }, [section, suggestionFlow, transcript, noteType, verbosity]);
+  }, [section, transcript, noteType, verbosity]);
+
+  // Guard wrapper — used by "Add to note" buttons (prevents concurrent flows)
+  const handleAddToNote = useCallback((suggestion: string, index: number) => {
+    if (!section || suggestionFlow !== null) return;
+    startSuggestionProcessing(suggestion, index);
+  }, [section, suggestionFlow, startSuggestionProcessing]);
 
   const handleOptionSelected = useCallback(async (option: string) => {
     if (!suggestionFlow || suggestionFlow.phase !== 'clarify') return;
-    const { suggestion, sectionId } = suggestionFlow;
-    setSuggestionFlow({ phase: 'resolving', suggestion, sectionId, selectedOption: option });
+    const { suggestion, sectionId, suggestionIndex } = suggestionFlow;
+    setSuggestionFlow({ phase: 'resolving', suggestion, sectionId, selectedOption: option, suggestionIndex });
     try {
       const controller = new AbortController();
       flowAbortRef.current = controller;
@@ -145,7 +154,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
       });
       if (!res.ok) throw new Error(`Failed (${res.status})`);
       const data = await res.json();
-      setSuggestionFlow({ phase: 'preview', sectionId, noteText: data.ghostWritten });
+      setSuggestionFlow({ phase: 'preview', sectionId, noteText: data.ghostWritten, suggestionIndex });
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return;
       setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
@@ -156,6 +165,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const handleConfirm = useCallback(() => {
     if (!suggestionFlow || suggestionFlow.phase !== 'preview') return;
     onApplySuggestion(suggestionFlow.sectionId, suggestionFlow.noteText);
+    setAddedSuggestionIndices(prev => new Set([...prev, suggestionFlow.suggestionIndex]));
     setSuggestionFlow(null);
     // onClose() removed; panel stays open for further additions
   }, [suggestionFlow, onApplySuggestion]);
@@ -217,16 +227,20 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <div>
                     <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Suggestions</h3>
                     {result.suggestions.map((s, i) => (
-                      <div key={i} className="flex items-start gap-2 text-sm py-1">
+                      <div key={i} className={`flex items-start gap-2 text-sm py-1 ${addedSuggestionIndices.has(i) ? 'opacity-50' : ''}`}>
                         <span className="text-orange-500 mt-0.5">•</span>
                         <span className="flex-1 text-gray-700">{s}</span>
-                        <button
-                          onClick={() => handleAddToNote(s)}
-                          aria-label="Add to note"
-                          className="text-xs text-blue-600 hover:underline flex-shrink-0"
-                        >
-                          Add to note
-                        </button>
+                        {addedSuggestionIndices.has(i) ? (
+                          <span className="text-xs text-green-600 font-medium flex-shrink-0">✓ Added</span>
+                        ) : (
+                          <button
+                            onClick={() => handleAddToNote(s, i)}
+                            aria-label="Add to note"
+                            className="text-xs text-blue-600 hover:underline flex-shrink-0"
+                          >
+                            Add to note
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>

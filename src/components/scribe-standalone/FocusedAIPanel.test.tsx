@@ -325,6 +325,34 @@ describe('FocusedAIPanel', () => {
     expect(onApplySuggestion).toHaveBeenCalledWith('sec-1', 'Ischemic stroke, left MCA territory.');
   });
 
+  it('shows ✓ Added on a suggestion after it is confirmed', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Ischemic stroke.' }),
+    });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="Ischemic."
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getAllByRole('button', { name: /add to note/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add to note/i }));
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    await waitFor(() => expect(screen.getByText('✓ Added')).toBeInTheDocument());
+    // The "Add to note" button for that suggestion should be gone
+    expect(screen.queryAllByRole('button', { name: /add to note/i })).toHaveLength(0);
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({
