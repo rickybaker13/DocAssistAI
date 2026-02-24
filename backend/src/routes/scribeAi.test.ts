@@ -149,4 +149,72 @@ describe('Scribe AI Routes', () => {
       expect(res.body.ghostWritten.length).toBeGreaterThan(0);
     });
   });
+
+  describe('POST /resolve-suggestion', () => {
+    it('returns ready=true with noteText when AI has enough context', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({ ready: true, noteText: 'Ischemic stroke, left MCA territory.' }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type (ischemic vs hemorrhagic) and vascular territory',
+          sectionName: 'Assessment',
+          existingContent: 'Patient with acute neurological deficits.',
+          transcript: 'The patient suffered an ischemic stroke involving the left MCA territory.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ready).toBe(true);
+      expect(typeof res.body.noteText).toBe('string');
+      expect(res.body.noteText.length).toBeGreaterThan(0);
+    });
+
+    it('returns ready=false with question and options when AI needs clarification', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          ready: false,
+          question: 'What type of stroke?',
+          options: ['Ischemic', 'Hemorrhagic', 'Not yet determined'],
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document stroke type (ischemic vs hemorrhagic) and vascular territory',
+          sectionName: 'Assessment',
+          existingContent: 'Patient with acute neurological deficits.',
+          transcript: 'Patient has new neuro deficits.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ready).toBe(false);
+      expect(typeof res.body.question).toBe('string');
+      expect(Array.isArray(res.body.options)).toBe(true);
+      expect(res.body.options.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('returns 400 if suggestion is missing', async () => {
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({ sectionName: 'Assessment' });
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 401 without auth', async () => {
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .send({ suggestion: 'x', sectionName: 'Assessment' });
+      expect(res.status).toBe(401);
+    });
+  });
 });

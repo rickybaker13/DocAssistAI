@@ -159,28 +159,39 @@ router.post('/ghost-write', async (req: Request, res: Response) => {
     existingContent,
     noteType = 'progress_note',
     specialty = 'Medicine',
+    verbosity = 'standard',
   } = req.body;
 
   if (!chatAnswer || !destinationSection) {
     return res.status(400).json({ error: 'chatAnswer and destinationSection are required' }) as any;
   }
 
-  const systemPrompt = `You are a clinical documentation AI. Rewrite clinical information into physician note language.
-Return ONLY the ghost-written text — no explanation, no JSON, no markdown. Just the note text.`;
+  // Verbosity-specific writing instructions
+  const verbosityInstruction =
+    verbosity === 'brief'
+      ? `Write in clinical shorthand using standard medical abbreviations. Use sentence fragments — do NOT write complete sentences.
+Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj. ID consult placed. Cont vanco only if GPO source confirmed."`
+      : verbosity === 'detailed'
+      ? `Write in complete clinical prose with full sentences. Include clinical reasoning and context where relevant.`
+      : `Write 1–2 concise clinical sentences. Use medical abbreviations where natural (e.g., IV, q8h, D/C, s/p).`;
 
-  const userPrompt = `Rewrite the following clinical information as 1–3 sentences in first-person plural physician voice.
-Match the clinical density and writing style of the existing section content.
-The output should read as if the attending physician dictated it.
+  const systemPrompt = `You are a clinical documentation AI. Convert clinical information into physician note text.
+Output ONLY the note text — no explanation, no JSON, no markdown, no preamble.
+Never include notes about transcription quality, source artifacts, uncertainty about the source material, or any meta-commentary.
+Never include caveats, disclaimers, or any text that would not appear verbatim in a physician's clinical note.`;
 
-Clinical information to incorporate:
+  const userPrompt = `Convert the following clinical information into note text for the "${destinationSection}" section.
+${verbosityInstruction}
+Match the style of the existing section content if provided.
+
+Clinical information:
 "${chatAnswer}"
 
-Destination section: ${destinationSection}
 Note type: ${noteType}
 Specialty: ${specialty}
 ${existingContent ? `Existing section content (match this style): "${existingContent.slice(0, 300)}"` : ''}
 
-Output ONLY the ghost-written sentences. No preamble.`;
+Output ONLY the note text. Nothing else.`;
 
   try {
     const raw = await aiService.chat(
@@ -196,6 +207,78 @@ Output ONLY the ghost-written sentences. No preamble.`;
 
     const ghostWritten = extractContent(raw).trim();
     return res.json({ ghostWritten });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST /api/ai/scribe/resolve-suggestion ──────────────────────────────────
+router.post('/resolve-suggestion', async (req: Request, res: Response) => {
+  const {
+    suggestion,
+    sectionName,
+    existingContent = '',
+    transcript = '',
+    noteType = 'progress_note',
+    verbosity = 'standard',
+  } = req.body;
+
+  if (!suggestion || !sectionName) {
+    return res.status(400).json({ error: 'suggestion and sectionName are required' }) as any;
+  }
+
+  const verbosityInstruction =
+    verbosity === 'brief'
+      ? 'If ready, write in clinical shorthand with medical abbreviations. Sentence fragments OK.'
+      : verbosity === 'detailed'
+      ? 'If ready, write in complete clinical prose with full reasoning.'
+      : 'If ready, write 1–2 concise clinical sentences with medical abbreviations where natural.';
+
+  const systemPrompt = `You are a clinical documentation AI. Your job is to convert a documentation suggestion into actual physician note text.
+
+First, search the provided transcript and existing section content for the clinical detail referenced in the suggestion.
+- If you find the detail → write the note text and return ready=true.
+- If a clinically critical detail is genuinely absent and cannot be inferred → return ready=false with a single focused question and 2–4 quick-select options. Always include a "Not yet determined" or equivalent escape option.
+
+Rules for note text when ready=true:
+${verbosityInstruction}
+Never include the suggestion text itself, meta-commentary, caveats, or guidance — only note-ready clinical content.
+
+Return ONLY valid JSON. No markdown fences. No extra text.`;
+
+  const userPrompt = `Suggestion to resolve: "${suggestion}"
+
+Section: ${sectionName}
+Note type: ${noteType}
+${existingContent ? `Existing section content:\n"${existingContent.slice(0, 400)}"` : ''}
+${transcript ? `Transcript excerpt:\n"${transcript.slice(0, 800)}"` : ''}
+
+Return one of these two JSON shapes:
+{ "ready": true, "noteText": "..." }
+{ "ready": false, "question": "...", "options": ["...", "...", "Not yet determined"] }`;
+
+  try {
+    const raw = await aiService.chat(
+      {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        options: { temperature: 0.2 },
+      },
+      { userId: req.scribeUserId }
+    );
+
+    const text = extractContent(raw);
+    let parsed: { ready: boolean; noteText?: string; question?: string; options?: string[] };
+    try {
+      const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      parsed = { ready: true, noteText: text.trim() };
+    }
+
+    return res.json(parsed);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
