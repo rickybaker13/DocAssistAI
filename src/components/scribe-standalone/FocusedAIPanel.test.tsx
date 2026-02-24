@@ -437,6 +437,96 @@ describe('FocusedAIPanel', () => {
     expect(screen.getByRole('button', { name: /add selected \(1\)/i })).toBeInTheDocument();
   });
 
+  it('batch auto-advances to next suggestion after confirm', async () => {
+    const batchResult = {
+      ...focusedResult,
+      suggestions: [
+        'Document stroke type (ischemic vs hemorrhagic)',
+        'Document vascular territory',
+      ],
+    };
+
+    // focused analysis
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => batchResult });
+    // resolve-suggestion for suggestion 0 (ready immediately)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Ischemic stroke.' }),
+    });
+    // resolve-suggestion for suggestion 1 (ready immediately)
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Left MCA territory.' }),
+    });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    // Select all and click Add selected
+    await waitFor(() => screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add selected/i }));
+
+    // First item: confirm
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    // Second item should start automatically
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    expect(onApplySuggestion).toHaveBeenCalledTimes(2);
+    expect(onApplySuggestion).toHaveBeenNthCalledWith(1, 'sec-1', 'Ischemic stroke.');
+    expect(onApplySuggestion).toHaveBeenNthCalledWith(2, 'sec-1', 'Left MCA territory.');
+  });
+
+  it('cancel mid-batch clears remaining queue', async () => {
+    const batchResult = {
+      ...focusedResult,
+      suggestions: [
+        'Document stroke type (ischemic vs hemorrhagic)',
+        'Document vascular territory',
+      ],
+    };
+
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => batchResult });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Ischemic stroke.' }),
+    });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /select all/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add selected/i }));
+
+    // Cancel during preview of first item
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
+
+    // Overlay dismissed; onApplySuggestion not called
+    expect(onApplySuggestion).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /confirm/i })).not.toBeInTheDocument();
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({

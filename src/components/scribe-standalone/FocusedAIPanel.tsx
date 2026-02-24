@@ -205,9 +205,19 @@ export const FocusedAIPanel: React.FC<Props> = ({
     if (!suggestionFlow || suggestionFlow.phase !== 'preview') return;
     onApplySuggestion(suggestionFlow.sectionId, suggestionFlow.noteText);
     setAddedSuggestionIndices(prev => new Set([...prev, suggestionFlow.suggestionIndex]));
-    setSuggestionFlow(null);
-    // onClose() removed; panel stays open for further additions
-  }, [suggestionFlow, onApplySuggestion]);
+
+    const nextQueue = [...batchQueueRef.current];
+    const nextIndex = nextQueue.shift();
+    batchQueueRef.current = nextQueue;
+
+    if (nextIndex !== undefined && result && section) {
+      // Auto-advance: start next batch item (transitions preview → loading)
+      startSuggestionProcessing(result.suggestions[nextIndex], nextIndex);
+    } else {
+      setSuggestionFlow(null);
+      if (batchTotal > 0) setBatchTotal(0);
+    }
+  }, [suggestionFlow, onApplySuggestion, result, section, batchTotal, startSuggestionProcessing]);
 
   const handleFreeTextSubmit = useCallback(() => {
     if (!freeTextValue.trim()) return;
@@ -326,10 +336,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
               <>
                 <div className="flex items-center gap-3 text-sm text-gray-600">
                   <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
-                  <span>Preparing note text...</span>
+                  <span>
+                    {batchTotal > 1
+                      ? `Processing ${addedSuggestionIndices.size + 1} of ${batchTotal}…`
+                      : 'Preparing note text...'}
+                  </span>
                 </div>
                 <button
-                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -363,7 +377,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                       </button>
                     </div>
                     <button
-                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
+                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
                       className="text-xs text-gray-400 hover:text-gray-600"
                     >
                       Cancel
@@ -399,7 +413,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     </button>
                     <button
                       aria-label="Cancel"
-                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); }}
+                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); batchQueueRef.current = []; setBatchTotal(0); }}
                       className="text-xs text-gray-400 hover:text-gray-600"
                     >
                       Cancel
@@ -417,7 +431,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <span>Writing note text...</span>
                 </div>
                 <button
-                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -441,7 +455,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     Confirm ✓
                   </button>
                   <button
-                    onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); }}
+                    onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
                     aria-label="Cancel"
                     className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl"
                   >
