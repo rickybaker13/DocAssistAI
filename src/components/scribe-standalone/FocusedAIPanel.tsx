@@ -218,10 +218,18 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
             {/* Loading phase */}
             {suggestionFlow.phase === 'loading' && (
-              <div className="flex items-center gap-3 text-sm text-gray-600">
-                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
-                <span>Preparing note text...</span>
-              </div>
+              <>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
+                  <span>Preparing note text...</span>
+                </div>
+                <button
+                  onClick={() => setSuggestionFlow(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancel
+                </button>
+              </>
             )}
 
             {/* Clarify phase */}
@@ -250,10 +258,18 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
             {/* Resolving phase */}
             {suggestionFlow.phase === 'resolving' && (
-              <div className="flex items-center gap-3 text-sm text-gray-600">
-                <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
-                <span>Writing note text...</span>
-              </div>
+              <>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
+                  <span>Writing note text...</span>
+                </div>
+                <button
+                  onClick={() => setSuggestionFlow(null)}
+                  className="text-xs text-gray-400 hover:text-gray-600"
+                >
+                  Cancel
+                </button>
+              </>
             )}
 
             {/* Preview phase */}
