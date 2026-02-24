@@ -1,3 +1,13 @@
+// Column migrations run after CREATE_TABLES to add new columns to pre-existing tables.
+// Each entry is checked via PRAGMA table_info before executing, so it's safe to run repeatedly.
+export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
+  {
+    table: 'scribe_notes',
+    column: 'verbosity',
+    sql: `ALTER TABLE scribe_notes ADD COLUMN verbosity TEXT NOT NULL DEFAULT 'standard'`,
+  },
+];
+
 export const CREATE_TABLES = `
 CREATE TABLE IF NOT EXISTS scribe_users (
   id            TEXT PRIMARY KEY,
