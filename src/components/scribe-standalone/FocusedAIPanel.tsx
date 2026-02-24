@@ -150,8 +150,9 @@ export const FocusedAIPanel: React.FC<Props> = ({
     const allUnaddedIndices = result.suggestions
       .map((_, i) => i)
       .filter(i => !addedSuggestionIndices.has(i));
+    const allAlreadySelected = allUnaddedIndices.every(i => selectedSuggestions.has(i));
     setSelectedSuggestions(
-      selectedSuggestions.size === allUnaddedIndices.length
+      allAlreadySelected
         ? new Set()
         : new Set(allUnaddedIndices)
     );
@@ -265,16 +266,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-xs font-semibold text-gray-500 uppercase">Suggestions</h3>
-                      {result.suggestions.length > 0 && (
-                        <button
-                          onClick={handleSelectAll}
-                          className="text-xs text-blue-600 hover:underline"
-                        >
-                          {selectedSuggestions.size > 0 && selectedSuggestions.size === result.suggestions.filter((_, i) => !addedSuggestionIndices.has(i)).length
-                            ? 'Deselect all'
-                            : 'Select all'}
-                        </button>
-                      )}
+                      <button
+                        onClick={handleSelectAll}
+                        className="text-xs text-blue-600 hover:underline"
+                      >
+                        {selectedSuggestions.size > 0 && selectedSuggestions.size === result.suggestions.filter((_, i) => !addedSuggestionIndices.has(i)).length
+                          ? 'Deselect all'
+                          : 'Select all'}
+                      </button>
                     </div>
                     {result.suggestions.map((s, i) => (
                       <div key={i} className={`flex items-center gap-2 text-sm py-1 ${addedSuggestionIndices.has(i) ? 'opacity-50' : ''}`}>
