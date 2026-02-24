@@ -353,6 +353,46 @@ describe('FocusedAIPanel', () => {
     expect(screen.queryAllByRole('button', { name: /add to note/i })).toHaveLength(0);
   });
 
+  it('renders a checkbox for each suggestion', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByText('Document stroke type (ischemic vs hemorrhagic)'));
+    const checkboxes = screen.getAllByRole('checkbox');
+    expect(checkboxes).toHaveLength(focusedResult.suggestions.length);
+  });
+
+  it('checking a suggestion checkbox selects it for batch', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getAllByRole('checkbox'));
+    const [firstCheckbox] = screen.getAllByRole('checkbox');
+    expect(firstCheckbox).not.toBeChecked();
+    fireEvent.click(firstCheckbox);
+    expect(firstCheckbox).toBeChecked();
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({

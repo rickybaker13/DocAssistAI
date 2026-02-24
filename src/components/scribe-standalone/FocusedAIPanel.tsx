@@ -45,6 +45,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [showFreeText, setShowFreeText] = useState(false);
   const [freeTextValue, setFreeTextValue] = useState('');
   const [addedSuggestionIndices, setAddedSuggestionIndices] = useState<Set<number>>(new Set());
+  const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
   const flowAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     setLoading(true);
     setError(null);
     setAddedSuggestionIndices(new Set());
+    setSelectedSuggestions(new Set());
     fetch(`${getBackendUrl()}/api/ai/scribe/focused`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -126,6 +128,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
       setSuggestionFlow(null);
     }
   }, [section, transcript, noteType, verbosity]);
+
+  const handleToggleSuggestion = useCallback((index: number) => {
+    setSelectedSuggestions(prev => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index); else next.add(index);
+      return next;
+    });
+  }, []);
 
   // Guard wrapper — used by "Add to note" buttons (prevents concurrent flows)
   const handleAddToNote = useCallback((suggestion: string, index: number) => {
@@ -228,8 +238,16 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <div>
                     <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Suggestions</h3>
                     {result.suggestions.map((s, i) => (
-                      <div key={i} className={`flex items-start gap-2 text-sm py-1 ${addedSuggestionIndices.has(i) ? 'opacity-50' : ''}`}>
-                        <span className="text-orange-500 mt-0.5">•</span>
+                      <div key={i} className={`flex items-center gap-2 text-sm py-1 ${addedSuggestionIndices.has(i) ? 'opacity-50' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedSuggestions.has(i)}
+                          onChange={() => handleToggleSuggestion(i)}
+                          disabled={addedSuggestionIndices.has(i)}
+                          aria-label={`Select suggestion: ${s}`}
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 flex-shrink-0"
+                        />
+                        <span className="text-orange-500">•</span>
                         <span className="flex-1 text-gray-700">{s}</span>
                         {addedSuggestionIndices.has(i) ? (
                           <span className="text-xs text-green-600 font-medium flex-shrink-0">✓ Added</span>
@@ -239,7 +257,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                             aria-label="Add to note"
                             className="text-xs text-blue-600 hover:underline flex-shrink-0"
                           >
-                            Add to note
+                            Add →
                           </button>
                         )}
                       </div>
