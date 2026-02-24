@@ -58,6 +58,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     setSuggestionFlow(null);
     setLoading(true);
     setError(null);
+    setAddedSuggestionIndices(new Set());
     fetch(`${getBackendUrl()}/api/ai/scribe/focused`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
