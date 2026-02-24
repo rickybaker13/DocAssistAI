@@ -11,6 +11,7 @@ interface NoteData {
   patient_label: string | null;
   status: string;
   transcript: string | null;
+  verbosity: string;
 }
 
 interface SectionData {
@@ -239,6 +240,8 @@ export const ScribeNotePage: React.FC = () => {
         <FocusedAIPanel
           section={focusedSection}
           transcript={note.transcript || ''}
+          noteType={note.note_type}
+          verbosity={note.verbosity}
           onClose={() => setFocusedSection(null)}
           onApplySuggestion={handleApplySuggestion}
         />
@@ -246,6 +249,7 @@ export const ScribeNotePage: React.FC = () => {
       <ScribeChatDrawer
         sections={sections}
         noteType={note.note_type}
+        verbosity={note.verbosity}
         onInsert={handleChatInsert}
       />
 
