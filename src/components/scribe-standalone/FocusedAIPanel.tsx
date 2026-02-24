@@ -48,6 +48,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
   const batchQueueRef = useRef<number[]>([]);
   const [batchTotal, setBatchTotal] = useState(0);
+  const [addedCitationIndices, setAddedCitationIndices] = useState<Set<number>>(new Set());
   const flowAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -63,6 +64,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     setError(null);
     setAddedSuggestionIndices(new Set());
     setSelectedSuggestions(new Set());
+    setAddedCitationIndices(new Set());
     fetch(`${getBackendUrl()}/api/ai/scribe/focused`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -173,6 +175,13 @@ export const FocusedAIPanel: React.FC<Props> = ({
     startSuggestionProcessing(result.suggestions[first], first);
   }, [section, result, selectedSuggestions, addedSuggestionIndices, startSuggestionProcessing]);
 
+  const handleAddCitation = useCallback((c: { guideline: string; year?: string; recommendation: string }, index: number) => {
+    if (!section) return;
+    const text = `Per ${c.guideline}${c.year ? ` (${c.year})` : ''} guidelines: ${c.recommendation}`;
+    onApplySuggestion(section.id, text);
+    setAddedCitationIndices(prev => new Set([...prev, index]));
+  }, [section, onApplySuggestion]);
+
   const handleOptionSelected = useCallback(async (option: string) => {
     if (!suggestionFlow || suggestionFlow.phase !== 'clarify') return;
     const { suggestion, sectionId, suggestionIndex } = suggestionFlow;
@@ -267,8 +276,23 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Guideline Citations</h3>
                     {result.citations.map((c, i) => (
                       <div key={i} className="bg-blue-50 rounded-lg p-2 mb-2 text-sm">
-                        <p className="font-medium text-blue-800">{c.guideline}{c.year && ` (${c.year})`}</p>
-                        <p className="text-blue-700 text-xs mt-0.5">{c.recommendation}</p>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="font-medium text-blue-800">{c.guideline}{c.year && ` (${c.year})`}</p>
+                            <p className="text-blue-700 text-xs mt-0.5">{c.recommendation}</p>
+                          </div>
+                          {addedCitationIndices.has(i) ? (
+                            <span className="text-xs text-green-600 font-medium flex-shrink-0 mt-0.5">✓ Added</span>
+                          ) : (
+                            <button
+                              onClick={() => handleAddCitation(c, i)}
+                              aria-label="Add citation"
+                              className="text-xs text-blue-600 hover:underline flex-shrink-0 mt-0.5"
+                            >
+                              Add citation
+                            </button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

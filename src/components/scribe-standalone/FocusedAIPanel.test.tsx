@@ -572,6 +572,69 @@ describe('FocusedAIPanel', () => {
     expect(onApplySuggestion).toHaveBeenCalledWith('sec-1', 'Ischemic stroke.');
   });
 
+  it('"Add citation" button appears on each guideline card', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByText(/AHA\/ASA/));
+    expect(screen.getByRole('button', { name: /add citation/i })).toBeInTheDocument();
+  });
+
+  it('"Add citation" applies formatted guideline text to the note', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByRole('button', { name: /add citation/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add citation/i }));
+
+    expect(onApplySuggestion).toHaveBeenCalledWith(
+      'sec-1',
+      'Per AHA/ASA (2023) guidelines: Determine stroke type.'
+    );
+  });
+
+  it('citation shows ✓ Added after being added', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    await waitFor(() => screen.getByRole('button', { name: /add citation/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add citation/i }));
+
+    // Button replaced by ✓ Added
+    expect(screen.queryByRole('button', { name: /add citation/i })).not.toBeInTheDocument();
+    expect(screen.getAllByText('✓ Added')).toHaveLength(1);
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({
