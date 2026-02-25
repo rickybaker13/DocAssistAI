@@ -1,6 +1,7 @@
 // src/components/scribe-standalone/NoteBuilderPage.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Mic, X } from 'lucide-react';
 import { SectionLibrary } from './SectionLibrary';
 import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
@@ -151,7 +152,9 @@ export const NoteBuilderPage: React.FC = () => {
         <div className={`${showLibrary ? 'block' : 'hidden'} lg:block bg-slate-900 border border-slate-700 rounded-xl overflow-hidden`} style={{ maxHeight: '60vh' }}>
           <div className="px-3 py-2 border-b border-slate-700 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-50">Section Library</h2>
-            <button onClick={() => setShowLibrary(false)} className="lg:hidden text-slate-400 text-lg">×</button>
+            <button onClick={() => setShowLibrary(false)} aria-label="Close section library" className="lg:hidden text-slate-400">
+              <X size={16} aria-hidden="true" />
+            </button>
           </div>
           <SectionLibrary />
         </div>
@@ -174,10 +177,11 @@ export const NoteBuilderPage: React.FC = () => {
       {/* Verbosity */}
       <div className="flex flex-col gap-1">
         <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Note Verbosity</p>
-        <div className="bg-slate-800 rounded-full p-1 flex w-fit">
+        <div className="bg-slate-800 rounded-full p-1 flex w-fit" role="group" aria-label="Note verbosity">
           {VERBOSITY_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setVerbosity(opt.value)}
-              title={opt.description}
+              aria-label={`${opt.label} — ${opt.description}`}
+              aria-pressed={verbosity === opt.value}
               className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${verbosity === opt.value ? 'bg-slate-700 text-slate-50' : 'text-slate-500 hover:text-slate-300'}`}>
               {opt.label}
             </button>
@@ -217,7 +221,8 @@ export const NoteBuilderPage: React.FC = () => {
       {error && <p className="text-sm text-red-400 bg-red-950/30 rounded p-2">{error}</p>}
       <button onClick={handleStartRecording} disabled={creating || canvasSections.length === 0}
         className="w-full py-4 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-        {creating ? 'Starting...' : '🎙 Record'}
+        <Mic size={18} aria-hidden="true" />
+        {creating ? 'Starting...' : 'Record'}
       </button>
     </div>
   );

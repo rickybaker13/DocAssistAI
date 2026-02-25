@@ -57,14 +57,14 @@ export const SectionLibrary: React.FC = () => {
               key={t.id}
               onClick={() => addSection({ id: t.id, name: t.name, promptHint: t.prompt_hint, isPrebuilt: t.is_prebuilt === 1 })}
               disabled={added}
-              className={`w-full text-left bg-slate-800 border border-slate-700 rounded-lg p-3 cursor-grab hover:bg-slate-700 hover:border-slate-600 transition-all duration-150 flex items-center gap-2 ${added ? 'opacity-40 cursor-default' : ''}`}
+              className={`group w-full text-left bg-slate-800 border border-slate-700 rounded-lg p-3 transition-all duration-150 flex items-center gap-2 ${added ? 'opacity-40 cursor-default' : 'cursor-grab hover:bg-slate-700 hover:border-slate-600'}`}
             >
               <GripVertical size={14} className="text-slate-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-slate-200 text-sm font-medium truncate">{t.name}</p>
                 {t.prompt_hint && <p className="text-slate-500 text-xs truncate">{t.prompt_hint}</p>}
               </div>
-              {!added && <span className="text-teal-400 text-xs opacity-0 group-hover:opacity-100">+ Add</span>}
+              {!added && <span className="text-teal-400 text-xs opacity-0 group-hover:opacity-100 group-focus-within:opacity-100">+ Add</span>}
               {added && <span className="text-teal-400 text-xs">✓</span>}
             </button>
           );

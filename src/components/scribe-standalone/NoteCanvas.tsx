@@ -20,8 +20,8 @@ const SortableItem: React.FC<{ section: CanvasSection }> = ({ section }) => {
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
       className={`bg-slate-800 border border-slate-700 border-l-4 ${isDragging ? 'border-l-slate-700' : 'border-l-teal-400'} rounded-lg p-3 flex items-center gap-2`}
     >
-      <span {...attributes} {...listeners} className="text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" title="Drag to reorder">
-        <GripVertical size={16} />
+      <span {...attributes} {...listeners} className="text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" aria-label="Drag to reorder">
+        <GripVertical size={16} aria-hidden="true" />
       </span>
       <div className="flex-1 min-w-0">
         <p className="text-slate-200 text-sm truncate">{section.name}</p>
@@ -33,7 +33,7 @@ const SortableItem: React.FC<{ section: CanvasSection }> = ({ section }) => {
         aria-label="Remove section"
         className="text-slate-600 hover:text-red-400 p-1 rounded transition-colors flex-shrink-0"
       >
-        <X size={14} />
+        <X size={14} aria-hidden="true" />
       </button>
     </div>
   );
