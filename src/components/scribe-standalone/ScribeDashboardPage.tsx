@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { NoteCard } from './NoteCard';
 import { getBackendUrl } from '../../config/appConfig';
 import type { Note } from './types';
+import { Search, Plus } from 'lucide-react';
 
 const STATUS_FILTERS = ['All', 'Draft', 'Finalized'] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
@@ -15,24 +16,17 @@ export const ScribeDashboardPage: React.FC = () => {
 
   useEffect(() => {
     fetch(`${getBackendUrl()}/api/scribe/notes`, { credentials: 'include' })
-      .then(r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        return r.json();
-      })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(d => { setNotes(d.notes || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
   const handleDelete = async (id: string) => {
     try {
-      const r = await fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
+      const r = await fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, { method: 'DELETE', credentials: 'include' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setNotes(prev => prev.filter(n => n.id !== id));
     } catch (e: unknown) {
-      // Note remains in list if delete failed — user can try again
       console.error('Failed to delete note:', e instanceof Error ? e.message : e);
     }
   };
@@ -49,52 +43,63 @@ export const ScribeDashboardPage: React.FC = () => {
   });
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">My Notes</h1>
+        <h1 className="text-xl font-semibold text-slate-50 tracking-tight">My Notes</h1>
         <Link
           to="/scribe/note/new"
-          className="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 transition-colors"
+          className="hidden md:flex items-center gap-1.5 bg-teal-400 text-slate-900 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-teal-300 transition-colors"
         >
-          + New Note
+          <Plus size={16} />
+          New Note
         </Link>
       </div>
 
-      <input
-        type="text"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        placeholder="Search by patient label or note type..."
-        aria-label="Search notes"
-        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Search */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+        <input
+          type="text" value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="Search by patient label or note type…"
+          aria-label="Search notes"
+          className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-colors"
+        />
+      </div>
 
+      {/* Status filters */}
       <div className="flex gap-2">
         {STATUS_FILTERS.map(f => (
           <button
-            key={f}
-            onClick={() => setStatusFilter(f)}
-            className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${statusFilter === f ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+            key={f} onClick={() => setStatusFilter(f)}
+            className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+              statusFilter === f
+                ? 'bg-teal-400/20 text-teal-400 border-teal-400/30'
+                : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-600 hover:text-slate-300'
+            }`}
           >
             {f}
           </button>
         ))}
       </div>
 
+      {/* List */}
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+          <div className="animate-spin h-8 w-8 border-4 border-teal-400 border-t-transparent rounded-full" />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           {notes.length === 0 ? (
             <>
-              <p className="text-gray-400 text-base mb-2">No notes yet</p>
-              <p className="text-gray-300 text-sm mb-4">Record your first patient encounter to get started</p>
-              <Link to="/scribe/note/new" className="text-blue-600 hover:underline text-sm">Create first note →</Link>
+              <p className="text-slate-500 text-base mb-2">No notes yet</p>
+              <p className="text-slate-600 text-sm mb-4">Record your first patient encounter to get started</p>
+              <Link to="/scribe/note/new" className="text-teal-400 hover:text-teal-300 text-sm transition-colors">
+                Create first note →
+              </Link>
             </>
           ) : (
-            <p className="text-gray-400 text-sm">No notes match your search</p>
+            <p className="text-slate-500 text-sm">No notes match your search</p>
           )}
         </div>
       ) : (
@@ -104,6 +109,15 @@ export const ScribeDashboardPage: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* Mobile FAB */}
+      <Link
+        to="/scribe/note/new"
+        aria-label="New Note"
+        className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 bg-teal-400 text-slate-900 rounded-full shadow-[0_0_20px_rgba(45,212,191,0.25)] flex items-center justify-center hover:bg-teal-300 transition-all duration-150"
+      >
+        <Plus size={24} />
+      </Link>
     </div>
   );
 };
