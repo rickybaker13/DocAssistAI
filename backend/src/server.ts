@@ -22,6 +22,7 @@ import scribeNotesRouter from './routes/scribeNotes.js';
 import scribeTemplatesRouter from './routes/scribeTemplates.js';
 import scribeAiRouter from './routes/scribeAi.js';
 import scribeNoteTemplatesRouter from './routes/scribeNoteTemplates.js';
+import healthRouter from './routes/health.js';
 
 dotenv.config();
 
@@ -92,6 +93,7 @@ app.use('/api/scribe/notes', scribeNotesRouter);
 app.use('/api/scribe/templates', scribeTemplatesRouter);
 app.use('/api/ai/scribe', scribeAiRouter);
 app.use('/api/scribe/note-templates', scribeNoteTemplatesRouter);
+app.use('/api', healthRouter);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {
