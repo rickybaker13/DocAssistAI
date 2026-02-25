@@ -76,4 +76,8 @@ describe('findCodingMatches', () => {
   it('does not flag "COPD" when "without acute exacerbation" appears nearby', () => {
     expect(findCodingMatches('COPD without acute exacerbation, stable.')).toHaveLength(0);
   });
+
+  it('does NOT flag "CHF" when "acute on chronic" (space-separated) appears nearby', () => {
+    expect(findCodingMatches('acute on chronic CHF')).toHaveLength(0);
+  });
 });
