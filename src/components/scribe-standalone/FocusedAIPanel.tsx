@@ -48,6 +48,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
   const [selectedSuggestions, setSelectedSuggestions] = useState<Set<number>>(new Set());
   const batchQueueRef = useRef<number[]>([]);
   const [batchTotal, setBatchTotal] = useState(0);
+  const [batchCurrentItem, setBatchCurrentItem] = useState(0);
   const [addedCitationIndices, setAddedCitationIndices] = useState<Set<number>>(new Set());
   const flowAbortRef = useRef<AbortController | null>(null);
 
@@ -65,6 +66,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     setAddedSuggestionIndices(new Set());
     setSelectedSuggestions(new Set());
     setAddedCitationIndices(new Set());
+    setBatchCurrentItem(0);
     fetch(`${getBackendUrl()}/api/ai/scribe/focused`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -132,6 +134,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
       setSuggestionFlow(null);
       batchQueueRef.current = [];
       setBatchTotal(0);
+      setBatchCurrentItem(0);
     }
   }, [section, transcript, noteType, verbosity]);
 
@@ -171,6 +174,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     const [first, ...rest] = indices;
     batchQueueRef.current = rest;
     setBatchTotal(indices.length);
+    setBatchCurrentItem(1);
     setSelectedSuggestions(new Set());
     startSuggestionProcessing(result.suggestions[first], first);
   }, [section, result, selectedSuggestions, addedSuggestionIndices, startSuggestionProcessing]);
@@ -223,12 +227,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
     if (nextIndex !== undefined && result && section) {
       // Auto-advance: start next batch item (transitions preview → loading)
+      setBatchCurrentItem(prev => prev + 1);
       startSuggestionProcessing(result.suggestions[nextIndex], nextIndex);
     } else {
       setSuggestionFlow(null);
       if (batchTotal > 0) setBatchTotal(0);
+      setBatchCurrentItem(0);
     }
-  }, [suggestionFlow, onApplySuggestion, result, section, batchTotal, startSuggestionProcessing]);
+  }, [suggestionFlow, onApplySuggestion, result, section, batchTotal, startSuggestionProcessing, setBatchCurrentItem]);
 
   const handleFreeTextSubmit = useCallback(() => {
     if (!freeTextValue.trim()) return;
@@ -364,12 +370,12 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
                   <span>
                     {batchTotal > 1
-                      ? `Processing ${addedSuggestionIndices.size + 1} of ${batchTotal}…`
+                      ? `Processing ${batchCurrentItem} of ${batchTotal}…`
                       : 'Preparing note text...'}
                   </span>
                 </div>
                 <button
-                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -403,7 +409,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                       </button>
                     </div>
                     <button
-                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
+                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
                       className="text-xs text-gray-400 hover:text-gray-600"
                     >
                       Cancel
@@ -439,7 +445,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     </button>
                     <button
                       aria-label="Cancel"
-                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); batchQueueRef.current = []; setBatchTotal(0); }}
+                      onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
                       className="text-xs text-gray-400 hover:text-gray-600"
                     >
                       Cancel
@@ -457,7 +463,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <span>Writing note text...</span>
                 </div>
                 <button
-                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
+                  onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
                   className="text-xs text-gray-400 hover:text-gray-600"
                 >
                   Cancel
@@ -481,7 +487,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     Confirm ✓
                   </button>
                   <button
-                    onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); }}
+                    onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
                     aria-label="Cancel"
                     className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl"
                   >

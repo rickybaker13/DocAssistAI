@@ -635,6 +635,81 @@ describe('FocusedAIPanel', () => {
     expect(screen.getAllByText('✓ Added')).toHaveLength(1);
   });
 
+  it('batch progress counter shows correct item number regardless of prior adds', async () => {
+    const batchResult = {
+      ...focusedResult,
+      suggestions: [
+        'Document stroke type (ischemic vs hemorrhagic)',
+        'Document vascular territory',
+        'Document NIHSS score',
+      ],
+    };
+
+    // Deferred helpers so we can assert the loading state before the fetch resolves
+    let resolveBatch1!: (v: unknown) => void;
+    let resolveBatch2!: (v: unknown) => void;
+    const batch1Promise = new Promise(r => { resolveBatch1 = r; });
+    const batch2Promise = new Promise(r => { resolveBatch2 = r; });
+
+    // Initial focused analysis
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => batchResult });
+    // Single add (suggestion 0) resolve — ready immediately
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ready: true, noteText: 'Ischemic stroke noted.' }),
+    });
+    // Batch item 1 (suggestion 1) — deferred so loading state is observable
+    mockFetch.mockImplementationOnce(() => batch1Promise);
+    // Batch item 2 (suggestion 2) — deferred so loading state is observable
+    mockFetch.mockImplementationOnce(() => batch2Promise);
+
+    render(
+      <FocusedAIPanel
+        section={mockSection}
+        transcript="x"
+        noteType="progress_note"
+        verbosity="standard"
+        onClose={onClose}
+        onApplySuggestion={onApplySuggestion}
+      />
+    );
+
+    // Step 1: Single-add suggestion 0 first (to pollute addedSuggestionIndices)
+    await waitFor(() => screen.getAllByRole('button', { name: /add to note/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /add to note/i })[0]);
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    // Step 2: Select remaining 2 suggestions for batch
+    await waitFor(() => screen.getAllByRole('checkbox'));
+    const checkboxes = screen.getAllByRole('checkbox');
+    fireEvent.click(checkboxes[1]); // suggestion index 1
+    fireEvent.click(checkboxes[2]); // suggestion index 2
+
+    // Step 3: Click "Add selected (2)"
+    await waitFor(() => screen.getByRole('button', { name: /add selected \(2\)/i }));
+    fireEvent.click(screen.getByRole('button', { name: /add selected \(2\)/i }));
+
+    // Step 4: Loading overlay for batch item 1 should show "Processing 1 of 2"
+    await waitFor(() => screen.getByText(/processing/i));
+    expect(screen.getByText('Processing 1 of 2…')).toBeInTheDocument();
+
+    // Resolve batch item 1 so component advances to preview
+    resolveBatch1({ ok: true, json: async () => ({ ready: true, noteText: 'Left MCA territory.' }) });
+
+    // Confirm item 1
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+    fireEvent.click(screen.getByRole('button', { name: /confirm/i }));
+
+    // Step 5: Loading overlay for batch item 2 should show "Processing 2 of 2"
+    await waitFor(() => screen.getByText(/processing/i));
+    expect(screen.getByText('Processing 2 of 2…')).toBeInTheDocument();
+
+    // Resolve batch item 2 to clean up
+    resolveBatch2({ ok: true, json: async () => ({ ready: true, noteText: 'NIHSS 14.' }) });
+    await waitFor(() => screen.getByRole('button', { name: /confirm/i }));
+  });
+
   it('Enter key submits free-text input', async () => {
     mockFetch.mockResolvedValueOnce({ ok: true, json: async () => focusedResult });
     mockFetch.mockResolvedValueOnce({
