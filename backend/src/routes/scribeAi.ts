@@ -2,6 +2,9 @@ import { Router, Request, Response } from 'express';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth';
 import { aiService } from '../services/ai/aiService';
 
+
+const ICD10_TERMINOLOGY_INSTRUCTION = `Use ICD-10-CM preferred terminology throughout. Examples: 'essential (primary) hypertension' not 'high blood pressure'; 'Type 2 diabetes mellitus' not 'diabetes' or 'diabetic'; specify systolic/diastolic and acute/chronic/acute-on-chronic for heart failure; 'COPD with acute exacerbation' or 'COPD without acute exacerbation' not 'COPD' alone; 'sequelae of CVA with [deficit]' not 'history of stroke' when deficits persist. Avoid 'history of [condition]' for conditions still actively managed — in ICD-10, 'history of' means fully resolved.`;
+
 const router = Router();
 router.use(scribeAuthMiddleware);
 
@@ -44,7 +47,8 @@ Generate structured note content for each section listed below, based ONLY on th
 Write in first-person plural physician voice ("We assessed...", "The patient was...", "Our plan includes...").
 Be clinically precise. Do not fabricate findings not present in the transcript.
 If a section cannot be completed from the transcript, write: "Insufficient information captured."
-Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}`;
+Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}
+${ICD10_TERMINOLOGY_INSTRUCTION}`;
 
   const userPrompt = `Transcript:
 "${transcript}"
@@ -100,7 +104,8 @@ router.post('/focused', async (req: Request, res: Response) => {
   }
 
   const systemPrompt = `You are a senior ${specialty} physician AI providing expert clinical analysis.
-Analyze the provided note section and return structured JSON only — no markdown, no extra text.`;
+Analyze the provided note section and return structured JSON only — no markdown, no extra text.
+${ICD10_TERMINOLOGY_INSTRUCTION}`;
 
   const userPrompt = `Analyze this note section and provide deep clinical insight.
 
@@ -178,7 +183,8 @@ Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj
   const systemPrompt = `You are a clinical documentation AI. Convert clinical information into physician note text.
 Output ONLY the note text — no explanation, no JSON, no markdown, no preamble.
 Never include notes about transcription quality, source artifacts, uncertainty about the source material, or any meta-commentary.
-Never include caveats, disclaimers, or any text that would not appear verbatim in a physician's clinical note.`;
+Never include caveats, disclaimers, or any text that would not appear verbatim in a physician's clinical note.
+${ICD10_TERMINOLOGY_INSTRUCTION}`;
 
   const userPrompt = `Convert the following clinical information into note text for the "${destinationSection}" section.
 ${verbosityInstruction}
@@ -251,7 +257,8 @@ ${verbosityInstruction}
 Never include notes about transcription quality, source artifacts, uncertainty about the source material, or any meta-commentary.
 Never include the suggestion text itself, caveats, or guidance — only note-ready clinical content.
 
-Return ONLY valid JSON. No markdown fences. No extra text.`;
+Return ONLY valid JSON. No markdown fences. No extra text.
+${ICD10_TERMINOLOGY_INSTRUCTION}`;
 
   const userPrompt = `Suggestion to resolve: "${suggestion}"
 

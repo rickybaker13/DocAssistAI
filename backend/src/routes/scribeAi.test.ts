@@ -102,6 +102,17 @@ describe('Scribe AI Routes', () => {
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body.sections)).toBe(true);
     });
+
+    it('system prompt includes ICD-10 terminology instruction', async () => {
+      mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
+        sections: [{ name: 'Assessment', content: 'Essential hypertension.', confidence: 0.9 }],
+      }) } as any);
+      await request(app).post('/api/ai/scribe/generate').set('Cookie', authCookie)
+        .send({ transcript: 'HTN.', sections: [{ name: 'Assessment' }], noteType: 'progress_note' });
+      const sys: string = (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'system')?.content ?? '';
+      expect(sys).toMatch(/ICD-10|icd-10/i);
+      expect(sys).toMatch(/essential.*hypertension|preferred terminology/i);
+    });
   });
 
   describe('POST /focused', () => {
@@ -127,6 +138,16 @@ describe('Scribe AI Routes', () => {
       expect(res.body.analysis).toBeDefined();
       expect(Array.isArray(res.body.citations)).toBe(true);
     });
+
+    it('system prompt includes ICD-10 terminology instruction', async () => {
+      mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
+        analysis: 'Good.', citations: [], suggestions: [], confidence_breakdown: '',
+      }) } as any);
+      await request(app).post('/api/ai/scribe/focused').set('Cookie', authCookie)
+        .send({ sectionName: 'Assessment', content: 'HTN.', transcript: '' });
+      const sys: string = (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'system')?.content ?? '';
+      expect(sys).toMatch(/ICD-10|icd-10/i);
+    });
   });
 
   describe('POST /ghost-write', () => {
@@ -147,6 +168,14 @@ describe('Scribe AI Routes', () => {
       expect(res.status).toBe(200);
       expect(typeof res.body.ghostWritten).toBe('string');
       expect(res.body.ghostWritten.length).toBeGreaterThan(0);
+    });
+
+    it('system prompt includes ICD-10 terminology instruction', async () => {
+      mockAiChat.mockResolvedValueOnce({ content: 'Essential hypertension, on lisinopril.' } as any);
+      await request(app).post('/api/ai/scribe/ghost-write').set('Cookie', authCookie)
+        .send({ chatAnswer: 'HTN on lisinopril', destinationSection: 'Assessment' });
+      const sys: string = (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'system')?.content ?? '';
+      expect(sys).toMatch(/ICD-10|icd-10/i);
     });
   });
 
@@ -363,6 +392,16 @@ describe('Scribe AI Routes', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toMatch(/no options/i);
+    });
+
+    it('system prompt includes ICD-10 terminology instruction', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({ ready: true, noteText: 'Essential (primary) hypertension.' }),
+      } as any);
+      await request(app).post('/api/ai/scribe/resolve-suggestion').set('Cookie', authCookie)
+        .send({ suggestion: 'Document BP', sectionName: 'Assessment', transcript: 'HTN.' });
+      const sys: string = (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'system')?.content ?? '';
+      expect(sys).toMatch(/ICD-10|icd-10/i);
     });
   });
 });
