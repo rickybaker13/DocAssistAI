@@ -132,7 +132,7 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          aria-label="Chat"
+          aria-label="Open chat"
           className="fixed bottom-20 right-5 md:bottom-6 md:right-6 z-40 w-14 h-14 bg-teal-400 text-slate-900 rounded-full shadow-[0_0_20px_rgba(45,212,191,0.25)] flex items-center justify-center hover:bg-teal-300 hover:shadow-[0_0_28px_rgba(45,212,191,0.35)] transition-all duration-150"
         >
           <MessageSquare size={22} aria-hidden="true" />
@@ -153,8 +153,12 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
             </button>
           </div>
 
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {/* Messages — C1: aria-live so new messages are announced to screen readers */}
+          <div
+            className="flex-1 overflow-y-auto p-4 space-y-3"
+            aria-live="polite"
+            aria-atomic="false"
+          >
             {messages.length === 0 && (
               <p className="text-sm text-slate-500 text-center py-4">Ask a clinical question about this patient or encounter.</p>
             )}
@@ -174,9 +178,10 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
                 </div>
               </div>
             ))}
+            {/* C2: role="status" so "Thinking..." is announced as a live status region */}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-slate-800 text-slate-500 animate-pulse rounded-2xl rounded-bl-sm px-3 py-2 text-sm">Thinking...</div>
+                <div role="status" className="bg-slate-800 text-slate-500 animate-pulse rounded-2xl rounded-bl-sm px-3 py-2 text-sm">Thinking...</div>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -186,10 +191,11 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
           {ghostState && (
             <div className="border-t border-slate-700 p-3 bg-violet-950/50 space-y-2">
               <p className="text-xs font-semibold text-violet-400">Add to section:</p>
+              {/* C4: more descriptive aria-label for the section select */}
               <select
                 value={ghostState.selectedSection}
                 onChange={e => setGhostState(prev => prev ? { ...prev, selectedSection: e.target.value, ghostWritten: null } : null)}
-                aria-label="Select section"
+                aria-label="Select destination note section"
                 className="w-full text-sm bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-violet-400"
               >
                 {sections.map(s => <option key={s.id} value={s.id}>{s.section_name}</option>)}
@@ -207,8 +213,9 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
                   <p className="text-xs font-medium text-violet-400">Preview:</p>
                   <p className="text-sm bg-slate-800 border border-slate-700 rounded p-2 text-slate-100">{ghostState.ghostWritten}</p>
                   <div className="flex gap-2">
+                    {/* C5: wrap ✓ in aria-hidden so screen readers don't read the symbol */}
                     <button onClick={handleConfirmInsert} aria-label="Confirm insert into note" className="flex-1 text-sm bg-teal-400 text-slate-900 font-semibold rounded-lg py-1.5 hover:bg-teal-300">
-                      Confirm ✓
+                      Confirm <span aria-hidden="true">✓</span>
                     </button>
                     <button onClick={() => setGhostState(null)} aria-label="Cancel ghost-write" className="text-sm text-slate-500 hover:text-slate-300 px-2">
                       Cancel
