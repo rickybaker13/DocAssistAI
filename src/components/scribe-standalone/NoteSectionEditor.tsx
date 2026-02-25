@@ -103,18 +103,16 @@ export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocuse
 
   const rows = Math.max(3, Math.ceil((text.length || 1) / 80));
 
-  // Confidence-driven left border color (inline ternary chain)
-  const leftBorderClass =
-    section.confidence === null
-      ? 'border-l-4 border-l-slate-600'
-      : section.confidence > 0.8
-      ? 'border-l-4 border-l-teal-400'
-      : section.confidence >= 0.5
-      ? 'border-l-4 border-l-amber-400'
-      : 'border-l-4 border-l-red-400';
-
   return (
-    <div className={`bg-slate-800 border border-slate-700 rounded-xl overflow-hidden mb-3 ${leftBorderClass}`}>
+    <div className={`bg-slate-800 border border-slate-700 rounded-xl overflow-hidden mb-3 ${
+      section.confidence === null
+        ? 'border-l-4 border-l-slate-600'
+        : section.confidence > 0.8
+        ? 'border-l-4 border-l-teal-400'
+        : section.confidence >= 0.5
+        ? 'border-l-4 border-l-amber-400'
+        : 'border-l-4 border-l-red-400'
+    }`}>
       {/* Section header row */}
       <div className="bg-slate-800 px-4 pt-3 pb-0 flex items-center justify-between">
         <div className="flex items-center gap-2">
