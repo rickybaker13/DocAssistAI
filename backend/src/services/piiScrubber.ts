@@ -124,7 +124,8 @@ function reInject(text: string, subMap: SubstitutionMap): string {
   for (const [token, original] of Object.entries(subMap)) {
     // Escape [ and ] since they are regex metacharacters
     const escaped = token.replace(/[[\]]/g, '\\$&');
-    result = result.replace(new RegExp(escaped, 'g'), original);
+    const safeOriginal = original.replace(/\$/g, '$$$$');
+    result = result.replace(new RegExp(escaped, 'g'), safeOriginal);
   }
   return result;
 }

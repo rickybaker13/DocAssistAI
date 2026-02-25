@@ -206,5 +206,11 @@ describe('piiScrubber', () => {
       const text = 'No tokens here.';
       expect(piiScrubber.reInject(text, {})).toBe(text);
     });
+
+    it('correctly restores values that contain $ characters', () => {
+      const subMap = { "[PERSON_0]": "O'Brien $& Co." };
+      const text = "Patient [PERSON_0] was seen.";
+      expect(piiScrubber.reInject(text, subMap)).toBe("Patient O'Brien $& Co. was seen.");
+    });
   });
 });
