@@ -6,63 +6,22 @@
  * live binding itself, so the spy is visible to the router module.
  */
 
-import { createServer } from 'http';
-import type { IncomingMessage } from 'http';
+import { jest, describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from '@jest/globals';
+import request from 'supertest';
 import express from 'express';
+import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
-// Singleton imports – must be dynamic so diagnostics: false applies
-// We import the router and singletons in beforeAll
+// Singleton imports – resolved in beforeAll
 let app: ReturnType<typeof express>;
-
-// ── HTTP helper ───────────────────────────────────────────────────────────────
-async function httpPost(
-  path: string,
-  body: unknown,
-  headers: Record<string, string> = {}
-): Promise<{ status: number; body: Record<string, unknown> }> {
-  return new Promise((resolve, reject) => {
-    const server = createServer(app);
-    server.listen(0, () => {
-      const addr = server.address() as { port: number };
-      const port = addr.port;
-      const bodyStr = JSON.stringify(body);
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const req = require('http').request(
-        {
-          hostname: 'localhost',
-          port,
-          path,
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': Buffer.byteLength(bodyStr).toString(),
-            ...headers,
-          },
-        },
-        (res: IncomingMessage) => {
-          let data = '';
-          res.on('data', (chunk: Buffer) => { data += chunk.toString(); });
-          res.on('end', () => {
-            server.close();
-            try {
-              resolve({ status: res.statusCode ?? 500, body: JSON.parse(data) });
-            } catch {
-              resolve({ status: res.statusCode ?? 500, body: {} });
-            }
-          });
-        }
-      );
-      req.on('error', (err: Error) => { server.close(); reject(err); });
-      req.write(bodyStr);
-      req.end();
-    });
-  });
-}
 
 // ── Singleton references (resolved in beforeAll) ──────────────────────────────
 let aiService: any;
 let contextStore: any;
 let ragService: any;
+
+// ── PII spy references ────────────────────────────────────────────────────────
+let mockScrub: ReturnType<typeof jest.spyOn>;
+let mockReInject: ReturnType<typeof jest.spyOn>;
 
 beforeAll(async () => {
   // Dynamic imports so ts-jest diagnostics: false applies; modules resolve once
@@ -80,6 +39,13 @@ beforeAll(async () => {
   app = express();
   app.use(express.json());
   app.use('/api/ai', aiRouter);
+
+  mockScrub = jest.spyOn(piiScrubber, 'scrub');
+  mockReInject = jest.spyOn(piiScrubber, 'reInject');
+});
+
+afterAll(() => {
+  jest.restoreAllMocks();
 });
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -87,7 +53,6 @@ beforeAll(async () => {
 describe('Chart-grounded chat endpoint', () => {
   let chatSpy: any;
   let contextStoreSpy: any;
-  let ragSpy: any;
 
   beforeEach(() => {
     // Spy on singleton methods before each test
@@ -99,12 +64,22 @@ describe('Chart-grounded chat endpoint', () => {
 
     contextStoreSpy = jest.spyOn(contextStore, 'get').mockReturnValue(null);
 
-    ragSpy = jest.spyOn(ragService, 'isAvailable').mockReturnValue(false);
+    jest.spyOn(ragService, 'isAvailable').mockReturnValue(false);
     jest.spyOn(ragService, 'getIndexStats').mockReturnValue({ documentCount: 0, available: false });
+
+    // Default pass-through mocks — existing tests are unaffected by the PII layer
+    mockScrub.mockImplementation(async (fields: any) => ({
+      scrubbedFields: { ...fields },
+      subMap: {},
+    }));
+    mockReInject.mockImplementation((text: any) => text);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    chatSpy.mockRestore();
+    contextStoreSpy.mockRestore();
+    mockScrub.mockReset();
+    mockReInject.mockReset();
   });
 
   it('returns cited: true when session has a cached Signal Engine timeline', async () => {
@@ -133,15 +108,14 @@ describe('Chart-grounded chat endpoint', () => {
       usage: {},
     });
 
-    const result = await httpPost(
-      '/api/ai/chat',
-      { messages: [{ role: 'user', content: 'What is the blood pressure?' }] },
-      { 'x-session-id': 'test-session' }
-    );
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('x-session-id', 'test-session')
+      .send({ messages: [{ role: 'user', content: 'What is the blood pressure?' }] });
 
-    expect(result.status).toBe(200);
-    expect(result.body).toHaveProperty('cited', true);
-    expect(result.body).toHaveProperty('data');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('cited', true);
+    expect(res.body).toHaveProperty('data');
 
     // Verify chart data was injected into the AI call
     const aiCallArgs = chatSpy.mock.calls[0]; // first call
@@ -158,25 +132,114 @@ describe('Chart-grounded chat endpoint', () => {
       usage: {},
     });
 
-    const result = await httpPost(
-      '/api/ai/chat',
-      { messages: [{ role: 'user', content: 'What is the blood pressure?' }] },
-      { 'x-session-id': 'unknown-session' }
-    );
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('x-session-id', 'unknown-session')
+      .send({ messages: [{ role: 'user', content: 'What is the blood pressure?' }] });
 
-    expect(result.status).toBe(200);
-    expect(result.body).toHaveProperty('cited', false);
-    expect(result.body).toHaveProperty('data');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('cited', false);
+    expect(res.body).toHaveProperty('data');
   });
 
   it('returns 400 when messages array is empty', async () => {
-    const result = await httpPost(
-      '/api/ai/chat',
-      { messages: [] },
-      { 'x-session-id': 'test-session' }
-    );
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .set('x-session-id', 'test-session')
+      .send({ messages: [] });
 
-    expect(result.status).toBe(400);
-    expect(result.body).toHaveProperty('error');
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error');
+  });
+});
+
+describe('PII de-identification', () => {
+  let chatSpy: any;
+
+  beforeEach(() => {
+    chatSpy = jest.spyOn(aiService, 'chat').mockResolvedValue({
+      content: 'mock response',
+      model: 'mock',
+      usage: {},
+    });
+
+    jest.spyOn(contextStore, 'get').mockReturnValue(null);
+    jest.spyOn(ragService, 'isAvailable').mockReturnValue(false);
+    jest.spyOn(ragService, 'getIndexStats').mockReturnValue({ documentCount: 0, available: false });
+
+    // Default pass-through mocks
+    mockScrub.mockImplementation(async (fields: any) => ({
+      scrubbedFields: { ...fields },
+      subMap: {},
+    }));
+    mockReInject.mockImplementation((text: any) => text);
+  });
+
+  afterEach(() => {
+    chatSpy.mockRestore();
+    mockScrub.mockReset();
+    mockReInject.mockReset();
+  });
+
+  it('calls piiScrubber.scrub with user message content before LLM call', async () => {
+    mockScrub.mockResolvedValueOnce({
+      scrubbedFields: { message_0: '[PERSON_0] has a question.' },
+      subMap: { '[PERSON_0]': 'John Smith' },
+    } as any);
+    mockReInject.mockImplementation((text: any) =>
+      text.replace(/\[PERSON_0\]/g, 'John Smith')
+    );
+    chatSpy.mockResolvedValue({
+      content: '[PERSON_0] has a question.',
+      model: 'mock',
+      usage: {},
+    });
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .send({ messages: [{ role: 'user', content: 'John Smith has a question.' }] });
+
+    expect(res.status).toBe(200);
+    expect(mockScrub).toHaveBeenCalledWith(
+      expect.objectContaining({ message_0: 'John Smith has a question.' })
+    );
+  });
+
+  it('returns 503 when Presidio is unavailable, never calls LLM', async () => {
+    mockScrub.mockRejectedValueOnce(new PiiServiceUnavailableError() as any);
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .send({ messages: [{ role: 'user', content: 'John Smith has a question.' }] });
+
+    expect(res.status).toBe(503);
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/PII scrubbing/i);
+    // Verify LLM was NOT called
+    expect(chatSpy).not.toHaveBeenCalled();
+  });
+
+  it('re-injects PII values into response content before returning to client', async () => {
+    mockScrub.mockResolvedValueOnce({
+      scrubbedFields: { message_0: '[PERSON_0] has a question.' },
+      subMap: { '[PERSON_0]': 'John Smith' },
+    } as any);
+    mockReInject.mockImplementation((text: any) =>
+      text.replace(/\[PERSON_0\]/g, 'John Smith')
+    );
+    chatSpy.mockResolvedValue({
+      content: 'Answer for [PERSON_0].',
+      model: 'mock',
+      usage: {},
+    });
+
+    const res = await request(app)
+      .post('/api/ai/chat')
+      .send({ messages: [{ role: 'user', content: 'John Smith has a question.' }] });
+
+    expect(res.status).toBe(200);
+    expect(mockReInject).toHaveBeenCalled();
+    // Response should contain the real name, not the token
+    expect(res.body.data.content).toContain('John Smith');
   });
 });

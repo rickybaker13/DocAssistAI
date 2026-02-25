@@ -15,6 +15,8 @@ import { buildCoWriterPrompt } from '../services/cowriter/noteBuilder.js';
 import { logAIServiceUsage } from '../services/audit/auditLogger.js';
 import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
+const TOKEN_PRESERVATION_INSTRUCTION = `\nText may contain privacy-protection tokens in [TOKEN_N] format (e.g., [PERSON_0], [DATE_0], [MRN_0]). Preserve these tokens exactly as written — do not rephrase, remove, or modify any [BRACKET_N] token.`;
+
 const router = Router();
 
 /**
@@ -37,18 +39,15 @@ router.post('/chat', async (req: Request, res: Response) => {
     }
 
     // ── PII De-identification ─────────────────────────────────────────────────
-    // Scrub user messages and the original patient context.
-    // Signal Engine chart context and RAG context are structured FHIR data
-    // addressed in V2 with a clinical NER model.
+    // V1: scrub user message content only. patientContext is always overwritten
+    // by the Signal Engine block before reaching the LLM; Signal Engine chart
+    // context and RAG context are addressed in V2 with a clinical NER model.
     const fieldsToScrub: Record<string, string> = {};
     request.messages.forEach((msg, i) => {
       if (msg.role === 'user' && msg.content) {
         fieldsToScrub[`message_${i}`] = msg.content;
       }
     });
-    if (req.body.patientContext) {
-      fieldsToScrub.patientContext = req.body.patientContext;
-    }
 
     let chatSubMap: Record<string, string> = {};
     if (Object.keys(fieldsToScrub).length > 0) {
@@ -102,10 +101,10 @@ If the data does not contain the answer, say "This information is not in the ava
 Be concise and clinically precise. Do not speculate or add information not present in the data.
 
 PATIENT CHART DATA:
-${chartContext}`;
+${chartContext}${TOKEN_PRESERVATION_INSTRUCTION}`;
     } else {
       // No verified chart data — instruct AI not to make patient-specific claims
-      request.patientContext = `You are a critical care physician AI assistant. No verified patient chart data is currently loaded for this session. Answer general medical questions only. Do NOT make patient-specific claims or reference specific lab values, vital signs, or clinical findings for any individual patient.`;
+      request.patientContext = `You are a critical care physician AI assistant. No verified patient chart data is currently loaded for this session. Answer general medical questions only. Do NOT make patient-specific claims or reference specific lab values, vital signs, or clinical findings for any individual patient.${TOKEN_PRESERVATION_INSTRUCTION}`;
     }
 
     const cited = !!chartContext;
