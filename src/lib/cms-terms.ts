@@ -32,7 +32,7 @@ export const CMS_TERMS: CmsTerm[] = [
     ],
     note: 'ICD-10 requires systolic vs. diastolic and acute vs. chronic — "CHF" alone maps to I50.9 (unspecified, no HCC weight).',
     icd10: 'I50.x',
-    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute.on.chronic',
+    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute[\s-]on[\s-]chronic',
   },
   {
     vague: 'heart failure',
@@ -43,7 +43,7 @@ export const CMS_TERMS: CmsTerm[] = [
     ],
     note: 'ICD-10 requires type (systolic/diastolic) and acuity (acute/chronic). Unspecified = I50.9 with no HCC value.',
     icd10: 'I50.x',
-    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute.on.chronic',
+    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute[\s-]on[\s-]chronic',
   },
   {
     vague: 'congestive heart failure',
@@ -54,7 +54,7 @@ export const CMS_TERMS: CmsTerm[] = [
     ],
     note: '"Congestive" is not an ICD-10 qualifier — specify systolic vs. diastolic and acuity.',
     icd10: 'I50.x',
-    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute.on.chronic',
+    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute[\s-]on[\s-]chronic',
   },
   {
     vague: 'fluid in lungs',
