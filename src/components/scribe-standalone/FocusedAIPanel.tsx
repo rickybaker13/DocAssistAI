@@ -189,6 +189,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
   const handleOptionSelected = useCallback(async (option: string) => {
     if (!suggestionFlow || suggestionFlow.phase !== 'clarify') return;
+    // Fix 5: Guard against null section
+    if (!section) { setSuggestionFlow(null); return; }
     const { suggestion, sectionId, suggestionIndex } = suggestionFlow;
     setSuggestionFlow({ phase: 'resolving', suggestion, sectionId, selectedOption: option, suggestionIndex });
     try {
@@ -201,8 +203,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
         signal: controller.signal,
         body: JSON.stringify({
           chatAnswer: `${suggestion}. ${option}.`,
-          destinationSection: section?.section_name || '',
-          existingContent: section?.content || '',
+          destinationSection: section.section_name,
+          existingContent: section.content || '',
           noteType,
           verbosity,
         }),
@@ -232,10 +234,11 @@ export const FocusedAIPanel: React.FC<Props> = ({
       startSuggestionProcessing(result.suggestions[nextIndex], nextIndex);
     } else {
       setSuggestionFlow(null);
-      if (batchTotal > 0) setBatchTotal(0);
+      // Fix 4: unconditional reset (avoids stale batchTotal closure)
+      setBatchTotal(0);
       setBatchCurrentItem(0);
     }
-  }, [suggestionFlow, onApplySuggestion, result, section, batchTotal, startSuggestionProcessing, setBatchCurrentItem]);
+  }, [suggestionFlow, onApplySuggestion, result, section, startSuggestionProcessing, setBatchCurrentItem]);
 
   const handleFreeTextSubmit = useCallback(() => {
     if (!freeTextValue.trim()) return;
@@ -245,6 +248,15 @@ export const FocusedAIPanel: React.FC<Props> = ({
   }, [freeTextValue, handleOptionSelected]);
 
   if (!section) return null;
+
+  // Derive isAllSelected for aria-label on select-all button
+  const allUnaddedIndices = result
+    ? result.suggestions.map((_, i) => i).filter(i => !addedSuggestionIndices.has(i))
+    : [];
+  const isAllSelected =
+    allUnaddedIndices.length > 0 &&
+    selectedSuggestions.size > 0 &&
+    allUnaddedIndices.every(i => selectedSuggestions.has(i));
 
   return (
     <>
@@ -273,9 +285,10 @@ export const FocusedAIPanel: React.FC<Props> = ({
           </div>
 
           <div className="p-4 space-y-4">
+            {/* Fix 1a: role="status" + aria-live on initial loading state */}
             {loading && (
-              <div className="flex items-center gap-2 text-sm text-slate-400">
-                <div className="animate-spin h-4 w-4 border-2 border-teal-400 border-t-transparent rounded-full" />
+              <div role="status" aria-live="polite" className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="animate-spin h-4 w-4 border-2 border-teal-400 border-t-transparent rounded-full" aria-hidden="true" />
                 Analyzing...
               </div>
             )}
@@ -322,8 +335,10 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   <div>
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-xs font-semibold text-slate-400 uppercase">Suggestions</h3>
+                      {/* Fix 3: contextual aria-label on select-all button */}
                       <button
                         onClick={handleSelectAll}
+                        aria-label={`${isAllSelected ? 'Deselect all' : 'Select all'} suggestions`}
                         className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
                       >
                         {selectedSuggestions.size > 0 && selectedSuggestions.size === result.suggestions.filter((_, i) => !addedSuggestionIndices.has(i)).length
@@ -384,13 +399,20 @@ export const FocusedAIPanel: React.FC<Props> = ({
       {/* Suggestion flow overlay */}
       {suggestionFlow && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+          {/* Fix 2: role="dialog", aria-modal="true", aria-label on overlay container */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Add to note"
+            className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4"
+          >
 
             {/* Loading phase */}
             {suggestionFlow.phase === 'loading' && (
               <>
-                <div className="flex items-center gap-3 text-sm text-slate-400">
-                  <div className="animate-spin h-5 w-5 border-2 border-teal-400 border-t-transparent rounded-full flex-shrink-0" />
+                {/* Fix 1b: role="status" + aria-live on flow loading overlay */}
+                <div role="status" aria-live="polite" className="flex items-center gap-3 text-sm text-slate-400">
+                  <div className="animate-spin h-5 w-5 border-2 border-teal-400 border-t-transparent rounded-full flex-shrink-0" aria-hidden="true" />
                   <span>
                     {batchTotal > 1
                       ? `Processing ${batchCurrentItem} of ${batchTotal}…`
@@ -489,8 +511,9 @@ export const FocusedAIPanel: React.FC<Props> = ({
             {/* Resolving phase */}
             {suggestionFlow.phase === 'resolving' && (
               <>
+                {/* Fix 1b: aria-hidden on spinner in resolving phase */}
                 <div className="flex items-center gap-3 text-sm text-slate-400">
-                  <div className="animate-spin h-5 w-5 border-2 border-teal-400 border-t-transparent rounded-full flex-shrink-0" />
+                  <div className="animate-spin h-5 w-5 border-2 border-teal-400 border-t-transparent rounded-full flex-shrink-0" aria-hidden="true" />
                   <span>Writing note text...</span>
                 </div>
                 <button
