@@ -18,7 +18,7 @@ const SortableItem: React.FC<{ section: CanvasSection }> = ({ section }) => {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 }}
-      className="bg-slate-800 border border-slate-700 border-l-4 border-l-teal-400 rounded-lg p-3 flex items-center gap-2"
+      className={`bg-slate-800 border border-slate-700 border-l-4 ${isDragging ? 'border-l-slate-700' : 'border-l-teal-400'} rounded-lg p-3 flex items-center gap-2`}
     >
       <span {...attributes} {...listeners} className="text-slate-600 hover:text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" title="Drag to reorder">
         <GripVertical size={16} />
