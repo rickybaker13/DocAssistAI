@@ -93,8 +93,8 @@ export const NoteBuilderPage: React.FC = () => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-gray-900">New Note</h1>
-        <button onClick={() => navigate('/scribe/dashboard')} className="text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+        <h1 className="text-xl font-bold text-slate-50">New Note</h1>
+        <button onClick={() => navigate('/scribe/dashboard')} className="text-sm text-slate-400 hover:text-slate-200">Cancel</button>
       </div>
 
       {/* Note type + patient label */}
@@ -103,23 +103,23 @@ export const NoteBuilderPage: React.FC = () => {
           value={noteType}
           onChange={e => { setNoteType(e.target.value); clearCanvas(); }}
           aria-label="Note type"
-          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+          className="bg-slate-800 border border-slate-700 text-slate-50 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400">
           {NOTE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
         </select>
         <input type="text" value={patientLabel} onChange={e => setPatientLabel(e.target.value)}
           placeholder="Patient label (optional)"
-          className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          className="flex-1 bg-slate-800 border border-slate-700 text-slate-50 placeholder-slate-500 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
       </div>
 
       {/* Template selection */}
       <div className="flex flex-col gap-2">
         {systemTemplates.length > 0 && (
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Standard Templates</p>
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">Standard Templates</p>
             <div className="flex flex-wrap gap-2">
               {systemTemplates.map(tmpl => (
                 <button key={tmpl.id} onClick={() => handleSelectTemplate(tmpl)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedTemplateId === tmpl.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'}`}>
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedTemplateId === tmpl.id ? 'bg-teal-950 border-teal-400 text-teal-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>
                   {tmpl.name}
                 </button>
               ))}
@@ -128,42 +128,42 @@ export const NoteBuilderPage: React.FC = () => {
         )}
         {userTemplates.length > 0 && (
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">My Templates</p>
+            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">My Templates</p>
             <div className="flex flex-wrap gap-2">
               {userTemplates.map(tmpl => (
                 <div key={tmpl.id} className="flex items-center gap-1">
                   <button onClick={() => handleSelectTemplate(tmpl)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedTemplateId === tmpl.id ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:border-blue-400'}`}>
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedTemplateId === tmpl.id ? 'bg-teal-950 border-teal-400 text-teal-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>
                     {tmpl.name}
                   </button>
                   <button onClick={() => deleteTemplate(tmpl.id)} aria-label={`Delete ${tmpl.name}`}
-                    className="text-gray-300 hover:text-red-400 text-xs px-1">×</button>
+                    className="text-slate-600 hover:text-red-400 text-xs px-1">×</button>
                 </div>
               ))}
             </div>
           </div>
         )}
-        {templatesLoading && <p className="text-xs text-gray-400">Loading templates...</p>}
+        {templatesLoading && <p className="text-xs text-slate-400">Loading templates...</p>}
       </div>
 
       {/* Section builder */}
       <div className="lg:grid lg:grid-cols-2 lg:gap-4">
-        <div className={`${showLibrary ? 'block' : 'hidden'} lg:block bg-white border border-gray-200 rounded-xl overflow-hidden`} style={{ maxHeight: '60vh' }}>
-          <div className="px-3 py-2 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">Section Library</h2>
-            <button onClick={() => setShowLibrary(false)} className="lg:hidden text-gray-400 text-lg">×</button>
+        <div className={`${showLibrary ? 'block' : 'hidden'} lg:block bg-slate-900 border border-slate-700 rounded-xl overflow-hidden`} style={{ maxHeight: '60vh' }}>
+          <div className="px-3 py-2 border-b border-slate-700 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-slate-50">Section Library</h2>
+            <button onClick={() => setShowLibrary(false)} className="lg:hidden text-slate-400 text-lg">×</button>
           </div>
           <SectionLibrary />
         </div>
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">Note Sections ({canvasSections.length})</h2>
+            <h2 className="text-sm font-semibold text-slate-50">Note Sections ({canvasSections.length})</h2>
             <div className="flex gap-2">
-              <button onClick={() => setShowLibrary(true)} className="lg:hidden text-sm text-blue-600 border border-blue-200 rounded-lg px-3 py-1 hover:bg-blue-50">
+              <button onClick={() => setShowLibrary(true)} className="lg:hidden text-sm text-teal-400 border border-teal-400/30 rounded-lg px-3 py-1 hover:bg-teal-950">
                 + Add sections
               </button>
               {canvasSections.length > 0 && (
-                <button onClick={clearCanvas} className="text-xs text-gray-400 hover:text-red-400">Clear all</button>
+                <button onClick={clearCanvas} className="text-xs text-slate-400 hover:text-red-400">Clear all</button>
               )}
             </div>
           </div>
@@ -173,12 +173,12 @@ export const NoteBuilderPage: React.FC = () => {
 
       {/* Verbosity */}
       <div className="flex flex-col gap-1">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Note Verbosity</p>
-        <div className="flex gap-2">
+        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Note Verbosity</p>
+        <div className="bg-slate-800 rounded-full p-1 flex w-fit">
           {VERBOSITY_OPTIONS.map(opt => (
             <button key={opt.value} onClick={() => setVerbosity(opt.value)}
               title={opt.description}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${verbosity === opt.value ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-600 border-gray-300 hover:border-blue-400'}`}>
+              className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${verbosity === opt.value ? 'bg-slate-700 text-slate-50' : 'text-slate-500 hover:text-slate-300'}`}>
               {opt.label}
             </button>
           ))}
@@ -189,7 +189,7 @@ export const NoteBuilderPage: React.FC = () => {
       {canvasSections.length > 0 && (
         <div>
           {!showSaveInput ? (
-            <button onClick={() => setShowSaveInput(true)} className="text-xs text-blue-600 hover:underline">
+            <button onClick={() => setShowSaveInput(true)} className="text-xs text-teal-400 hover:underline">
               + Save current sections as template
             </button>
           ) : (
@@ -199,24 +199,24 @@ export const NoteBuilderPage: React.FC = () => {
                 value={saveTemplateName}
                 onChange={e => setSaveTemplateName(e.target.value)}
                 placeholder="Template name..."
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 bg-slate-800 border border-slate-700 text-slate-50 placeholder-slate-500 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
                 onKeyDown={e => e.key === 'Enter' && handleSaveTemplate()}
               />
               <button onClick={handleSaveTemplate} disabled={saving}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
+                className="px-3 py-1.5 bg-teal-400 text-slate-900 font-semibold rounded-lg text-sm hover:bg-teal-300 disabled:opacity-50 transition-colors">
                 {saving ? 'Saving...' : 'Save'}
               </button>
               <button onClick={() => { setShowSaveInput(false); setSaveTemplateName(''); }}
-                className="text-sm text-gray-400 hover:text-gray-600">Cancel</button>
+                className="text-sm text-slate-400 hover:text-slate-200">Cancel</button>
             </div>
           )}
-          {saveError && <p className="text-xs text-red-600 mt-1">{saveError}</p>}
+          {saveError && <p className="text-xs text-red-400 mt-1">{saveError}</p>}
         </div>
       )}
 
-      {error && <p className="text-sm text-red-600 bg-red-50 rounded p-2">{error}</p>}
+      {error && <p className="text-sm text-red-400 bg-red-950/30 rounded p-2">{error}</p>}
       <button onClick={handleStartRecording} disabled={creating || canvasSections.length === 0}
-        className="w-full py-4 bg-blue-600 text-white rounded-xl font-semibold text-base hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
+        className="w-full py-4 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
         {creating ? 'Starting...' : '🎙 Record'}
       </button>
     </div>
