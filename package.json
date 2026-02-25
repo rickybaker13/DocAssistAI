@@ -14,6 +14,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "axios": "^1.6.2",
     "fhirclient": "^2.5.0",
+    "lucide-react": "^0.575.0",
     "pdfjs-dist": "^5.4.449",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
