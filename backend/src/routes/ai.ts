@@ -150,7 +150,7 @@ ${chartContext}${TOKEN_PRESERVATION_INSTRUCTION}`;
           });
 
           // Use RAG-retrieved context instead of full patient context
-          request.patientContext = ragResult.retrievedContext;
+          request.patientContext = ragResult.retrievedContext + TOKEN_PRESERVATION_INSTRUCTION;
         } else {
           console.warn('[RAG] No user query found, using full context');
         }
