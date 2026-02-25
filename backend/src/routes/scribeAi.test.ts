@@ -514,6 +514,18 @@ describe('Scribe AI Routes', () => {
       expect(mockAiChat).not.toHaveBeenCalled();
     });
 
+    it('/focused — returns 503 when Presidio is unavailable', async () => {
+      mockScrub.mockRejectedValueOnce(new PiiServiceUnavailableError());
+
+      const res = await request(app)
+        .post('/api/ai/scribe/focused')
+        .set('Cookie', authCookie)
+        .send({ sectionName: 'Assessment', content: 'John Smith with HTN.', transcript: '' });
+
+      expect(res.status).toBe(503);
+      expect(mockAiChat).not.toHaveBeenCalled();
+    });
+
     it('/focused — scrubs content and transcript, re-injects into analysis', async () => {
       mockScrub.mockResolvedValueOnce({
         scrubbedFields: { content: '[PERSON_0] with HTN.', transcript: '' },

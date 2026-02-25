@@ -100,10 +100,13 @@ Confidence is 0.0–1.0: 1.0 = fully supported by transcript, 0.0 = not in trans
       const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
       parsed = JSON.parse(cleaned);
     } catch {
+      const fallbackContent = Object.keys(subMap).length > 0
+        ? piiScrubber.reInject(text, subMap)
+        : text;
       return res.json({
-        sections: [{ name: 'Note', content: text, confidence: 0.5 }],
+        sections: [{ name: 'Note', content: fallbackContent, confidence: 0.5 }],
         parseError: true,
-      });
+      }) as any;
     }
 
     if (Object.keys(subMap).length > 0) {
@@ -201,6 +204,17 @@ Keep each field concise. Suggestions should be actionable one-liners.`;
         parsed.suggestions = parsed.suggestions.map((s: string) =>
           piiScrubber.reInject(s, subMapFocused)
         );
+      }
+      if (Array.isArray(parsed.citations)) {
+        parsed.citations = parsed.citations.map((c: any) => ({
+          ...c,
+          recommendation: c.recommendation
+            ? piiScrubber.reInject(c.recommendation, subMapFocused)
+            : c.recommendation,
+        }));
+      }
+      if (parsed.confidence_breakdown) {
+        parsed.confidence_breakdown = piiScrubber.reInject(parsed.confidence_breakdown, subMapFocused);
       }
     }
 
@@ -408,6 +422,11 @@ Return one of these two JSON shapes:
       }
       if (parsed.question) {
         parsed.question = piiScrubber.reInject(parsed.question, subMapRS);
+      }
+      if (Array.isArray(parsed.options)) {
+        parsed.options = parsed.options.map((opt: string) =>
+          piiScrubber.reInject(opt, subMapRS)
+        );
       }
     }
 
