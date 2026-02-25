@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Mic } from 'lucide-react';
+import { ArrowLeft, Sparkles, Mic, X } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
@@ -273,10 +273,23 @@ export const ScribeNotePage: React.FC = () => {
       />
 
       {showAddSection && (
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-slate-900 border-t border-slate-700 rounded-t-2xl shadow-2xl" style={{ maxHeight: '60vh' }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-section-heading"
+          className="fixed inset-x-0 bottom-0 z-50 bg-slate-900 border-t border-slate-700 rounded-t-2xl shadow-2xl"
+          style={{ maxHeight: '60vh' }}
+        >
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-            <h3 className="font-semibold text-slate-50 text-sm">Add Section</h3>
-            <button onClick={() => setShowAddSection(false)} className="text-slate-400 hover:text-slate-200 text-xl">×</button>
+            <h3 id="add-section-heading" className="font-semibold text-slate-50 text-sm">Add Section</h3>
+            <button
+              type="button"
+              onClick={() => setShowAddSection(false)}
+              aria-label="Close add section panel"
+              className="text-slate-400 hover:text-slate-200"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
           </div>
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(60vh - 52px)' }}>
             <SectionLibraryForNote

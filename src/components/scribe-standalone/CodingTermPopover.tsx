@@ -31,6 +31,7 @@ export const CodingTermPopover: React.FC<Props> = ({ match, position, onReplace,
     <div
       ref={ref}
       role="dialog"
+      aria-modal="true"
       aria-label={`ICD-10 term suggestion for "${match.original}"`}
       style={{
         position: 'fixed',
@@ -73,6 +74,8 @@ export const CodingTermPopover: React.FC<Props> = ({ match, position, onReplace,
             }}
             onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#334155')}
             onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#0f172a')}
+            onFocus={e => (e.currentTarget.style.backgroundColor = '#334155')}
+            onBlur={e => (e.currentTarget.style.backgroundColor = '#0f172a')}
           >
             {p}
           </button>

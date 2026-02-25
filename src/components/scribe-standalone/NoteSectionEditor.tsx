@@ -121,9 +121,10 @@ export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocuse
           {matches.length > 0 && (
             <span
               className="text-xs px-1.5 py-0.5 rounded-full bg-amber-950 text-amber-400 border border-amber-400/30 font-medium"
-              title={`${matches.length} ICD-10 coding term${matches.length > 1 ? 's' : ''} to review`}
+              title={`${matches.length} ICD-10 coding term${matches.length !== 1 ? 's' : ''} to review`}
             >
-              ⚠ {matches.length}
+              <span aria-hidden="true">⚠ {matches.length}</span>
+              <span className="sr-only">{matches.length} ICD-10 coding term{matches.length !== 1 ? 's' : ''} to review</span>
             </span>
           )}
         </div>
@@ -162,6 +163,7 @@ export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocuse
           onChange={handleChange}
           onClick={handleClick}
           onScroll={handleScroll}
+          aria-label={section.section_name}
           style={{ ...sharedStyle, background: 'transparent', position: 'relative', color: '#f1f5f9' }}
           className="w-full focus:outline-none resize-none min-h-[80px] placeholder:text-slate-500"
           rows={rows}
