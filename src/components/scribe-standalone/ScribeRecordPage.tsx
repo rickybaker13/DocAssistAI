@@ -14,7 +14,7 @@ export const ScribeRecordPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState('');
 
-  if (!noteId) return <div className="text-red-500 p-4">Invalid note ID.</div>;
+  if (!noteId) return <div className="text-red-400 p-4">Invalid note ID.</div>;
 
   const handleTranscript = async (transcript: string) => {
     setPhase('generating');
@@ -69,8 +69,8 @@ export const ScribeRecordPage: React.FC = () => {
     <div className="flex flex-col items-center justify-center min-h-64 gap-6 py-12">
       {phase === 'record' && (
         <>
-          <h1 className="text-xl font-bold text-gray-900">Ready to Record</h1>
-          <p className="text-sm text-gray-500 text-center max-w-xs">
+          <h1 className="text-xl font-bold text-slate-100">Ready to Record</h1>
+          <p className="text-sm text-slate-400 text-center max-w-xs">
             Speak your patient encounter. The AI will generate all {canvasSections.length} section{canvasSections.length !== 1 ? 's' : ''} automatically.
           </p>
           <AudioRecorder onTranscript={handleTranscript} onError={handleError} />
@@ -79,17 +79,17 @@ export const ScribeRecordPage: React.FC = () => {
 
       {phase === 'generating' && (
         <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full" />
-          <p className="text-sm text-gray-600 animate-pulse">{statusMsg || 'Processing...'}</p>
+          <div className="animate-spin h-10 w-10 border-4 border-teal-500 border-t-transparent rounded-full" />
+          <p className="text-sm text-slate-400 animate-pulse">{statusMsg || 'Processing...'}</p>
         </div>
       )}
 
       {phase === 'error' && (
         <div className="text-center">
-          <p className="text-red-600 text-sm mb-4">{error}</p>
+          <p className="text-red-400 text-sm mb-4">{error}</p>
           <button
             onClick={() => { setPhase('record'); setError(null); }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-500"
           >
             Try again
           </button>
