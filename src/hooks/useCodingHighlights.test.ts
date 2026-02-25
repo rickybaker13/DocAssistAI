@@ -62,6 +62,17 @@ describe('findCodingMatches', () => {
     expect(matches.some(m => m.term.vague.includes('history of stroke'))).toBe(true);
   });
 
+  it('"stroke" is not separately flagged at same position when "history of stroke" matches', () => {
+    const text = 'PMH: history of stroke, HTN.';
+    const matches = findCodingMatches(text);
+    // Should have exactly one match for this span - the longer "history of stroke", not the shorter "stroke"
+    const strokeMatches = matches.filter(m =>
+      m.original.toLowerCase() === 'stroke' || m.term.vague === 'history of stroke'
+    );
+    expect(strokeMatches).toHaveLength(1);
+    expect(strokeMatches[0].term.vague).toBe('history of stroke');
+  });
+
   it('does not flag "COPD" when "without acute exacerbation" appears nearby', () => {
     expect(findCodingMatches('COPD without acute exacerbation, stable.')).toHaveLength(0);
   });
