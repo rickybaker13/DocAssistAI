@@ -169,7 +169,7 @@ import {
   FileText,
   User,
   LogOut,
-  Stethoscope,
+  Sparkles,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -198,7 +198,7 @@ export const ScribeLayout: React.FC = () => {
         {/* Logo */}
         <div className="px-5 py-5 flex items-center gap-2.5 border-b border-slate-800">
           <div className="w-8 h-8 bg-teal-400 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Stethoscope size={18} className="text-slate-900" />
+            <Sparkles size={18} className="text-slate-900" />
           </div>
           <span className="font-semibold text-slate-50 text-sm tracking-tight">DocAssist Scribe</span>
         </div>
@@ -248,7 +248,7 @@ export const ScribeLayout: React.FC = () => {
         <header className="md:hidden sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-teal-400 rounded-md flex items-center justify-center">
-              <Stethoscope size={15} className="text-slate-900" />
+              <Sparkles size={15} className="text-slate-900" />
             </div>
             <span className="font-semibold text-slate-50 text-sm">DocAssist Scribe</span>
           </div>
@@ -321,7 +321,7 @@ cd /Users/bitbox/Documents/DocAssistAI && git add src/components/scribe-standalo
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
-import { Stethoscope } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export const ScribeLoginPage: React.FC = () => {
   const { login, loading, error, user } = useScribeAuthStore();
@@ -344,7 +344,7 @@ export const ScribeLoginPage: React.FC = () => {
         {/* Logo mark */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-400 rounded-2xl mb-4">
-            <Stethoscope size={28} className="text-slate-900" />
+            <Sparkles size={28} className="text-slate-900" />
           </div>
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">DocAssist Scribe</h1>
           <p className="text-sm text-slate-400 mt-1">Clinical documentation, simplified</p>
@@ -427,7 +427,7 @@ Expected: All login and register tests pass.
 **Step 4: Commit**
 
 ```bash
-cd /Users/bitbox/Documents/DocAssistAI && git add src/components/scribe-standalone/ScribeLoginPage.tsx src/components/scribe-standalone/ScribeRegisterPage.tsx && git commit -m "feat(ui): dark login + register pages with teal accent and Stethoscope logo"
+cd /Users/bitbox/Documents/DocAssistAI && git add src/components/scribe-standalone/ScribeLoginPage.tsx src/components/scribe-standalone/ScribeRegisterPage.tsx && git commit -m "feat(ui): dark login + register pages with teal accent and Sparkles logo"
 ```
 
 ---
@@ -858,7 +858,7 @@ Navigate to `http://localhost:8080/scribe/login` and verify:
 - [ ] No emoji icons remain anywhere in the Scribe UI
 - [ ] Desktop (> 768px): left sidebar visible with nav items
 - [ ] Mobile (< 768px, use browser DevTools): bottom tab bar with 4 items
-- [ ] Login page: Stethoscope logo mark, dark card
+- [ ] Login page: Sparkles logo mark, dark card
 - [ ] Dashboard: search with Search icon, teal filter pills
 - [ ] Chat FAB: teal circle with MessageSquare icon, subtle glow
 
