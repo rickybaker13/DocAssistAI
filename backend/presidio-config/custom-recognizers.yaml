@@ -30,7 +30,7 @@ recognizers:
     patterns:
       - name: plan_pattern
         regex: "[A-Z]{2,3}[\\s\\-]?\\d{6,12}"
-        score: 0.6
+        score: 0.70
     context:
       - "insurance"
       - "health plan"
@@ -51,7 +51,7 @@ recognizers:
     supported_language: en
     patterns:
       - name: age_pattern
-        regex: "\\b(9[0-9]|1[0-9]{2})\\s*(?:year|yr)"
+        regex: "\\b(9[0-9]|1[0-9]{2})\\s*(?:year|yr|y\\/o)"
         score: 0.8
     context:
       - "age"
