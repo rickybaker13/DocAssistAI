@@ -47,7 +47,8 @@ export const ScribeLayout: React.FC = () => {
             <Link
               key={to}
               to={to}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
+              aria-current={isActive(to) ? 'page' : undefined}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-inset ${
                 isActive(to)
                   ? 'bg-teal-950 text-teal-400'
                   : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800'
@@ -69,8 +70,9 @@ export const ScribeLayout: React.FC = () => {
               <span className="text-xs text-slate-400 truncate">{user.name || user.email}</span>
             </div>
             <button
+              aria-label="Sign out"
               onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-all duration-150"
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-inset"
             >
               <LogOut size={16} />
               Sign out
@@ -108,7 +110,8 @@ export const ScribeLayout: React.FC = () => {
             <Link
               key={to}
               to={to}
-              className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 text-xs font-medium transition-colors ${
+              aria-current={isActive(to) ? 'page' : undefined}
+              className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-inset ${
                 isActive(to) ? 'text-teal-400' : 'text-slate-500 hover:text-slate-300'
               }`}
             >
