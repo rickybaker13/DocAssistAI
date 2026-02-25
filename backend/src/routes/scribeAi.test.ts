@@ -3,15 +3,16 @@ import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import { ScribeUserModel } from '../models/scribeUser';
-import { closeDb } from '../database/db';
+import { ScribeUserModel } from '../models/scribeUser.js';
+import { initPool, closePool } from '../database/db.js';
+import { runMigrations } from '../database/migrations.js';
 import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
 // In ESM mode, jest.mock at top-level is not hoisted correctly.
 // We use jest.spyOn on the singleton aiService object instead,
 // matching the pattern used in ai.test.ts.
-import { aiService } from '../services/ai/aiService';
-import scribeAiRouter from './scribeAi';
+import { aiService } from '../services/ai/aiService.js';
+import scribeAiRouter from './scribeAi.js';
 
 const app = express();
 app.use(express.json());
@@ -25,10 +26,12 @@ let mockScrub: ReturnType<typeof jest.spyOn>;
 let mockReInject: ReturnType<typeof jest.spyOn>;
 
 describe('Scribe AI Routes', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = SECRET;
-    const user = new ScribeUserModel().create({ email: 'ai-test@test.com', passwordHash: 'hash' });
+    await initPool();
+    await runMigrations();
+    const user = await new ScribeUserModel().create({ email: 'ai-test@test.com', passwordHash: 'hash' });
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '1h' });
     authCookie = `scribe_token=${token}`;
     mockAiChat = jest.spyOn(aiService, 'chat');
@@ -48,9 +51,9 @@ describe('Scribe AI Routes', () => {
     mockScrub.mockReset();
     mockReInject.mockReset();
   });
-  afterAll(() => {
+  afterAll(async () => {
     jest.restoreAllMocks();
-    closeDb();
+    await closePool();
   });
 
   describe('POST /generate', () => {

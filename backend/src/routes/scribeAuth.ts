@@ -32,10 +32,10 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' }) as any;
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' }) as any;
-  if (userModel.findByEmail(email)) return res.status(409).json({ error: 'Email already registered' }) as any;
+  if (await userModel.findByEmail(email)) return res.status(409).json({ error: 'Email already registered' }) as any;
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = userModel.create({ email, passwordHash, name, specialty });
+  const user = await userModel.create({ email, passwordHash, name, specialty });
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '7d' });
   res.cookie(COOKIE, token, COOKIE_OPTS);
   return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
@@ -45,7 +45,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 router.post('/login', authLimiter, async (req: Request, res: Response) => {
   const { email, password, rememberMe } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
-  const user = userModel.findByEmail(email);
+  const user = await userModel.findByEmail(email);
   if (!user || !(await bcrypt.compare(password, user.password_hash))) {
     return res.status(401).json({ error: 'Invalid credentials' }) as any;
   }
@@ -56,8 +56,16 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
 });
 
 // GET /api/scribe/auth/me
-router.get('/me', scribeAuthMiddleware, (req: Request, res: Response) => {
-  const user = userModel.findById(req.scribeUserId!);
+router.get('/me', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const user = await userModel.findById(req.scribeUserId!);
+  if (!user) return res.status(404).json({ error: 'User not found' }) as any;
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
+});
+
+// PATCH /api/scribe/auth/profile
+router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const { name, specialty } = req.body;
+  const user = await userModel.update(req.scribeUserId!, { name, specialty });
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
   return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
 });

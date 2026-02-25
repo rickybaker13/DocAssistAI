@@ -1,22 +1,18 @@
-// Column migrations run after CREATE_TABLES to add new columns to pre-existing tables.
-// Each entry is checked via PRAGMA table_info before executing, so it's safe to run repeatedly.
-export const COLUMN_MIGRATIONS: Array<{ table: string; column: string; sql: string }> = [
-  {
-    table: 'scribe_notes',
-    column: 'verbosity',
-    sql: `ALTER TABLE scribe_notes ADD COLUMN verbosity TEXT NOT NULL DEFAULT 'standard'`,
-  },
-];
+import { getPool } from './db.js';
 
-export const CREATE_TABLES = `
+// ---------------------------------------------------------------------------
+// Table DDL — PostgreSQL syntax
+// ---------------------------------------------------------------------------
+
+const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS scribe_users (
   id            TEXT PRIMARY KEY,
   email         TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   name          TEXT,
   specialty     TEXT,
-  created_at    TEXT DEFAULT (datetime('now')),
-  updated_at    TEXT DEFAULT (datetime('now'))
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS scribe_notes (
@@ -27,9 +23,9 @@ CREATE TABLE IF NOT EXISTS scribe_notes (
   transcript    TEXT,
   status        TEXT DEFAULT 'draft',
   verbosity     TEXT NOT NULL DEFAULT 'standard',
-  deleted_at    TEXT,
-  created_at    TEXT DEFAULT (datetime('now')),
-  updated_at    TEXT DEFAULT (datetime('now'))
+  deleted_at    TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS scribe_note_sections (
@@ -42,8 +38,8 @@ CREATE TABLE IF NOT EXISTS scribe_note_sections (
   confidence        REAL,
   focused_ai_result TEXT,
   chat_insertions   TEXT DEFAULT '[]',
-  created_at        TEXT DEFAULT (datetime('now')),
-  updated_at        TEXT DEFAULT (datetime('now'))
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS scribe_section_templates (
@@ -52,8 +48,10 @@ CREATE TABLE IF NOT EXISTS scribe_section_templates (
   name        TEXT NOT NULL,
   prompt_hint TEXT,
   is_prebuilt INTEGER DEFAULT 0,
-  created_at  TEXT DEFAULT (datetime('now')),
-  updated_at  TEXT DEFAULT (datetime('now'))
+  category    TEXT DEFAULT 'general',
+  disciplines TEXT DEFAULT '[]',
+  created_at  TIMESTAMPTZ DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS note_templates (
@@ -63,6 +61,69 @@ CREATE TABLE IF NOT EXISTS note_templates (
   name       TEXT NOT NULL,
   verbosity  TEXT NOT NULL DEFAULT 'standard',
   sections   TEXT NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 `;
+
+// ---------------------------------------------------------------------------
+// Column migrations — for databases created before certain columns existed.
+// Each entry is checked via information_schema before executing ALTER TABLE,
+// so it is safe to run repeatedly on any DB (fresh or existing).
+// ---------------------------------------------------------------------------
+
+interface ColumnMigration {
+  table: string;
+  column: string;
+  sql: string;
+}
+
+const COLUMN_MIGRATIONS: ColumnMigration[] = [
+  // Added verbosity to notes in v0.2
+  {
+    table: 'scribe_notes',
+    column: 'verbosity',
+    sql: `ALTER TABLE scribe_notes ADD COLUMN verbosity TEXT NOT NULL DEFAULT 'standard'`,
+  },
+  // Added category + disciplines to section templates in v0.3 (Phase 6 — discipline filtering)
+  {
+    table: 'scribe_section_templates',
+    column: 'category',
+    sql: `ALTER TABLE scribe_section_templates ADD COLUMN category TEXT DEFAULT 'general'`,
+  },
+  {
+    table: 'scribe_section_templates',
+    column: 'disciplines',
+    sql: `ALTER TABLE scribe_section_templates ADD COLUMN disciplines TEXT DEFAULT '[]'`,
+  },
+];
+
+// ---------------------------------------------------------------------------
+// runMigrations — call once at server startup after initPool()
+// ---------------------------------------------------------------------------
+
+export async function runMigrations(): Promise<void> {
+  const pool = getPool();
+
+  // 1. Create tables (idempotent via IF NOT EXISTS)
+  const statements = CREATE_TABLES_SQL
+    .split(';')
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+
+  for (const stmt of statements) {
+    await pool.query(stmt);
+  }
+
+  // 2. Column migrations — checked via information_schema before ALTER TABLE
+  for (const migration of COLUMN_MIGRATIONS) {
+    const result = await pool.query(
+      `SELECT column_name
+       FROM information_schema.columns
+       WHERE table_name = $1 AND column_name = $2`,
+      [migration.table, migration.column],
+    );
+    if ((result.rowCount ?? 0) === 0) {
+      await pool.query(migration.sql);
+    }
+  }
+}

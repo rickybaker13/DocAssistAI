@@ -1,66 +1,64 @@
 import { randomUUID } from 'crypto';
-import Database from 'better-sqlite3';
-import { getDb } from '../database/db';
+import { getPool } from '../database/db.js';
 import { SYSTEM_NOTE_TEMPLATES } from '../database/systemNoteTemplates.js';
 
 export interface NoteTemplate {
-  id: string;
-  user_id: string | null;
-  note_type: string;
-  name: string;
-  verbosity: 'brief' | 'standard' | 'detailed';
-  sections: string; // JSON string
-  created_at: string;
+  id: string; user_id: string | null; note_type: string; name: string;
+  verbosity: 'brief' | 'standard' | 'detailed'; sections: string; created_at: string;
 }
 
 export class ScribeNoteTemplateModel {
-  seedSystem(): void {
-    const existing = getDb()
-      .prepare('SELECT COUNT(*) as count FROM note_templates WHERE user_id IS NULL')
-      .get() as { count: number };
-    if (existing.count > 0) return;
-    const insert = getDb().prepare(
-      'INSERT INTO note_templates (id, user_id, note_type, name, verbosity, sections) VALUES (?, NULL, ?, ?, ?, ?)'
-    );
-    const insertAll = getDb().transaction(() => {
-      for (const t of SYSTEM_NOTE_TEMPLATES) {
-        insert.run(randomUUID(), t.noteType, t.name, t.verbosity, JSON.stringify(t.sections));
+  async seedSystem(): Promise<void> {
+    const pool = getPool();
+    for (const t of SYSTEM_NOTE_TEMPLATES) {
+      const existing = await pool.query(
+        'SELECT 1 FROM note_templates WHERE user_id IS NULL AND note_type = $1 AND name = $2',
+        [t.noteType, t.name]
+      );
+      if ((existing.rowCount ?? 0) === 0) {
+        await pool.query(
+          'INSERT INTO note_templates (id, user_id, note_type, name, verbosity, sections) VALUES ($1, NULL, $2, $3, $4, $5)',
+          [randomUUID(), t.noteType, t.name, t.verbosity, JSON.stringify(t.sections)]
+        );
       }
-    });
-    insertAll();
+    }
   }
 
-  listSystem(noteType: string): NoteTemplate[] {
-    return getDb()
-      .prepare('SELECT * FROM note_templates WHERE user_id IS NULL AND note_type = ? ORDER BY name ASC')
-      .all(noteType) as NoteTemplate[];
+  async listSystem(noteType: string): Promise<NoteTemplate[]> {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM note_templates WHERE user_id IS NULL AND note_type = $1 ORDER BY name ASC',
+      [noteType]
+    );
+    return result.rows;
   }
 
-  listForUser(userId: string, noteType: string): NoteTemplate[] {
-    return getDb()
-      .prepare(
-        'SELECT * FROM note_templates WHERE (user_id IS NULL OR user_id = ?) AND note_type = ? ORDER BY user_id ASC, name ASC'
-      )
-      .all(userId, noteType) as NoteTemplate[];
+  async listForUser(userId: string, noteType: string): Promise<NoteTemplate[]> {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM note_templates WHERE (user_id IS NULL OR user_id = $1) AND note_type = $2 ORDER BY user_id ASC, name ASC',
+      [userId, noteType]
+    );
+    return result.rows;
   }
 
-  create(input: {
-    userId: string;
-    noteType: string;
-    name: string;
-    verbosity: 'brief' | 'standard' | 'detailed';
-    sections: Array<{ name: string; promptHint: string | null }>;
-  }): NoteTemplate {
+  async create(input: { userId: string; noteType: string; name: string; verbosity: 'brief' | 'standard' | 'detailed'; sections: Array<{ name: string; promptHint: string | null }> }): Promise<NoteTemplate> {
+    const pool = getPool();
     const id = randomUUID();
-    getDb()
-      .prepare('INSERT INTO note_templates (id, user_id, note_type, name, verbosity, sections) VALUES (?, ?, ?, ?, ?, ?)')
-      .run(id, input.userId, input.noteType, input.name, input.verbosity, JSON.stringify(input.sections));
-    return getDb().prepare('SELECT * FROM note_templates WHERE id = ?').get(id) as NoteTemplate;
+    await pool.query(
+      'INSERT INTO note_templates (id, user_id, note_type, name, verbosity, sections) VALUES ($1, $2, $3, $4, $5, $6)',
+      [id, input.userId, input.noteType, input.name, input.verbosity, JSON.stringify(input.sections)]
+    );
+    const result = await pool.query('SELECT * FROM note_templates WHERE id = $1', [id]);
+    return result.rows[0] as NoteTemplate;
   }
 
-  delete(id: string, userId: string): Database.RunResult {
-    return getDb()
-      .prepare('DELETE FROM note_templates WHERE id = ? AND user_id = ?')
-      .run(id, userId);
+  async delete(id: string, userId: string): Promise<{ rowCount: number }> {
+    const pool = getPool();
+    const result = await pool.query(
+      'DELETE FROM note_templates WHERE id = $1 AND user_id = $2',
+      [id, userId]
+    );
+    return { rowCount: result.rowCount ?? 0 };
   }
 }

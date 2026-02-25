@@ -23,6 +23,8 @@ import scribeTemplatesRouter from './routes/scribeTemplates.js';
 import scribeAiRouter from './routes/scribeAi.js';
 import scribeNoteTemplatesRouter from './routes/scribeNoteTemplates.js';
 import healthRouter from './routes/health.js';
+import { initPool } from './database/db.js';
+import { runMigrations } from './database/migrations.js';
 
 dotenv.config();
 
@@ -40,21 +42,22 @@ app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    // Allow localhost origins (dev mode)
-    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+
+    // Allow localhost origins (dev mode only)
+    if (process.env.NODE_ENV !== 'production' &&
+        (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:'))) {
       return callback(null, true);
     }
-    
+
     // Allow configured frontend URL
     if (origin === FRONTEND_URL) {
       return callback(null, true);
     }
-    
+
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Patient-Id', 'X-User-Id', 'X-Session-Id'],
 }));
 
@@ -78,7 +81,7 @@ app.use(auditMiddleware);
 // Validate AI configuration on startup
 const configValidation = validateAIConfig();
 if (!configValidation.valid) {
-  console.error('⚠️  AI Configuration Error:', configValidation.error);
+  console.error('AI Configuration Error:', configValidation.error);
   console.error('Please check your .env file');
 }
 
@@ -109,8 +112,8 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error('Error:', err);
   res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
+    error: process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
       : err.message,
   });
 });
@@ -124,11 +127,17 @@ app.use((req: Request, res: Response) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 DocAssistAI Backend Server running on port ${PORT}`);
-  console.log(`📡 Frontend URL: ${FRONTEND_URL}`);
-  console.log(`🤖 AI Provider: ${process.env.AI_PROVIDER || 'external'}`);
-  if (!configValidation.valid) {
-    console.warn(`⚠️  Warning: ${configValidation.error}`);
-  }
-});
+(async () => {
+  await initPool();
+  await runMigrations();
+  console.log('Database ready');
+
+  app.listen(PORT, () => {
+    console.log(`DocAssistAI Backend Server running on port ${PORT}`);
+    console.log(`Frontend URL: ${FRONTEND_URL}`);
+    console.log(`AI Provider: ${process.env.AI_PROVIDER || 'external'}`);
+    if (!configValidation.valid) {
+      console.warn(`Warning: ${configValidation.error}`);
+    }
+  });
+})();

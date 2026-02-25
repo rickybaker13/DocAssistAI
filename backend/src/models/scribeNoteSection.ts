@@ -1,71 +1,70 @@
 import { randomUUID } from 'crypto';
-import { getDb } from '../database/db';
+import { getPool } from '../database/db.js';
 
 export interface ScribeNoteSection {
-  id: string;
-  note_id: string;
-  section_name: string;
-  content: string | null;
-  prompt_hint: string | null;
-  display_order: number;
-  confidence: number | null;
-  focused_ai_result: string | null;
-  chat_insertions: string;
-  created_at: string;
-  updated_at: string;
+  id: string; note_id: string; section_name: string; content: string | null;
+  prompt_hint: string | null; display_order: number; confidence: number | null;
+  focused_ai_result: string | null; chat_insertions: string; created_at: string; updated_at: string;
 }
 
 export class ScribeNoteSectionModel {
   private static readonly ALLOWED_UPDATE_COLUMNS = new Set(['content', 'confidence', 'focused_ai_result', 'chat_insertions', 'display_order']);
 
-  create(input: { noteId: string; sectionName: string; displayOrder: number; promptHint?: string }): ScribeNoteSection {
+  async create(input: { noteId: string; sectionName: string; displayOrder: number; promptHint?: string }): Promise<ScribeNoteSection> {
+    const pool = getPool();
     const id = randomUUID();
-    getDb().prepare(
-      'INSERT INTO scribe_note_sections (id, note_id, section_name, display_order, prompt_hint) VALUES (?, ?, ?, ?, ?)'
-    ).run(id, input.noteId, input.sectionName, input.displayOrder, input.promptHint ?? null);
-    return this.findById(id)!;
+    await pool.query(
+      'INSERT INTO scribe_note_sections (id, note_id, section_name, display_order, prompt_hint) VALUES ($1, $2, $3, $4, $5)',
+      [id, input.noteId, input.sectionName, input.displayOrder, input.promptHint ?? null]
+    );
+    return (await this.findById(id))!;
   }
 
-  bulkCreate(items: Array<{ noteId: string; sectionName: string; displayOrder: number; promptHint?: string; content?: string; confidence?: number }>): ScribeNoteSection[] {
-    return items.map(item => {
+  async bulkCreate(items: Array<{ noteId: string; sectionName: string; displayOrder: number; promptHint?: string; content?: string; confidence?: number }>): Promise<ScribeNoteSection[]> {
+    const results: ScribeNoteSection[] = [];
+    for (const item of items) {
+      const pool = getPool();
       const id = randomUUID();
-      getDb().prepare(
-        'INSERT INTO scribe_note_sections (id, note_id, section_name, display_order, prompt_hint, content, confidence) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(id, item.noteId, item.sectionName, item.displayOrder, item.promptHint ?? null, item.content ?? null, item.confidence ?? null);
-      return this.findById(id)!;
-    });
+      await pool.query(
+        'INSERT INTO scribe_note_sections (id, note_id, section_name, display_order, prompt_hint, content, confidence) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [id, item.noteId, item.sectionName, item.displayOrder, item.promptHint ?? null, item.content ?? null, item.confidence ?? null]
+      );
+      results.push((await this.findById(id))!);
+    }
+    return results;
   }
 
-  listForNote(noteId: string): ScribeNoteSection[] {
-    return getDb().prepare(
-      'SELECT * FROM scribe_note_sections WHERE note_id = ? ORDER BY display_order ASC'
-    ).all(noteId) as ScribeNoteSection[];
+  async listForNote(noteId: string): Promise<ScribeNoteSection[]> {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM scribe_note_sections WHERE note_id = $1 ORDER BY display_order ASC',
+      [noteId]
+    );
+    return result.rows;
   }
 
-  findById(id: string): ScribeNoteSection | null {
-    return (getDb().prepare('SELECT * FROM scribe_note_sections WHERE id = ?').get(id) ?? null) as ScribeNoteSection | null;
+  async findById(id: string): Promise<ScribeNoteSection | null> {
+    const pool = getPool();
+    const result = await pool.query('SELECT * FROM scribe_note_sections WHERE id = $1', [id]);
+    return result.rows[0] ?? null;
   }
 
-  /**
-   * Updates a section by ID.
-   * IMPORTANT: Does NOT verify user ownership of the section.
-   * Callers MUST verify that the parent note belongs to the user before calling this.
-   * Use: noteModel.findById(note_id, userId) before calling update().
-   */
-  update(id: string, fields: Partial<Pick<ScribeNoteSection, 'content' | 'confidence' | 'focused_ai_result' | 'chat_insertions' | 'display_order'>>): void {
+  async update(id: string, fields: Partial<Pick<ScribeNoteSection, 'content' | 'confidence' | 'focused_ai_result' | 'chat_insertions' | 'display_order'>>): Promise<void> {
+    const pool = getPool();
     const keys = Object.keys(fields);
     for (const key of keys) {
-      if (!ScribeNoteSectionModel.ALLOWED_UPDATE_COLUMNS.has(key)) {
-        throw new Error(`Invalid column: ${key}`);
-      }
+      if (!ScribeNoteSectionModel.ALLOWED_UPDATE_COLUMNS.has(key)) throw new Error(`Invalid column: ${key}`);
     }
-    const sets = keys.map(k => `${k} = ?`).join(', ');
-    getDb().prepare(
-      `UPDATE scribe_note_sections SET ${sets}, updated_at = ? WHERE id = ?`
-    ).run(...Object.values(fields), new Date().toISOString(), id);
+    const sets = keys.map((k, i) => `${k} = $${i + 1}`).join(', ');
+    const vals = [...Object.values(fields), new Date().toISOString(), id];
+    await pool.query(
+      `UPDATE scribe_note_sections SET ${sets}, updated_at = $${keys.length + 1} WHERE id = $${keys.length + 2}`,
+      vals
+    );
   }
 
-  deleteForNote(noteId: string): void {
-    getDb().prepare('DELETE FROM scribe_note_sections WHERE note_id = ?').run(noteId);
+  async deleteForNote(noteId: string): Promise<void> {
+    const pool = getPool();
+    await pool.query('DELETE FROM scribe_note_sections WHERE note_id = $1', [noteId]);
   }
 }

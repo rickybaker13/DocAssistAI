@@ -1,8 +1,10 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import { initPool, closePool } from '../database/db.js';
+import { runMigrations } from '../database/migrations.js';
 import scribeAuthRouter from './scribeAuth.js';
-import { closeDb } from '../database/db.js';
 
 const app = express();
 app.use(express.json());
@@ -10,8 +12,13 @@ app.use(cookieParser());
 app.use('/api/scribe/auth', scribeAuthRouter);
 
 describe('Scribe Auth Routes', () => {
-  beforeAll(() => { process.env.NODE_ENV = 'test'; process.env.JWT_SECRET = 'test-secret'; });
-  afterAll(() => closeDb());
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    process.env.JWT_SECRET = 'test-secret';
+    await initPool();
+    await runMigrations();
+  });
+  afterAll(async () => { await closePool(); });
 
   it('POST /register — creates user, returns 201, sets cookie', async () => {
     const res = await request(app)

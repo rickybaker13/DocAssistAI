@@ -1,0 +1,2 @@
+FROM mcr.microsoft.com/presidio-analyzer:latest
+COPY custom-recognizers.yaml /usr/bin/presidio-analyzer/

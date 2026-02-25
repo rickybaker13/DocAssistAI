@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { NoteCard } from './NoteCard';
 import { getBackendUrl } from '../../config/appConfig';
 import type { Note } from './types';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Settings } from 'lucide-react';
 
 const STATUS_FILTERS = ['All', 'Draft', 'Finalized'] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
@@ -47,13 +47,22 @@ export const ScribeDashboardPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-50 tracking-tight">My Notes</h1>
-        <Link
-          to="/scribe/note/new"
-          className="hidden md:flex items-center gap-1.5 bg-teal-400 text-slate-900 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-teal-300 transition-colors"
-        >
-          <Plus size={16} />
-          New Note
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/scribe/settings"
+            aria-label="Settings"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          >
+            <Settings size={18} />
+          </Link>
+          <Link
+            to="/scribe/note/new"
+            className="hidden md:flex items-center gap-1.5 bg-teal-400 text-slate-900 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-teal-300 transition-colors"
+          >
+            <Plus size={16} />
+            New Note
+          </Link>
+        </div>
       </div>
 
       {/* Search */}

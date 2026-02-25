@@ -7,36 +7,41 @@ router.use(scribeAuthMiddleware);
 const model = new ScribeSectionTemplateModel();
 
 let seeded = false;
-function ensureSeeded() { if (!seeded) { model.seedPrebuilt(); seeded = true; } }
+async function ensureSeeded() {
+  if (!seeded) {
+    await model.seedPrebuilt();
+    seeded = true;
+  }
+}
 
-router.get('/', (req: Request, res: Response) => {
-  ensureSeeded();
-  return res.json({ templates: model.listForUser(req.scribeUserId!) });
+router.get('/', async (req: Request, res: Response) => {
+  await ensureSeeded();
+  return res.json({ templates: await model.listForUser(req.scribeUserId!) });
 });
 
 // Must come before /:id
-router.get('/prebuilt', (_req: Request, res: Response) => {
-  ensureSeeded();
-  return res.json({ templates: model.listPrebuilt() });
+router.get('/prebuilt', async (_req: Request, res: Response) => {
+  await ensureSeeded();
+  return res.json({ templates: await model.listPrebuilt() });
 });
 
-router.post('/', (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response) => {
   const { name, promptHint } = req.body;
   if (!name) return res.status(400).json({ error: 'name is required' }) as any;
-  const template = model.create({ userId: req.scribeUserId!, name, promptHint });
+  const template = await model.create({ userId: req.scribeUserId!, name, promptHint });
   return res.status(201).json({ template });
 });
 
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', async (req: Request, res: Response) => {
   const { name, promptHint } = req.body;
-  const result = model.update(req.params.id, req.scribeUserId!, { name, promptHint });
-  if (result.changes === 0) return res.status(404).json({ error: 'Template not found or cannot be modified' }) as any;
+  const result = await model.update(req.params.id, req.scribeUserId!, { name, promptHint });
+  if ((result.rowCount ?? 0) === 0) return res.status(404).json({ error: 'Template not found or cannot be modified' }) as any;
   return res.json({ ok: true });
 });
 
-router.delete('/:id', (req: Request, res: Response) => {
-  const result = model.delete(req.params.id, req.scribeUserId!);
-  if (result.changes === 0) return res.status(404).json({ error: 'Template not found or cannot be deleted' }) as any;
+router.delete('/:id', async (req: Request, res: Response) => {
+  const result = await model.delete(req.params.id, req.scribeUserId!);
+  if ((result.rowCount ?? 0) === 0) return res.status(404).json({ error: 'Template not found or cannot be deleted' }) as any;
   return res.json({ ok: true });
 });
 

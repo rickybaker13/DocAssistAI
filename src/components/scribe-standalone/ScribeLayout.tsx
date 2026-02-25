@@ -8,12 +8,14 @@ import {
   User,
   LogOut,
   Sparkles,
+  Settings,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/scribe/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/scribe/note/new',  icon: Plus,            label: 'New Note'  },
   { to: '/scribe/templates', icon: FileText,         label: 'Templates' },
+  { to: '/scribe/settings',  icon: Settings,         label: 'Settings'  },
 ];
 
 export const ScribeLayout: React.FC = () => {
