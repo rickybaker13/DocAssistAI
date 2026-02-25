@@ -16,7 +16,7 @@ export const ScribeRegisterPage: React.FC = () => {
 
   useEffect(() => { if (user) navigate("/scribe/dashboard"); }, [user, navigate]);
 
-  const setField = (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+  const setField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(prev => ({ ...prev, [field]: e.target.value }));
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -41,7 +41,7 @@ export const ScribeRegisterPage: React.FC = () => {
         <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="name" className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Name</label>
+              <label htmlFor="name" className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Name (optional)</label>
               <input
                 id="name" type="text" value={form.name} onChange={setField('name')}
                 placeholder="Dr. Jane Smith"
@@ -75,10 +75,10 @@ export const ScribeRegisterPage: React.FC = () => {
               </select>
             </div>
             {error && (
-              <p className="text-sm text-red-400 bg-red-950 border border-red-400/20 rounded-lg p-2.5">{error}</p>
+              <p role="alert" className="text-sm text-red-400 bg-red-950 border border-red-400/20 rounded-lg p-2.5">{error}</p>
             )}
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={loading} aria-busy={loading}
               className="w-full bg-teal-400 text-slate-900 rounded-lg py-2.5 text-sm font-semibold hover:bg-teal-300 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Creating account...' : 'Create account'}

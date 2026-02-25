@@ -59,11 +59,11 @@ export const ScribeLoginPage: React.FC = () => {
               Remember me for 30 days
             </label>
             {error && (
-              <p className="text-sm text-red-400 bg-red-950 border border-red-400/20 rounded-lg p-2.5">{error}</p>
+              <p role="alert" className="text-sm text-red-400 bg-red-950 border border-red-400/20 rounded-lg p-2.5">{error}</p>
             )}
             <button
-              type="submit" disabled={loading}
-              className="w-full bg-teal-400 text-slate-900 rounded-lg py-2.5 text-sm font-semibold hover:bg-teal-300 disabled:opacity-50 transition-colors mt-2"
+              type="submit" disabled={loading} aria-busy={loading}
+              className="w-full bg-teal-400 text-slate-900 rounded-lg py-2.5 text-sm font-semibold hover:bg-teal-300 disabled:opacity-50 transition-colors"
             >
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
