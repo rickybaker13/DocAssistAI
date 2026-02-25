@@ -71,7 +71,10 @@ export const ScribeDashboardPage: React.FC = () => {
       <div className="flex gap-2">
         {STATUS_FILTERS.map(f => (
           <button
-            key={f} onClick={() => setStatusFilter(f)}
+            key={f}
+            type="button"
+            onClick={() => setStatusFilter(f)}
+            aria-pressed={statusFilter === f}
             className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
               statusFilter === f
                 ? 'bg-teal-400/20 text-teal-400 border-teal-400/30'
@@ -86,20 +89,24 @@ export const ScribeDashboardPage: React.FC = () => {
       {/* List */}
       {loading ? (
         <div className="flex items-center justify-center h-32">
-          <div className="animate-spin h-8 w-8 border-4 border-teal-400 border-t-transparent rounded-full" />
+          <div
+            role="status"
+            aria-label="Loading notes"
+            className="animate-spin h-8 w-8 border-4 border-teal-400 border-t-transparent rounded-full"
+          />
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           {notes.length === 0 ? (
             <>
-              <p className="text-slate-500 text-base mb-2">No notes yet</p>
-              <p className="text-slate-600 text-sm mb-4">Record your first patient encounter to get started</p>
+              <p className="text-slate-400 text-base mb-2">No notes yet</p>
+              <p className="text-slate-400 text-sm mb-4">Record your first patient encounter to get started</p>
               <Link to="/scribe/note/new" className="text-teal-400 hover:text-teal-300 text-sm transition-colors">
                 Create first note →
               </Link>
             </>
           ) : (
-            <p className="text-slate-500 text-sm">No notes match your search</p>
+            <p className="text-slate-400 text-sm">No notes match your search</p>
           )}
         </div>
       ) : (
