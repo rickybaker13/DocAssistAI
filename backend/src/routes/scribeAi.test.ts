@@ -1,10 +1,11 @@
-import { jest, describe, it, expect, beforeAll, afterEach, afterAll } from '@jest/globals';
+import { jest, describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import { ScribeUserModel } from '../models/scribeUser';
 import { closeDb } from '../database/db';
+import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
 // In ESM mode, jest.mock at top-level is not hoisted correctly.
 // We use jest.spyOn on the singleton aiService object instead,
@@ -20,6 +21,8 @@ app.use('/api/ai/scribe', scribeAiRouter);
 const SECRET = 'test-secret';
 let authCookie: string;
 let mockAiChat: ReturnType<typeof jest.spyOn>;
+let mockScrub: ReturnType<typeof jest.spyOn>;
+let mockReInject: ReturnType<typeof jest.spyOn>;
 
 describe('Scribe AI Routes', () => {
   beforeAll(() => {
@@ -29,9 +32,21 @@ describe('Scribe AI Routes', () => {
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '1h' });
     authCookie = `scribe_token=${token}`;
     mockAiChat = jest.spyOn(aiService, 'chat');
+    mockScrub = jest.spyOn(piiScrubber, 'scrub');
+    mockReInject = jest.spyOn(piiScrubber, 'reInject');
+  });
+  beforeEach(() => {
+    // Default pass-through mocks — existing tests are unaffected by the PII layer
+    mockScrub.mockImplementation(async (fields) => ({
+      scrubbedFields: { ...fields },
+      subMap: {},
+    }));
+    mockReInject.mockImplementation((text) => text);
   });
   afterEach(() => {
     mockAiChat.mockReset();
+    mockScrub.mockReset();
+    mockReInject.mockReset();
   });
   afterAll(() => {
     jest.restoreAllMocks();
@@ -402,6 +417,193 @@ describe('Scribe AI Routes', () => {
         .send({ suggestion: 'Document BP', sectionName: 'Assessment', transcript: 'HTN.' });
       const sys: string = (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'system')?.content ?? '';
       expect(sys).toMatch(/ICD-10|icd-10/i);
+    });
+  });
+
+  describe('PII de-identification', () => {
+    it('/generate — calls piiScrubber.scrub with transcript before LLM call', async () => {
+      mockScrub.mockResolvedValueOnce({
+        scrubbedFields: { transcript: 'Patient is [PERSON_0].' },
+        subMap: { '[PERSON_0]': 'John Smith' },
+      });
+      mockReInject.mockImplementation((text) =>
+        text.replace(/\[PERSON_0\]/g, 'John Smith')
+      );
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          sections: [{ name: 'HPI', content: '[PERSON_0] has chest pain.', confidence: 0.9 }],
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/generate')
+        .set('Cookie', authCookie)
+        .send({
+          transcript: 'Patient is John Smith.',
+          sections: [{ name: 'HPI' }],
+          noteType: 'progress_note',
+        });
+
+      expect(res.status).toBe(200);
+      expect(mockScrub).toHaveBeenCalledWith(
+        expect.objectContaining({ transcript: 'Patient is John Smith.' })
+      );
+      const userMsg: string =
+        (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'user')?.content ?? '';
+      expect(userMsg).toContain('[PERSON_0]');
+      expect(userMsg).not.toContain('John Smith');
+      expect(res.body.sections[0].content).toContain('John Smith');
+    });
+
+    it('/generate — returns 503 when Presidio is unavailable, never calls LLM', async () => {
+      mockScrub.mockRejectedValueOnce(new PiiServiceUnavailableError());
+
+      const res = await request(app)
+        .post('/api/ai/scribe/generate')
+        .set('Cookie', authCookie)
+        .send({
+          transcript: 'Patient is John Smith.',
+          sections: [{ name: 'HPI' }],
+          noteType: 'progress_note',
+        });
+
+      expect(res.status).toBe(503);
+      expect(mockAiChat).not.toHaveBeenCalled();
+      expect(res.body.error).toMatch(/PII scrubbing/i);
+    });
+
+    it('/ghost-write — scrubs chatAnswer and existingContent, re-injects into ghostWritten', async () => {
+      mockScrub.mockResolvedValueOnce({
+        scrubbedFields: { chatAnswer: '[PERSON_0] on lisinopril.', existingContent: '' },
+        subMap: { '[PERSON_0]': 'John Smith' },
+      });
+      mockReInject.mockImplementation((text) =>
+        text.replace(/\[PERSON_0\]/g, 'John Smith')
+      );
+      mockAiChat.mockResolvedValueOnce({ content: '[PERSON_0] on lisinopril.' } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/ghost-write')
+        .set('Cookie', authCookie)
+        .send({
+          chatAnswer: 'John Smith on lisinopril.',
+          destinationSection: 'Assessment',
+          existingContent: '',
+        });
+
+      expect(res.status).toBe(200);
+      expect(mockScrub).toHaveBeenCalledWith(
+        expect.objectContaining({ chatAnswer: 'John Smith on lisinopril.' })
+      );
+      expect(mockReInject).toHaveBeenCalled();
+      expect(res.body.ghostWritten).toContain('John Smith');
+    });
+
+    it('/ghost-write — returns 503 when Presidio is unavailable', async () => {
+      mockScrub.mockRejectedValueOnce(new PiiServiceUnavailableError());
+
+      const res = await request(app)
+        .post('/api/ai/scribe/ghost-write')
+        .set('Cookie', authCookie)
+        .send({
+          chatAnswer: 'John Smith on lisinopril.',
+          destinationSection: 'Assessment',
+        });
+
+      expect(res.status).toBe(503);
+      expect(mockAiChat).not.toHaveBeenCalled();
+    });
+
+    it('/focused — scrubs content and transcript, re-injects into analysis', async () => {
+      mockScrub.mockResolvedValueOnce({
+        scrubbedFields: { content: '[PERSON_0] with HTN.', transcript: '' },
+        subMap: { '[PERSON_0]': 'John Smith' },
+      });
+      mockReInject.mockImplementation((text) =>
+        text.replace(/\[PERSON_0\]/g, 'John Smith')
+      );
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          analysis: '[PERSON_0] has essential hypertension.',
+          citations: [],
+          suggestions: ['Add medication list.'],
+          confidence_breakdown: '',
+        }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/focused')
+        .set('Cookie', authCookie)
+        .send({ sectionName: 'Assessment', content: 'John Smith with HTN.', transcript: '' });
+
+      expect(res.status).toBe(200);
+      expect(mockScrub).toHaveBeenCalled();
+      expect(res.body.analysis).toContain('John Smith');
+    });
+
+    it('/resolve-suggestion — scrubs suggestion/existingContent/transcript, re-injects into noteText', async () => {
+      mockScrub.mockResolvedValueOnce({
+        scrubbedFields: {
+          suggestion: 'Document BP for [PERSON_0].',
+          existingContent: '',
+          transcript: '',
+        },
+        subMap: { '[PERSON_0]': 'John Smith' },
+      });
+      mockReInject.mockImplementation((text) =>
+        text.replace(/\[PERSON_0\]/g, 'John Smith')
+      );
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({ ready: true, noteText: '[PERSON_0]: BP 140/90.' }),
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document BP for John Smith.',
+          sectionName: 'Assessment',
+          existingContent: '',
+          transcript: '',
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ready).toBe(true);
+      expect(res.body.noteText).toContain('John Smith');
+    });
+
+    it('/resolve-suggestion — returns 503 when Presidio is unavailable', async () => {
+      mockScrub.mockRejectedValueOnce(new PiiServiceUnavailableError());
+
+      const res = await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document BP for John Smith.',
+          sectionName: 'Assessment',
+        });
+
+      expect(res.status).toBe(503);
+      expect(mockAiChat).not.toHaveBeenCalled();
+    });
+
+    it('system prompt includes token-preservation instruction on /generate', async () => {
+      mockScrub.mockResolvedValueOnce({ scrubbedFields: { transcript: 'text' }, subMap: {} });
+      mockReInject.mockImplementation((text) => text);
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({
+          sections: [{ name: 'HPI', content: 'text', confidence: 0.9 }],
+        }),
+      } as any);
+
+      await request(app)
+        .post('/api/ai/scribe/generate')
+        .set('Cookie', authCookie)
+        .send({ transcript: 'text', sections: [{ name: 'HPI' }], noteType: 'progress_note' });
+
+      const sys: string =
+        (mockAiChat.mock.calls[0][0] as any).messages.find((m: any) => m.role === 'system')?.content ?? '';
+      expect(sys).toMatch(/privacy-protection token|TOKEN_N|BRACKET_N/i);
     });
   });
 });

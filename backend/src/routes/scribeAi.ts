@@ -1,9 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth';
 import { aiService } from '../services/ai/aiService';
+import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
 
 const ICD10_TERMINOLOGY_INSTRUCTION = `Use ICD-10-CM preferred terminology throughout. Examples: 'essential (primary) hypertension' not 'high blood pressure'; 'Type 2 diabetes mellitus' not 'diabetes' or 'diabetic'; specify systolic/diastolic and acute/chronic/acute-on-chronic for heart failure; 'COPD with acute exacerbation' or 'COPD without acute exacerbation' not 'COPD' alone; 'sequelae of CVA with [deficit]' not 'history of stroke' when deficits persist. Avoid 'history of [condition]' for conditions still actively managed — in ICD-10, 'history of' means fully resolved.`;
+
+const TOKEN_PRESERVATION_INSTRUCTION = `\nText may contain privacy-protection tokens in [TOKEN_N] format (e.g., [PERSON_0], [DATE_0], [MRN_0]). Preserve these tokens exactly as written — do not rephrase, remove, or modify any [BRACKET_N] token.`;
 
 const router = Router();
 router.use(scribeAuthMiddleware);
@@ -30,6 +33,20 @@ router.post('/generate', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'sections array is required and must be non-empty' }) as any;
   }
 
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedTranscript = transcript;
+  let subMap: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({ transcript });
+    scrubbedTranscript = result.scrubbedFields.transcript;
+    subMap = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
+  }
+
   const specialty = userContext?.specialty || 'Medicine';
   const sectionList = sections
     .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
@@ -48,10 +65,10 @@ Write in first-person plural physician voice ("We assessed...", "The patient was
 Be clinically precise. Do not fabricate findings not present in the transcript.
 If a section cannot be completed from the transcript, write: "Insufficient information captured."
 Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}
-${ICD10_TERMINOLOGY_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
 
   const userPrompt = `Transcript:
-"${transcript}"
+"${scrubbedTranscript}"
 
 Generate content for these sections:
 ${sectionList}
@@ -89,6 +106,13 @@ Confidence is 0.0–1.0: 1.0 = fully supported by transcript, 0.0 = not in trans
       });
     }
 
+    if (Object.keys(subMap).length > 0) {
+      parsed.sections = parsed.sections.map((s: any) => ({
+        ...s,
+        content: piiScrubber.reInject(s.content ?? '', subMap),
+      }));
+    }
+
     return res.json({ sections: parsed.sections });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -103,15 +127,34 @@ router.post('/focused', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'sectionName and content are required' }) as any;
   }
 
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedContent = content;
+  let scrubbedTranscriptFocused = transcript ?? '';
+  let subMapFocused: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({
+      content,
+      transcript: transcript ?? '',
+    });
+    scrubbedContent = result.scrubbedFields.content;
+    scrubbedTranscriptFocused = result.scrubbedFields.transcript;
+    subMapFocused = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
+  }
+
   const systemPrompt = `You are a senior ${specialty} physician AI providing expert clinical analysis.
 Analyze the provided note section and return structured JSON only — no markdown, no extra text.
-${ICD10_TERMINOLOGY_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
 
   const userPrompt = `Analyze this note section and provide deep clinical insight.
 
 Section: ${sectionName}
-Content: "${content}"
-${transcript ? `Original transcript excerpt: "${transcript.slice(0, 500)}"` : ''}
+Content: "${scrubbedContent}"
+${scrubbedTranscriptFocused ? `Original transcript excerpt: "${scrubbedTranscriptFocused.slice(0, 500)}"` : ''}
 Specialty: ${specialty}
 
 Return JSON:
@@ -150,6 +193,17 @@ Keep each field concise. Suggestions should be actionable one-liners.`;
       parsed = { analysis: text, citations: [], suggestions: [], confidence_breakdown: '' };
     }
 
+    if (Object.keys(subMapFocused).length > 0) {
+      if (parsed.analysis) {
+        parsed.analysis = piiScrubber.reInject(parsed.analysis, subMapFocused);
+      }
+      if (Array.isArray(parsed.suggestions)) {
+        parsed.suggestions = parsed.suggestions.map((s: string) =>
+          piiScrubber.reInject(s, subMapFocused)
+        );
+      }
+    }
+
     return res.json(parsed);
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -171,6 +225,25 @@ router.post('/ghost-write', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'chatAnswer and destinationSection are required' }) as any;
   }
 
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedChatAnswer = chatAnswer;
+  let scrubbedExistingContent = existingContent ?? '';
+  let subMapGhost: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({
+      chatAnswer,
+      existingContent: existingContent ?? '',
+    });
+    scrubbedChatAnswer = result.scrubbedFields.chatAnswer;
+    scrubbedExistingContent = result.scrubbedFields.existingContent;
+    subMapGhost = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
+  }
+
   // Verbosity-specific writing instructions
   const verbosityInstruction =
     verbosity === 'brief'
@@ -184,18 +257,18 @@ Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj
 Output ONLY the note text — no explanation, no JSON, no markdown, no preamble.
 Never include notes about transcription quality, source artifacts, uncertainty about the source material, or any meta-commentary.
 Never include caveats, disclaimers, or any text that would not appear verbatim in a physician's clinical note.
-${ICD10_TERMINOLOGY_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
 
   const userPrompt = `Convert the following clinical information into note text for the "${destinationSection}" section.
 ${verbosityInstruction}
 Match the style of the existing section content if provided.
 
 Clinical information:
-"${chatAnswer}"
+"${scrubbedChatAnswer}"
 
 Note type: ${noteType}
 Specialty: ${specialty}
-${existingContent ? `Existing section content (match this style): "${existingContent.slice(0, 300)}"` : ''}
+${scrubbedExistingContent ? `Existing section content (match this style): "${scrubbedExistingContent.slice(0, 300)}"` : ''}
 
 Output ONLY the note text. Nothing else.`;
 
@@ -211,7 +284,7 @@ Output ONLY the note text. Nothing else.`;
       { userId: req.scribeUserId }
     );
 
-    const ghostWritten = extractContent(raw).trim();
+    const ghostWritten = piiScrubber.reInject(extractContent(raw).trim(), subMapGhost);
     return res.json({ ghostWritten });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -232,6 +305,28 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
 
   if (!suggestion || !sectionName) {
     return res.status(400).json({ error: 'suggestion and sectionName are required' }) as any;
+  }
+
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedSuggestion = suggestion;
+  let scrubbedExistingContentRS = existingContent;
+  let scrubbedTranscriptRS = transcript;
+  let subMapRS: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({
+      suggestion,
+      existingContent,
+      transcript,
+    });
+    scrubbedSuggestion = result.scrubbedFields.suggestion;
+    scrubbedExistingContentRS = result.scrubbedFields.existingContent;
+    scrubbedTranscriptRS = result.scrubbedFields.transcript;
+    subMapRS = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
   }
 
   const verbosityInstruction =
@@ -258,15 +353,15 @@ Never include notes about transcription quality, source artifacts, uncertainty a
 Never include the suggestion text itself, caveats, or guidance — only note-ready clinical content.
 
 Return ONLY valid JSON. No markdown fences. No extra text.
-${ICD10_TERMINOLOGY_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
 
-  const userPrompt = `Suggestion to resolve: "${suggestion}"
+  const userPrompt = `Suggestion to resolve: "${scrubbedSuggestion}"
 
 Section: ${sectionName}
 Note type: ${noteType}
 Specialty: ${specialty}
-${existingContent ? `Existing section content:\n"${existingContent.slice(0, 400)}"` : ''}
-${transcript ? `Transcript excerpt:\n"${transcript.slice(0, 800)}"` : ''}
+${scrubbedExistingContentRS ? `Existing section content:\n"${scrubbedExistingContentRS.slice(0, 400)}"` : ''}
+${scrubbedTranscriptRS ? `Transcript excerpt:\n"${scrubbedTranscriptRS.slice(0, 800)}"` : ''}
 
 Return one of these two JSON shapes:
 { "ready": true, "noteText": "..." }
@@ -305,6 +400,15 @@ Return one of these two JSON shapes:
     }
     if (!parsed.ready && Array.isArray(parsed.options) && parsed.options.length < 1) {
       return res.status(500).json({ error: 'AI returned no options for the clarifying question' }) as any;
+    }
+
+    if (Object.keys(subMapRS).length > 0) {
+      if (parsed.noteText) {
+        parsed.noteText = piiScrubber.reInject(parsed.noteText, subMapRS);
+      }
+      if (parsed.question) {
+        parsed.question = piiScrubber.reInject(parsed.question, subMapRS);
+      }
     }
 
     return res.json(parsed);
