@@ -4,6 +4,8 @@ services:
     ports: ["5002:3000"]
     volumes:
       - ./backend/presidio-config:/usr/bin/presidio/conf
+    environment:
+      - RECOGNIZER_REGISTRY_CONF_FILE=/usr/bin/presidio/conf/recognizers.yaml
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]

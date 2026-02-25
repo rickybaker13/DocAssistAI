@@ -58,6 +58,29 @@ async function analyzeText(text: string): Promise<AnalyzerResult[]> {
   }
 }
 
+// ── Internal: deduplicate overlapping spans ───────────────────────────────────
+
+/**
+ * Remove overlapping entity spans, keeping the highest-scoring one.
+ * If scores are equal, the longer span wins. Prevents token corruption
+ * when e.g. DATE_OF_BIRTH and DATE_TIME both match the same text region.
+ */
+function deduplicateEntities(entities: AnalyzerResult[]): AnalyzerResult[] {
+  // Sort by score descending, then span length descending (best candidates first)
+  const sorted = [...entities].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    return (b.end - b.start) - (a.end - a.start);
+  });
+
+  const kept: AnalyzerResult[] = [];
+  for (const entity of sorted) {
+    const overlaps = kept.some((k) => entity.start < k.end && entity.end > k.start);
+    if (!overlaps) kept.push(entity);
+  }
+
+  return kept;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 /**
@@ -80,10 +103,10 @@ async function scrub(fields: Record<string, string>): Promise<ScrubResult> {
 
     const results = await analyzeText(text); // throws PiiServiceUnavailableError on failure
 
-    // Filter by confidence; sort ascending by start to assign tokens in appearance order
-    const filteredAscending = results
-      .filter((r) => r.score >= minScore)
-      .sort((a, b) => a.start - b.start);
+    // Filter by confidence, deduplicate overlapping spans, then sort ascending
+    const filteredAscending = deduplicateEntities(
+      results.filter((r) => r.score >= minScore)
+    ).sort((a, b) => a.start - b.start);
 
     // First pass (ascending): assign tokens in order of appearance in the text
     for (const entity of filteredAscending) {
