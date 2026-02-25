@@ -1,0 +1,61 @@
+# HIPAA identifiers not natively covered by Presidio base models
+---
+recognizers:
+  - name: MedicalRecordNumberRecognizer
+    supported_language: en
+    patterns:
+      - name: mrn_pattern
+        regex: "MRN[\\s#:]*[A-Z0-9]{4,12}"
+        score: 0.85
+    context:
+      - "mrn"
+      - "medical record"
+      - "record number"
+      - "chart number"
+    supported_entity: MEDICAL_RECORD_NUMBER
+
+  - name: DateOfBirthRecognizer
+    supported_language: en
+    patterns:
+      - name: dob_pattern
+        regex: "DOB[\\s:]*\\d{1,2}[/\\-]\\d{1,2}[/\\-]\\d{2,4}"
+        score: 0.9
+      - name: dob_full_pattern
+        regex: "(?:date of birth|born on)[:\\s]*\\d{1,2}[/\\-]\\d{1,2}[/\\-]\\d{2,4}"
+        score: 0.85
+    supported_entity: DATE_OF_BIRTH
+
+  - name: HealthPlanNumberRecognizer
+    supported_language: en
+    patterns:
+      - name: plan_pattern
+        regex: "[A-Z]{2,3}[\\s\\-]?\\d{6,12}"
+        score: 0.6
+    context:
+      - "insurance"
+      - "health plan"
+      - "policy"
+      - "member id"
+      - "subscriber"
+    supported_entity: HEALTH_PLAN_NUMBER
+
+  - name: AccountNumberRecognizer
+    supported_language: en
+    patterns:
+      - name: account_pattern
+        regex: "(?:account|acct)[\\s#:]*[A-Z0-9\\-]{4,16}"
+        score: 0.75
+    supported_entity: ACCOUNT_NUMBER
+
+  - name: AgeOver89Recognizer
+    supported_language: en
+    patterns:
+      - name: age_pattern
+        regex: "\\b(9[0-9]|1[0-9]{2})\\s*(?:year|yr)"
+        score: 0.8
+    context:
+      - "age"
+      - "year old"
+      - "yr old"
+      - "years of age"
+    supported_entity: AGE_OVER_89
