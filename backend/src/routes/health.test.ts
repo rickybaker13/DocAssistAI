@@ -74,4 +74,17 @@ describe('GET /api/health', () => {
     expect(res.body.analyzer).toBe('unavailable');
     expect(res.body.anonymizer).toBe('unavailable');
   });
+
+  it('returns degraded when analyzer returns a non-ok HTTP status', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeErrorResponse())  // analyzer responds with 503
+      .mockResolvedValueOnce(makeOkResponse());    // anonymizer is fine
+
+    const res = await request(app).get('/api/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.presidio).toBe('degraded');
+    expect(res.body.analyzer).toBe('unavailable');
+    expect(res.body.anonymizer).toBe('ok');
+  });
 });
