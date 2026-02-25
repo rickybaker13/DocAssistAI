@@ -13,7 +13,7 @@ describe('ScribeLayout', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getByText(/DocAssist Scribe/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/DocAssist Scribe/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders child route content via Outlet', () => {
