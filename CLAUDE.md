@@ -68,6 +68,45 @@ npx vitest run src/
 - **Gotcha — longer phrases win:** `COMPILED_TERMS` sorted by `vague.length` desc so "history of stroke" is checked before "stroke", preventing substring overlap.
 - **Overlay layout:** Overlay and textarea MUST share identical `fontFamily`, `fontSize`, `lineHeight`, `padding` via the `sharedStyle` object — any mismatch misaligns underlines.
 
+## PII De-Identification Layer
+
+**Architecture:** Microsoft Presidio sidecar via Docker Compose. `backend/src/services/piiScrubber.ts` intercepts all text fields before every LLM call. PHI is replaced with typed tokens (`[PERSON_0]`, `[DATE_TIME_0]`, `[MEDICAL_RECORD_NUMBER_0]`, etc.). Backend holds a request-scoped substitution map (never persisted, never logged). Re-injection restores real values in LLM response before client receives it.
+
+**Fail behavior:** Fail closed always — 503 returned to client, LLM never called if Presidio unreachable.
+
+**Start Presidio locally (required for backend to serve LLM requests):**
+```bash
+docker-compose up presidio-analyzer presidio-anonymizer
+```
+
+**Environment variables:**
+- `PRESIDIO_ANALYZER_URL` — default `http://localhost:5002`
+- `PRESIDIO_ANONYMIZER_URL` — default `http://localhost:5001`
+- `PRESIDIO_MIN_SCORE` — confidence threshold (default `0.7`). Low-confidence detections skipped — prefer missing uncertain PII over corrupting clinical content.
+- `PRESIDIO_TIMEOUT_MS` — per-request timeout (default `5000`)
+
+**Testing pattern for `piiScrubber.test.ts`:**
+Mock fetch before importing the module:
+```typescript
+const mockFetch = jest.fn<typeof fetch>();
+(globalThis as any).fetch = mockFetch;
+import { piiScrubber } from './piiScrubber.js';
+```
+
+**Testing pattern for route integration tests:**
+```typescript
+import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
+const mockScrub = jest.spyOn(piiScrubber, 'scrub');
+const mockReInject = jest.spyOn(piiScrubber, 'reInject');
+// In beforeEach — set pass-through default so existing tests are unaffected:
+mockScrub.mockImplementation(async (fields) => ({ scrubbedFields: { ...fields }, subMap: {} }));
+mockReInject.mockImplementation((text) => text);
+```
+
+**Custom HIPAA recognizers:** `backend/presidio-config/custom-recognizers.yaml` — mounted into the analyzer container via Docker volume. Covers: MRN, DOB, health plan numbers, account numbers, ages > 89.
+
+**Health check:** `GET /api/health` returns `{ presidio, analyzer, anonymizer }` status. Used by frontend health banner.
+
 ## Known Gotchas
 
 - **`ANTHROPIC_API_KEY=` (empty) blocks dotenv:** Claude Code bash has `ANTHROPIC_API_KEY=` (empty string), preventing dotenv from loading the real key. Start backend with `env -u ANTHROPIC_API_KEY npm run dev`.
