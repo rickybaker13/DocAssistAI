@@ -13,6 +13,7 @@ import { contextStore } from '../services/signal/contextStore.js';
 import type { ClinicalEvent } from '../services/signal/fhirNormalizer.js';
 import { buildCoWriterPrompt } from '../services/cowriter/noteBuilder.js';
 import { logAIServiceUsage } from '../services/audit/auditLogger.js';
+import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
 const router = Router();
 
@@ -32,6 +33,46 @@ router.post('/chat', async (req: Request, res: Response) => {
     if (!request.messages || request.messages.length === 0) {
       return res.status(400).json({
         error: 'Messages are required',
+      });
+    }
+
+    // ── PII De-identification ─────────────────────────────────────────────────
+    // Scrub user messages and the original patient context.
+    // Signal Engine chart context and RAG context are structured FHIR data
+    // addressed in V2 with a clinical NER model.
+    const fieldsToScrub: Record<string, string> = {};
+    request.messages.forEach((msg, i) => {
+      if (msg.role === 'user' && msg.content) {
+        fieldsToScrub[`message_${i}`] = msg.content;
+      }
+    });
+    if (req.body.patientContext) {
+      fieldsToScrub.patientContext = req.body.patientContext;
+    }
+
+    let chatSubMap: Record<string, string> = {};
+    if (Object.keys(fieldsToScrub).length > 0) {
+      let scrubResult: Awaited<ReturnType<typeof piiScrubber.scrub>>;
+      try {
+        scrubResult = await piiScrubber.scrub(fieldsToScrub);
+      } catch (err) {
+        if (err instanceof PiiServiceUnavailableError) {
+          return res.status(503).json({
+            success: false,
+            error: (err as Error).message,
+          });
+        }
+        throw err;
+      }
+      chatSubMap = scrubResult.subMap;
+
+      // Apply scrubbed content back to user messages
+      request.messages = request.messages.map((msg, i) => {
+        const key = `message_${i}`;
+        if (msg.role === 'user' && scrubResult.scrubbedFields[key] !== undefined) {
+          return { ...msg, content: scrubResult.scrubbedFields[key] };
+        }
+        return msg;
       });
     }
 
@@ -153,10 +194,16 @@ ${chartContext}`;
       console.log(`  Total tokens: ${response.usage.total_tokens ?? 'N/A'}`);
     }
 
+    // Re-inject original PII values before returning to client
+    const responseData =
+      Object.keys(chatSubMap).length > 0 && response.content
+        ? { ...response, content: piiScrubber.reInject(response.content, chatSubMap) }
+        : response;
+
     res.json({
       success: true,
       cited,
-      data: response,
+      data: responseData,
     });
   } catch (error: any) {
     console.error('Chat error:', error);
