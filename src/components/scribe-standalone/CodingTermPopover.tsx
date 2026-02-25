@@ -32,28 +32,59 @@ export const CodingTermPopover: React.FC<Props> = ({ match, position, onReplace,
       ref={ref}
       role="dialog"
       aria-label={`ICD-10 term suggestion for "${match.original}"`}
-      style={{ position: 'fixed', left: leftPos, top: position.y + 12, zIndex: 60, width: 300 }}
-      className="bg-white border border-amber-200 rounded-xl shadow-xl p-3 text-sm"
+      style={{
+        position: 'fixed',
+        left: leftPos,
+        top: position.y + 12,
+        zIndex: 60,
+        width: 300,
+        backgroundColor: '#1e293b',
+        border: '1px solid #334155',
+        color: '#f8fafc',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        borderRadius: '0.75rem',
+        padding: '0.75rem',
+        fontSize: '0.875rem',
+      }}
     >
-      <div className="mb-1.5">
-        <span className="font-semibold text-amber-700">⚠ "{match.original}"</span>
+      <div style={{ marginBottom: '0.375rem' }}>
+        <span style={{ fontWeight: 600, color: '#fbbf24' }}>⚠ "{match.original}"</span>
         {match.term.icd10 && (
-          <span className="ml-2 text-xs text-gray-400">({match.term.icd10})</span>
+          <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#2dd4bf' }}>({match.term.icd10})</span>
         )}
       </div>
-      <p className="text-xs text-gray-500 mb-2 leading-snug">{match.term.note}</p>
-      <div className="flex flex-col gap-1 mb-2">
+      <p style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '0.5rem', lineHeight: '1.4' }}>{match.term.note}</p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.5rem' }}>
         {match.term.preferred.map(p => (
           <button
             key={p}
             onClick={() => onReplace(p)}
-            className="text-left text-xs px-2 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-800 font-medium transition-colors"
+            style={{
+              textAlign: 'left',
+              fontSize: '0.75rem',
+              padding: '0.375rem 0.5rem',
+              borderRadius: '0.5rem',
+              backgroundColor: '#0f172a',
+              color: '#2dd4bf',
+              fontWeight: 500,
+              border: '1px solid #334155',
+              cursor: 'pointer',
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#334155')}
+            onMouseLeave={e => (e.currentTarget.style.backgroundColor = '#0f172a')}
           >
             {p}
           </button>
         ))}
       </div>
-      <button onClick={onDismiss} aria-label="Skip this suggestion" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+      <button
+        onClick={onDismiss}
+        aria-label="Skip this suggestion"
+        style={{ fontSize: '0.75rem', color: '#94a3b8', cursor: 'pointer', background: 'none', border: 'none', padding: 0, transition: 'color 0.15s' }}
+        onMouseEnter={e => (e.currentTarget.style.color = '#f8fafc')}
+        onMouseLeave={e => (e.currentTarget.style.color = '#94a3b8')}
+      >
         ✕ skip
       </button>
     </div>

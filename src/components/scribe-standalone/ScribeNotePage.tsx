@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { ArrowLeft, Sparkles, Mic } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
@@ -48,27 +49,27 @@ const SectionLibraryForNote: React.FC<SectionLibraryForNoteProps> = ({ onSelect,
 
   return (
     <div className="flex flex-col">
-      <div className="px-3 py-2 border-b border-gray-200">
+      <div className="px-3 py-2 border-b border-slate-700">
         <input
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search sections..."
           aria-label="Search sections"
-          className="w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-slate-700 rounded-lg px-3 py-1.5 text-sm bg-slate-900 text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400"
         />
       </div>
       {filtered.map(t => (
         <button
           key={t.id}
           onClick={() => onSelect({ id: t.id, name: t.name, promptHint: t.prompt_hint, isPrebuilt: t.is_prebuilt === 1 })}
-          className="w-full text-left px-3 py-2.5 text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors"
+          className="w-full text-left px-3 py-2.5 text-sm border-b border-slate-700 text-slate-200 hover:bg-teal-400/10 transition-colors"
         >
           {t.name}
         </button>
       ))}
       {filtered.length === 0 && (
-        <p className="text-center text-sm text-gray-400 py-4">No sections found</p>
+        <p className="text-center text-sm text-slate-400 py-4">No sections found</p>
       )}
     </div>
   );
@@ -183,7 +184,7 @@ export const ScribeNotePage: React.FC = () => {
 
   if (loading) return (
     <div className="flex items-center justify-center h-48">
-      <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+      <div className="animate-spin h-8 w-8 border-4 border-teal-400 border-t-transparent rounded-full" />
     </div>
   );
 
@@ -191,21 +192,39 @@ export const ScribeNotePage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <div className="text-red-500 p-4 bg-red-50 rounded-lg text-sm">{error}</div>}
+      {error && <div className="text-red-400 p-4 bg-red-950 rounded-lg text-sm border border-red-400/30">{error}</div>}
+
+      {/* Page header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-gray-900">
-            {note.patient_label || note.note_type.replace(/_/g, ' ')}
-          </h1>
-          <span className={`text-xs px-2 py-0.5 rounded-full ${note.status === 'finalized' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-            {note.status}
-          </span>
+        <div className="flex flex-col gap-1">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-200 transition-colors w-fit"
+          >
+            <ArrowLeft size={16} aria-hidden="true" />
+            Back
+          </button>
+          <div className="flex items-center gap-2">
+            <h1 className="text-slate-50 font-semibold text-lg">
+              {note.patient_label || note.note_type.replace(/_/g, ' ')}
+            </h1>
+            <span className="bg-slate-800 border border-slate-700 text-slate-400 text-xs px-2.5 py-1 rounded-lg">
+              {note.note_type.replace(/_/g, ' ')}
+            </span>
+            <span className={
+              note.status === 'finalized'
+                ? 'bg-emerald-950 text-emerald-400 border border-emerald-400/30 text-xs px-2.5 py-1 rounded-full'
+                : 'bg-amber-950 text-amber-400 border border-amber-400/30 text-xs px-2.5 py-1 rounded-full'
+            }>
+              {note.status}
+            </span>
+          </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={handleFinalize}
             disabled={saving}
-            className="text-sm px-3 py-1.5 border border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 transition-colors"
+            className="bg-teal-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-300 transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Finalize'}
           </button>
@@ -224,14 +243,14 @@ export const ScribeNotePage: React.FC = () => {
 
       <button
         onClick={() => setShowAddSection(true)}
-        className="text-sm text-blue-600 border border-dashed border-blue-300 rounded-lg px-4 py-2 hover:bg-blue-50 transition-colors w-full"
+        className="text-sm text-teal-400 border border-dashed border-slate-700 rounded-lg px-4 py-2 hover:bg-teal-400/10 transition-colors w-full"
       >
         + Add Section
       </button>
 
       <button
         onClick={handleCopyNote}
-        className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-base hover:bg-green-700 transition-colors"
+        className="w-full py-3 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 transition-colors"
       >
         Copy Note
       </button>
@@ -254,10 +273,10 @@ export const ScribeNotePage: React.FC = () => {
       />
 
       {showAddSection && (
-        <div className="fixed inset-x-0 bottom-0 z-50 bg-white border-t border-gray-200 rounded-t-2xl shadow-2xl" style={{ maxHeight: '60vh' }}>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-            <h3 className="font-semibold text-gray-900 text-sm">Add Section</h3>
-            <button onClick={() => setShowAddSection(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+        <div className="fixed inset-x-0 bottom-0 z-50 bg-slate-900 border-t border-slate-700 rounded-t-2xl shadow-2xl" style={{ maxHeight: '60vh' }}>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+            <h3 className="font-semibold text-slate-50 text-sm">Add Section</h3>
+            <button onClick={() => setShowAddSection(false)} className="text-slate-400 hover:text-slate-200 text-xl">×</button>
           </div>
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(60vh - 52px)' }}>
             <SectionLibraryForNote
