@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Sparkles, X, ArrowRight } from 'lucide-react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface Section {
@@ -248,52 +249,64 @@ export const FocusedAIPanel: React.FC<Props> = ({
   return (
     <>
       {/* Main panel */}
-      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60" onClick={onClose}>
         <div
-          className="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl"
+          className="bg-slate-900 border border-slate-700 rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto shadow-2xl"
           onClick={e => e.stopPropagation()}
         >
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+          {/* Header */}
+          <div className="sticky top-0 bg-slate-900 border-b border-slate-700 px-4 py-3 flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-gray-900">⚡ Focused AI</h2>
-              <p className="text-xs text-gray-500">{section.section_name}</p>
+              <h2 className="text-sm font-semibold text-slate-50 flex items-center gap-2">
+                <Sparkles size={15} className="text-teal-400" aria-hidden="true" />
+                AI Analysis
+              </h2>
+              <p className="text-xs text-slate-400">{section.section_name}</p>
             </div>
-            <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="p-1.5 rounded-lg text-slate-500 hover:text-slate-200 hover:bg-slate-700 transition-all duration-150"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
           </div>
 
           <div className="p-4 space-y-4">
             {loading && (
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+              <div className="flex items-center gap-2 text-sm text-slate-400">
+                <div className="animate-spin h-4 w-4 border-2 border-teal-400 border-t-transparent rounded-full" />
                 Analyzing...
               </div>
             )}
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-red-400 text-sm">{error}</p>}
 
             {result && (
               <>
+                {/* Analysis */}
                 <div>
-                  <h3 className="text-xs font-semibold text-gray-500 uppercase mb-1">Analysis</h3>
-                  <p className="text-sm text-gray-800">{result.analysis}</p>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase mb-1">Analysis</h3>
+                  <p className="text-sm text-slate-200">{result.analysis}</p>
                 </div>
 
+                {/* Citations */}
                 {result.citations?.length > 0 && (
                   <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-2">Guideline Citations</h3>
+                    <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">Guideline Citations</h3>
                     {result.citations.map((c, i) => (
-                      <div key={i} className="bg-blue-50 rounded-lg p-2 mb-2 text-sm">
+                      <div key={i} className="bg-sky-950 border border-sky-400/30 rounded-xl p-3 mb-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
-                            <p className="font-medium text-blue-800">{c.guideline}{c.year && ` (${c.year})`}</p>
-                            <p className="text-blue-700 text-xs mt-0.5">{c.recommendation}</p>
+                            <p className="text-xs font-semibold text-sky-400">{c.guideline}{c.year && ` (${c.year})`}</p>
+                            <p className="text-slate-200 text-sm mt-0.5">{c.recommendation}</p>
                           </div>
                           {addedCitationIndices.has(i) ? (
-                            <span className="text-xs text-green-600 font-medium flex-shrink-0 mt-0.5">✓ Added</span>
+                            <span className="text-xs text-emerald-400 font-medium flex-shrink-0 mt-0.5">✓ Added</span>
                           ) : (
                             <button
                               onClick={() => handleAddCitation(c, i)}
                               aria-label="Add citation"
-                              className="text-xs text-blue-600 hover:underline flex-shrink-0 mt-0.5"
+                              className="text-xs text-sky-400 hover:text-sky-300 flex-shrink-0 mt-0.5 transition-colors"
                             >
                               Add citation
                             </button>
@@ -304,13 +317,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
                   </div>
                 )}
 
+                {/* Suggestions */}
                 {result.suggestions?.length > 0 && (
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-xs font-semibold text-gray-500 uppercase">Suggestions</h3>
+                      <h3 className="text-xs font-semibold text-slate-400 uppercase">Suggestions</h3>
                       <button
                         onClick={handleSelectAll}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-teal-400 hover:text-teal-300 transition-colors"
                       >
                         {selectedSuggestions.size > 0 && selectedSuggestions.size === result.suggestions.filter((_, i) => !addedSuggestionIndices.has(i)).length
                           ? 'Deselect all'
@@ -318,26 +332,34 @@ export const FocusedAIPanel: React.FC<Props> = ({
                       </button>
                     </div>
                     {result.suggestions.map((s, i) => (
-                      <div key={i} className={`flex items-center gap-2 text-sm py-1 ${addedSuggestionIndices.has(i) ? 'opacity-50' : ''}`}>
+                      <div
+                        key={i}
+                        className={`bg-slate-800 border rounded-xl p-3 mb-2 flex items-center gap-2 text-sm transition-opacity ${
+                          addedSuggestionIndices.has(i)
+                            ? 'opacity-60 border-emerald-400/30'
+                            : 'border-slate-700'
+                        }`}
+                      >
                         <input
                           type="checkbox"
                           checked={selectedSuggestions.has(i)}
                           onChange={() => handleToggleSuggestion(i)}
                           disabled={addedSuggestionIndices.has(i)}
                           aria-label={`Select suggestion: ${s}`}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 flex-shrink-0"
+                          className="h-3.5 w-3.5 rounded border-slate-600 text-teal-400 flex-shrink-0"
                         />
-                        <span className="text-orange-500">•</span>
-                        <span className="flex-1 text-gray-700">{s}</span>
+                        <span className="text-teal-400">•</span>
+                        <span className="flex-1 text-slate-200">{s}</span>
                         {addedSuggestionIndices.has(i) ? (
-                          <span className="text-xs text-green-600 font-medium flex-shrink-0">✓ Added</span>
+                          <span className="text-xs text-emerald-400 font-medium flex-shrink-0">✓ Added</span>
                         ) : (
                           <button
                             onClick={() => handleAddToNote(s, i)}
                             aria-label="Add to note"
-                            className="text-xs text-blue-600 hover:underline flex-shrink-0"
+                            className="flex items-center gap-1 text-xs text-teal-400 hover:bg-teal-400/10 px-2 py-1 rounded transition-colors flex-shrink-0"
                           >
-                            Add →
+                            Add
+                            <ArrowRight size={14} aria-hidden="true" />
                           </button>
                         )}
                       </div>
@@ -345,7 +367,8 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     {selectedSuggestions.size > 0 && (
                       <button
                         onClick={handleBatchAdd}
-                        className="mt-3 w-full py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors"
+                        aria-label={`Add selected (${selectedSuggestions.size})`}
+                        className="mt-3 w-full py-2 bg-teal-400 text-slate-900 rounded-xl text-sm font-semibold hover:bg-teal-300 transition-colors"
                       >
                         Add selected ({selectedSuggestions.size}) →
                       </button>
@@ -360,23 +383,31 @@ export const FocusedAIPanel: React.FC<Props> = ({
 
       {/* Suggestion flow overlay */}
       {suggestionFlow && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 px-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-sm p-5 space-y-4">
 
             {/* Loading phase */}
             {suggestionFlow.phase === 'loading' && (
               <>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
+                <div className="flex items-center gap-3 text-sm text-slate-400">
+                  <div className="animate-spin h-5 w-5 border-2 border-teal-400 border-t-transparent rounded-full flex-shrink-0" />
                   <span>
                     {batchTotal > 1
                       ? `Processing ${batchCurrentItem} of ${batchTotal}…`
                       : 'Preparing note text...'}
                   </span>
                 </div>
+                {batchTotal > 1 && (
+                  <div className="h-1.5 bg-slate-700 rounded-full">
+                    <div
+                      className="h-1.5 bg-teal-400 rounded-full transition-all"
+                      style={{ width: `${Math.round((batchCurrentItem / batchTotal) * 100)}%` }}
+                    />
+                  </div>
+                )}
                 <button
                   onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -386,7 +417,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
             {/* Clarify phase */}
             {suggestionFlow.phase === 'clarify' && (
               <>
-                <p className="text-sm font-semibold text-gray-900">{suggestionFlow.question}</p>
+                <p className="text-sm font-semibold text-slate-50">{suggestionFlow.question}</p>
 
                 {!showFreeText ? (
                   <>
@@ -395,7 +426,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
                         <button
                           key={opt}
                           onClick={() => handleOptionSelected(opt)}
-                          className="px-3 py-1.5 rounded-full text-sm text-gray-800 border border-gray-300 hover:border-blue-500 hover:bg-blue-50 transition-colors"
+                          className="px-3 py-1.5 rounded-full text-sm text-slate-200 border border-slate-600 hover:border-teal-400 hover:bg-teal-400/10 transition-colors"
                         >
                           {opt}
                         </button>
@@ -403,14 +434,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
                       <button
                         aria-label="Other — enter a custom answer"
                         onClick={() => { setShowFreeText(true); setFreeTextValue(''); }}
-                        className="px-3 py-1.5 rounded-full text-sm text-gray-500 border border-dashed border-gray-300 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                        className="px-3 py-1.5 rounded-full text-sm text-slate-500 border border-dashed border-slate-600 hover:border-teal-400 hover:text-teal-400 transition-colors"
                       >
                         Other…
                       </button>
                     </div>
                     <button
                       onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                     >
                       Cancel
                     </button>
@@ -425,13 +456,13 @@ export const FocusedAIPanel: React.FC<Props> = ({
                         onKeyDown={e => { if (e.key === 'Enter') handleFreeTextSubmit(); }}
                         placeholder="Type your answer…"
                         autoFocus
-                        className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="flex-1 border border-slate-600 rounded-lg px-3 py-1.5 text-sm text-slate-200 bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-400 placeholder:text-slate-500"
                       />
                       <button
                         onClick={handleFreeTextSubmit}
                         disabled={!freeTextValue.trim()}
                         aria-label="Submit"
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-40 transition-colors"
+                        className="px-3 py-1.5 bg-teal-400 text-slate-900 rounded-lg text-sm font-medium hover:bg-teal-300 disabled:opacity-40 transition-colors"
                       >
                         Submit
                       </button>
@@ -439,14 +470,14 @@ export const FocusedAIPanel: React.FC<Props> = ({
                     <button
                       onClick={() => setShowFreeText(false)}
                       aria-label="Back"
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                     >
                       ← back
                     </button>
                     <button
                       aria-label="Cancel"
                       onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); setShowFreeText(false); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
-                      className="text-xs text-gray-400 hover:text-gray-600"
+                      className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                     >
                       Cancel
                     </button>
@@ -458,13 +489,13 @@ export const FocusedAIPanel: React.FC<Props> = ({
             {/* Resolving phase */}
             {suggestionFlow.phase === 'resolving' && (
               <>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full flex-shrink-0" />
+                <div className="flex items-center gap-3 text-sm text-slate-400">
+                  <div className="animate-spin h-5 w-5 border-2 border-teal-400 border-t-transparent rounded-full flex-shrink-0" />
                   <span>Writing note text...</span>
                 </div>
                 <button
                   onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
-                  className="text-xs text-gray-400 hover:text-gray-600"
+                  className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
                 >
                   Cancel
                 </button>
@@ -474,22 +505,22 @@ export const FocusedAIPanel: React.FC<Props> = ({
             {/* Preview phase */}
             {suggestionFlow.phase === 'preview' && (
               <>
-                <p className="text-xs font-semibold text-gray-500 uppercase">Preview</p>
-                <p className="text-sm bg-green-50 border border-green-200 rounded-lg p-3 text-green-900">
-                  {suggestionFlow.noteText}
-                </p>
+                <p className="text-xs font-semibold text-violet-400 uppercase">Preview</p>
+                <div className="bg-violet-950 border border-violet-400/30 rounded-xl p-3">
+                  <p className="text-sm text-slate-200">{suggestionFlow.noteText}</p>
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleConfirm}
                     aria-label="Confirm insert into note"
-                    className="flex-1 py-2 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors"
+                    className="flex-1 py-2 bg-teal-400 text-slate-900 rounded-xl text-sm font-semibold hover:bg-teal-300 transition-colors"
                   >
                     Confirm ✓
                   </button>
                   <button
                     onClick={() => { flowAbortRef.current?.abort(); setSuggestionFlow(null); batchQueueRef.current = []; setBatchTotal(0); setBatchCurrentItem(0); }}
                     aria-label="Cancel"
-                    className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl"
+                    className="px-4 py-2 text-sm text-slate-500 hover:text-slate-300 border border-slate-700 rounded-xl transition-colors"
                   >
                     Cancel
                   </button>
