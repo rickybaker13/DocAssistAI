@@ -32,7 +32,7 @@ export const CMS_TERMS: CmsTerm[] = [
     ],
     note: 'ICD-10 requires systolic vs. diastolic and acute vs. chronic — "CHF" alone maps to I50.9 (unspecified, no HCC weight).',
     icd10: 'I50.x',
-    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute on chronic',
+    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute.on.chronic',
   },
   {
     vague: 'heart failure',
@@ -43,7 +43,7 @@ export const CMS_TERMS: CmsTerm[] = [
     ],
     note: 'ICD-10 requires type (systolic/diastolic) and acuity (acute/chronic). Unspecified = I50.9 with no HCC value.',
     icd10: 'I50.x',
-    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute on chronic',
+    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute.on.chronic',
   },
   {
     vague: 'congestive heart failure',
@@ -54,7 +54,7 @@ export const CMS_TERMS: CmsTerm[] = [
     ],
     note: '"Congestive" is not an ICD-10 qualifier — specify systolic vs. diastolic and acuity.',
     icd10: 'I50.x',
-    excludeContext: 'systolic|diastolic',
+    excludeContext: 'systolic|diastolic|HFrEF|HFpEF|acute.on.chronic',
   },
   {
     vague: 'fluid in lungs',
@@ -174,14 +174,14 @@ export const CMS_TERMS: CmsTerm[] = [
     preferred: ['CKD Stage 3a', 'CKD Stage 3b', 'CKD Stage 4', 'CKD Stage 5'],
     note: 'ICD-10 N18.x requires stage (1-5) or ESRD; "kidney disease" alone = N18.9 (unspecified, no HCC).',
     icd10: 'N18.x',
-    excludeContext: 'stage|ESRD|end.stage|CKD',
+    excludeContext: 'stage|ESRD|end[\s-]stage|CKD',
   },
   {
     vague: 'kidney failure',
     preferred: ['ESRD (End-Stage Renal Disease)', 'Acute kidney injury (AKI)', 'Acute-on-chronic kidney disease'],
     note: 'Specify ESRD (N18.6), AKI (N17.x), or acute-on-chronic for proper ICD-10 coding.',
     icd10: 'N18.6 / N17.x',
-    excludeContext: 'acute|ESRD|end.stage|stage',
+    excludeContext: 'acute|ESRD|end[\s-]stage|stage',
   },
 
   // ── Hematology ───────────────────────────────────────────────────────────────

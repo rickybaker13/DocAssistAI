@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CMS_TERMS, CmsTerm } from './cms-terms';
+import { CMS_TERMS } from './cms-terms';
 
 describe('CMS_TERMS dictionary', () => {
   it('exports a non-empty array of CmsTerm objects', () => {
