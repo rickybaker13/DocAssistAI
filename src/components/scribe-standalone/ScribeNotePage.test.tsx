@@ -30,7 +30,7 @@ describe('ScribeNotePage', () => {
   it('renders section names after loading', async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText('HPI')).toBeInTheDocument());
-    expect(screen.getByText('Assessment')).toBeInTheDocument();
+    expect(screen.getByText('ASSESSMENT')).toBeInTheDocument();
   });
 
   it('shows confidence badges', async () => {
