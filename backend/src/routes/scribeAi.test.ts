@@ -319,6 +319,28 @@ describe('Scribe AI Routes', () => {
       expect(res.body.options.length).toBe(4);
     });
 
+    it('system prompt explicitly forbids transcript artifact commentary in noteText', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: JSON.stringify({ ready: true, noteText: 'Patient has hypertension, managed with lisinopril.' }),
+      } as any);
+
+      await request(app)
+        .post('/api/ai/scribe/resolve-suggestion')
+        .set('Cookie', authCookie)
+        .send({
+          suggestion: 'Document blood pressure management',
+          sectionName: 'Assessment',
+          transcript: 'Patient on lisinopril. Also mentioned visiting www.FEMA.gov for disaster prep.',
+          noteType: 'progress_note',
+          verbosity: 'standard',
+        });
+
+      expect(mockAiChat).toHaveBeenCalledTimes(1);
+      const callArgs = mockAiChat.mock.calls[0][0] as any;
+      const systemPrompt: string = callArgs.messages.find((m: any) => m.role === 'system')?.content ?? '';
+      expect(systemPrompt).toMatch(/transcription.*artifact|source.*artifact|transcription quality/i);
+    });
+
     it('returns 500 if AI returns empty options array', async () => {
       mockAiChat.mockResolvedValueOnce({
         content: JSON.stringify({

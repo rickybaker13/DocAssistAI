@@ -248,7 +248,8 @@ Rules for options when ready=false:
 
 Rules for note text when ready=true:
 ${verbosityInstruction}
-Never include the suggestion text itself, meta-commentary, caveats, or guidance — only note-ready clinical content.
+Never include notes about transcription quality, source artifacts, uncertainty about the source material, or any meta-commentary.
+Never include the suggestion text itself, caveats, or guidance — only note-ready clinical content.
 
 Return ONLY valid JSON. No markdown fences. No extra text.`;
 
