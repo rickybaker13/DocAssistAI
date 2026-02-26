@@ -129,4 +129,6 @@ mockReInject.mockImplementation((text) => text);
 ## Known Gotchas
 
 - **`ANTHROPIC_API_KEY=` (empty) blocks dotenv:** Claude Code bash has `ANTHROPIC_API_KEY=` (empty string), preventing dotenv from loading the real key. Start backend with `env -u ANTHROPIC_API_KEY npm run dev`.
+- **`scribeAuthStore` used to have its own `getBackendUrl()`** that bypassed `appConfig.ts` and always returned `http://localhost:3000`. Fixed in `a385d9f` — now imports from `appConfig.ts`. If auth fetches fail in production, check that no store or component has a local hardcoded backend URL.
+- **Discipline values must be snake_case:** `src/lib/disciplines.ts` is the single source of truth for discipline `value`/`label` pairs. Registration, settings, and prebuilt section filters all use snake_case values (e.g. `hospital_medicine`). Display names are derived from `label` only.
 - **`resolve-suggestion` options validation:** Any non-empty options array is accepted (`options.length < 1` rejects). AI sometimes returns 2 or 4 options — that's fine.
