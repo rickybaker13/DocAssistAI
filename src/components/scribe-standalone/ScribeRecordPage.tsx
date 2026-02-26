@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../scribe/AudioRecorder';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { getBackendUrl } from '../../config/appConfig';
+import { localNoteStore } from '../../lib/localNoteStore';
 
 type Phase = 'record' | 'generating' | 'error';
 
@@ -20,14 +21,10 @@ export const ScribeRecordPage: React.FC = () => {
     setPhase('generating');
     setStatusMsg('Generating note sections...');
     try {
-      const putRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ transcript }),
-      });
-      if (!putRes.ok) throw new Error('Failed to save transcript');
+      // Persist transcript locally (no server call — PHI stays in browser)
+      localNoteStore.update(noteId, { transcript });
 
+      // AI generation still goes to the Railway backend (Bedrock migration comes in Task 2)
       const genRes = await fetch(`${getBackendUrl()}/api/ai/scribe/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,16 +42,8 @@ export const ScribeRecordPage: React.FC = () => {
       }
       const genData = await genRes.json();
 
-      const saveRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}/sections`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ sections: genData.sections }),
-      });
-      if (!saveRes.ok) {
-        const saveData = await saveRes.json().catch(() => ({}));
-        throw new Error((saveData as any).error || 'Failed to save generated sections');
-      }
+      // Save generated sections locally
+      localNoteStore.update(noteId, { sections: genData.sections });
 
       navigate(`/scribe/note/${noteId}`);
     } catch (e: unknown) {

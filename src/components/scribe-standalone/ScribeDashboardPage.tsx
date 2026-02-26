@@ -1,41 +1,42 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { NoteCard } from './NoteCard';
-import { getBackendUrl } from '../../config/appConfig';
 import type { Note } from './types';
 import { Search, Plus, Settings } from 'lucide-react';
+import { localNoteStore } from '../../lib/localNoteStore';
 
 const STATUS_FILTERS = ['All', 'Draft', 'Finalized'] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
 
+/** Convert a unix-ms timestamp to ISO string for the Note type used by NoteCard. */
+function tsToIso(ms: number): string {
+  return new Date(ms).toISOString();
+}
+
 export const ScribeDashboardPage: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
 
   useEffect(() => {
-    fetch(`${getBackendUrl()}/api/scribe/notes`, { credentials: 'include' })
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-      .then(d => { setNotes(d.notes || []); setLoading(false); })
-      .catch((e: unknown) => {
-        const msg = e instanceof TypeError
-          ? 'Unable to reach server. Check your connection.'
-          : e instanceof Error ? e.message : 'Failed to load notes';
-        setFetchError(msg);
-        setLoading(false);
-      });
+    // Purge notes older than 24 h as a safety net
+    localNoteStore.purgeExpired();
+    // Load notes from localStorage (synchronous — no loading state needed)
+    setNotes(
+      localNoteStore.list().map(n => ({
+        id: n.id,
+        note_type: n.note_type,
+        patient_label: n.patient_label,
+        status: n.status,
+        created_at: tsToIso(n.created_at),
+        updated_at: tsToIso(n.updated_at),
+      }))
+    );
   }, []);
 
-  const handleDelete = async (id: string) => {
-    try {
-      const r = await fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, { method: 'DELETE', credentials: 'include' });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      setNotes(prev => prev.filter(n => n.id !== id));
-    } catch (e: unknown) {
-      console.error('Failed to delete note:', e instanceof Error ? e.message : e);
-    }
+  const handleDelete = (id: string) => {
+    localNoteStore.delete(id);
+    setNotes(prev => prev.filter(n => n.id !== id));
   };
 
   const filtered = notes.filter(n => {
@@ -102,21 +103,8 @@ export const ScribeDashboardPage: React.FC = () => {
         ))}
       </div>
 
-      {/* Error banner */}
-      {fetchError && (
-        <div className="text-red-400 p-4 bg-red-950 rounded-lg text-sm border border-red-400/30">{fetchError}</div>
-      )}
-
       {/* List */}
-      {loading ? (
-        <div className="flex items-center justify-center h-32">
-          <div
-            role="status"
-            aria-label="Loading notes"
-            className="animate-spin h-8 w-8 border-4 border-teal-400 border-t-transparent rounded-full"
-          />
-        </div>
-      ) : filtered.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="text-center py-16">
           {notes.length === 0 ? (
             <>

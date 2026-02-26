@@ -1,19 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, X } from 'lucide-react';
+import { ArrowLeft, X, ClipboardCopy, Check, Trash2 } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
 import { getBackendUrl } from '../../config/appConfig';
-
-interface NoteData {
-  id: string;
-  note_type: string;
-  patient_label: string | null;
-  status: string;
-  transcript: string | null;
-  verbosity: string;
-}
+import { localNoteStore, type LocalNote, type LocalSection } from '../../lib/localNoteStore';
 
 interface SectionData {
   id: string;
@@ -79,37 +71,34 @@ const SectionLibraryForNote: React.FC<SectionLibraryForNoteProps> = ({ onSelect,
 // ScribeNotePage
 // ---------------------------------------------------------------------------
 
+type CopyState = 'idle' | 'copied';
+
 export const ScribeNotePage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [note, setNote] = useState<NoteData | null>(null);
+  const [note, setNote] = useState<LocalNote | null>(null);
   const [sections, setSections] = useState<SectionData[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focusedSection, setFocusedSection] = useState<SectionData | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
+  const [copyState, setCopyState] = useState<CopyState>('idle');
 
   useEffect(() => {
     if (!noteId) { setLoading(false); return; }
-    fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, { credentials: 'include' })
-      .then(r => {
-        if (!r.ok) throw new Error(`Failed to load note (${r.status})`);
-        return r.json();
-      })
-      .then(d => {
-        setNote(d.note);
-        setSections(d.sections || []);
-        const initial: Record<string, string> = {};
-        (d.sections || []).forEach((s: SectionData) => { initial[s.id] = s.content || ''; });
-        setEdits(initial);
-        setLoading(false);
-      })
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : 'Failed to load note');
-        setLoading(false);
-      });
+    const stored = localNoteStore.get(noteId);
+    if (!stored) {
+      setError('Note not found');
+      setLoading(false);
+      return;
+    }
+    setNote(stored);
+    setSections(stored.sections);
+    const initial: Record<string, string> = {};
+    stored.sections.forEach((s: LocalSection) => { initial[s.id] = s.content || ''; });
+    setEdits(initial);
+    setLoading(false);
   }, [noteId]);
 
   const handleSectionChange = useCallback((id: string, content: string) => {
@@ -117,8 +106,6 @@ export const ScribeNotePage: React.FC = () => {
   }, []);
 
   // UI-only: removes section from local display state.
-  // Persisted sections (real UUIDs) are not deleted from the backend until a future
-  // endpoint (DELETE /api/scribe/notes/:noteId/sections/:sectionId) is implemented.
   const handleDeleteSection = (sectionId: string) => {
     setSections(prev => prev.filter(s => s.id !== sectionId));
     setEdits(prev => {
@@ -146,7 +133,6 @@ export const ScribeNotePage: React.FC = () => {
       ...prev,
       [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + suggestion,
     }));
-    // setFocusedSection(null) removed; panel only closes on explicit × click
   };
 
   const handleChatInsert = (sectionId: string, text: string) => {
@@ -156,30 +142,31 @@ export const ScribeNotePage: React.FC = () => {
     }));
   };
 
-  const handleCopyNote = () => {
+  /** Merge current edits into stored sections, then copy full note to clipboard. */
+  const handleCopyForEmr = () => {
+    if (!noteId) return;
+
+    // Persist current edits to localStorage before copying
+    const mergedSections: LocalSection[] = sections.map(s => ({
+      ...s,
+      content: edits[s.id] ?? s.content,
+    }));
+    localNoteStore.update(noteId, { sections: mergedSections });
+
     const fullNote = sections
-      .map(s => `${s.section_name.toUpperCase()}\n${edits[s.id] || s.content || ''}`)
+      .map(s => `${s.section_name.toUpperCase()}\n${edits[s.id] ?? s.content ?? ''}`)
       .join('\n\n');
-    navigator.clipboard.writeText(fullNote);
+
+    navigator.clipboard.writeText(fullNote).catch(() => {
+      // Clipboard may fail in some browser contexts — silent fail, state still advances
+    });
+    setCopyState('copied');
   };
 
-  const handleFinalize = async () => {
+  const handleDeleteNote = () => {
     if (!noteId) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'finalized' }),
-      });
-      if (!res.ok) throw new Error('Failed to finalize note');
-      navigate('/scribe/dashboard');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to finalize');
-    } finally {
-      setSaving(false);
-    }
+    localNoteStore.delete(noteId);
+    navigate('/scribe/dashboard');
   };
 
   if (loading) return (
@@ -220,15 +207,6 @@ export const ScribeNotePage: React.FC = () => {
             </span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={handleFinalize}
-            disabled={saving}
-            className="bg-teal-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-300 transition-colors disabled:opacity-50"
-          >
-            {saving ? 'Saving...' : 'Finalize'}
-          </button>
-        </div>
       </div>
 
       {sections.map(section => (
@@ -248,12 +226,38 @@ export const ScribeNotePage: React.FC = () => {
         + Add Section
       </button>
 
-      <button
-        onClick={handleCopyNote}
-        className="w-full py-3 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 transition-colors"
-      >
-        Copy Note
-      </button>
+      {/* Copy for EMR → Done/Delete flow */}
+      {copyState === 'idle' ? (
+        <button
+          onClick={handleCopyForEmr}
+          className="w-full py-3 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 transition-colors flex items-center justify-center gap-2"
+        >
+          <ClipboardCopy size={18} aria-hidden="true" />
+          Copy for EMR
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <div className="w-full py-3 bg-emerald-950 border border-emerald-400/30 text-emerald-400 rounded-xl font-semibold text-base flex items-center justify-center gap-2">
+            <Check size={18} aria-hidden="true" />
+            Copied — paste into your EMR
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDeleteNote}
+              className="flex-1 py-2.5 bg-red-950 border border-red-400/30 text-red-400 rounded-xl text-sm font-semibold hover:bg-red-900 transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Trash2 size={15} aria-hidden="true" />
+              Done — Delete Note
+            </button>
+            <button
+              onClick={() => setCopyState('idle')}
+              className="flex-1 py-2.5 bg-slate-800 border border-slate-700 text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-700 transition-colors"
+            >
+              Not yet
+            </button>
+          </div>
+        </div>
+      )}
 
       {focusedSection && (
         <FocusedAIPanel

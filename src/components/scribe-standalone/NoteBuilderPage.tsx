@@ -6,7 +6,7 @@ import { SectionLibrary } from './SectionLibrary';
 import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { useNoteTemplates, NoteTemplate } from '../../hooks/useNoteTemplates';
-import { getBackendUrl } from '../../config/appConfig';
+import { localNoteStore } from '../../lib/localNoteStore';
 
 const NOTE_TYPES = [
   { value: 'progress_note', label: 'Progress Note' },
@@ -54,20 +54,17 @@ export const NoteBuilderPage: React.FC = () => {
     setVerbosity(tmpl.verbosity as Verbosity);
   };
 
-  const handleStartRecording = async () => {
+  const handleStartRecording = () => {
     if (canvasSections.length === 0) { setError('Add at least one section before recording'); return; }
     setCreating(true);
     setError(null);
     try {
-      const res = await fetch(`${getBackendUrl()}/api/scribe/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ noteType, patientLabel: patientLabel || null, verbosity }),
+      const note = localNoteStore.create({
+        note_type: noteType,
+        patient_label: patientLabel || null,
+        verbosity,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create note');
-      navigate(`/scribe/note/${data.note.id}/record`);
+      navigate(`/scribe/note/${note.id}/record`);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'An unexpected error occurred');
     } finally {
