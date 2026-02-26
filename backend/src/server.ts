@@ -31,11 +31,16 @@ dotenv.config();
 const app = express();
 app.set('trust proxy', 1); // Railway / Vercel sit behind a load balancer that injects X-Forwarded-For
 const PORT = process.env.PORT || 3000;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/+$/, '');
 
 // Build allowed origins set — always include both www and non-www variants
-// so the CORS config works regardless of which variant Vercel serves as primary
-const ALLOWED_ORIGINS = new Set<string>([FRONTEND_URL]);
+// so the CORS config works regardless of which variant Vercel serves as primary.
+// Production domain is hardcoded as a safety net in case FRONTEND_URL is unset on Railway.
+const ALLOWED_ORIGINS = new Set<string>([
+  FRONTEND_URL,
+  'https://www.docassistai.app',
+  'https://docassistai.app',
+]);
 if (FRONTEND_URL.startsWith('https://www.')) {
   ALLOWED_ORIGINS.add('https://' + FRONTEND_URL.slice(12));
 } else if (FRONTEND_URL.startsWith('https://')) {
