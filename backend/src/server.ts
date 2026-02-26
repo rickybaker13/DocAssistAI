@@ -29,6 +29,7 @@ import { runMigrations } from './database/migrations.js';
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1); // Railway / Vercel sit behind a load balancer that injects X-Forwarded-For
 const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
 
