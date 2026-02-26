@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 import { BaseAIProvider } from './base.js';
-import { AIMessage, AIResponse } from '../../../types';
+import { AIMessage, AIResponse } from '../../../types/index.js';
 
 export class SelfHostedProvider extends BaseAIProvider {
   private url: string;

@@ -3,7 +3,7 @@
  * All AI providers must implement this interface
  */
 
-import { AIMessage, AIResponse } from '../../../types';
+import { AIMessage, AIResponse } from '../../../types/index.js';
 
 export interface AIProvider {
   /**

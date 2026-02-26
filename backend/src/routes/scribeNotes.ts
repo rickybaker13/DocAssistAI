@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
-import { scribeAuthMiddleware } from '../middleware/scribeAuth';
-import { ScribeNoteModel } from '../models/scribeNote';
-import { ScribeNoteSectionModel } from '../models/scribeNoteSection';
+import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
+import { ScribeNoteModel } from '../models/scribeNote.js';
+import { ScribeNoteSectionModel } from '../models/scribeNoteSection.js';
 
 const router = Router();
 router.use(scribeAuthMiddleware);

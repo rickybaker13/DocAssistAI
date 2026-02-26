@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { scribeAuthMiddleware } from '../middleware/scribeAuth';
-import { aiService } from '../services/ai/aiService';
+import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
+import { aiService } from '../services/ai/aiService.js';
 import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 
 
