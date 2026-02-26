@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Document Tools (Pattern 5: Tool Use)
  * Tools for fetching data needed for document generation

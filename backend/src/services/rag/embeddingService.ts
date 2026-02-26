@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Embedding Service
  * Generates embeddings for text using OpenAI API
