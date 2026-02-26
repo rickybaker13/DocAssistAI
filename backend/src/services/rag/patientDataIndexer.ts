@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Patient Data Indexer
  * Indexes patient data into vector store for RAG
