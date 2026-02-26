@@ -66,21 +66,32 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
           : '',
       ].filter(Boolean).join('\n');
 
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60_000);
       const res = await fetch(`${getBackendUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           messages: updatedMessages.map(m => ({ role: m.role, content: m.content })),
           patientContext: noteContext,
         }),
       });
+      clearTimeout(timer);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Request failed (${res.status})`);
+      }
       const data = await res.json();
-      // Response shape: { success, cited, data: { content: string } } or { error: string }
       const content = data.data?.content || data.error || 'No response';
       setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content }]);
     } catch (e: unknown) {
-      setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content: 'Error: ' + (e instanceof Error ? e.message : 'Unknown error') }]);
+      let msg = 'Something went wrong. Please try again.';
+      if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
+      else if (e instanceof DOMException && e.name === 'AbortError') msg = 'Request timed out. Please try again.';
+      else if (e instanceof Error) msg = e.message;
+      setMessages(prev => [...prev, { id: makeId(), role: 'assistant', content: `Error: ${msg}` }]);
     } finally {
       setLoading(false);
     }
@@ -100,10 +111,13 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
 
     setGhostState(prev => prev ? { ...prev, loadingGhost: true, ghostError: null } : null);
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 60_000);
       const res = await fetch(`${getBackendUrl()}/api/ai/scribe/ghost-write`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           chatAnswer: answer,
           destinationSection: section.section_name,
@@ -112,11 +126,19 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
           verbosity,
         }),
       });
-      if (!res.ok) throw new Error(`Ghost-write failed (${res.status})`);
+      clearTimeout(timer);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `Ghost-write failed (${res.status})`);
+      }
       const data = await res.json();
       setGhostState(prev => prev ? { ...prev, ghostWritten: data.ghostWritten, loadingGhost: false } : null);
     } catch (e: unknown) {
-      setGhostState(prev => prev ? { ...prev, ghostWritten: null, loadingGhost: false, ghostError: e instanceof Error ? e.message : 'Ghost-write failed' } : null);
+      let msg = 'Ghost-write failed. Please try again.';
+      if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
+      else if (e instanceof DOMException && e.name === 'AbortError') msg = 'Request timed out. Please try again.';
+      else if (e instanceof Error) msg = e.message;
+      setGhostState(prev => prev ? { ...prev, ghostWritten: null, loadingGhost: false, ghostError: msg } : null);
     }
   };
 

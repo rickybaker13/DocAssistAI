@@ -11,6 +11,7 @@ type StatusFilter = typeof STATUS_FILTERS[number];
 export const ScribeDashboardPage: React.FC = () => {
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
 
@@ -18,7 +19,13 @@ export const ScribeDashboardPage: React.FC = () => {
     fetch(`${getBackendUrl()}/api/scribe/notes`, { credentials: 'include' })
       .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(d => { setNotes(d.notes || []); setLoading(false); })
-      .catch(() => setLoading(false));
+      .catch((e: unknown) => {
+        const msg = e instanceof TypeError
+          ? 'Unable to reach server. Check your connection.'
+          : e instanceof Error ? e.message : 'Failed to load notes';
+        setFetchError(msg);
+        setLoading(false);
+      });
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -94,6 +101,11 @@ export const ScribeDashboardPage: React.FC = () => {
           </button>
         ))}
       </div>
+
+      {/* Error banner */}
+      {fetchError && (
+        <div className="text-red-400 p-4 bg-red-950 rounded-lg text-sm border border-red-400/30">{fetchError}</div>
+      )}
 
       {/* List */}
       {loading ? (
