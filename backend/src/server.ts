@@ -32,6 +32,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
 
+// Build allowed origins set — always include both www and non-www variants
+// so the CORS config works regardless of which variant Vercel serves as primary
+const ALLOWED_ORIGINS = new Set<string>([FRONTEND_URL]);
+if (FRONTEND_URL.startsWith('https://www.')) {
+  ALLOWED_ORIGINS.add('https://' + FRONTEND_URL.slice(12));
+} else if (FRONTEND_URL.startsWith('https://')) {
+  ALLOWED_ORIGINS.add('https://www.' + FRONTEND_URL.slice(8));
+}
+
 // Security middleware
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
@@ -49,8 +58,8 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Allow configured frontend URL
-    if (origin === FRONTEND_URL) {
+    // Allow configured frontend URL (and its www/non-www counterpart)
+    if (ALLOWED_ORIGINS.has(origin)) {
       return callback(null, true);
     }
 
