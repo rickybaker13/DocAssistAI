@@ -503,7 +503,7 @@ function App() {
           <Route path="note/:id" element={<ScribeNotePage />} />
           <Route index element={<Navigate to="/scribe/dashboard" replace />} />
         </Route>
-        <Route path="*" element={<ExistingApp />} />
+        <Route path="*" element={<Navigate to="/scribe/login" replace />} />
       </Routes>
     </BrowserRouter>
   );
