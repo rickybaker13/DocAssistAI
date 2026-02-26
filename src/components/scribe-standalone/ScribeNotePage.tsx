@@ -38,9 +38,9 @@ const SectionLibraryForNote: React.FC<SectionLibraryForNoteProps> = ({ onSelect,
 
   useEffect(() => {
     fetch(`${getBackendUrl()}/api/scribe/templates`, { credentials: 'include' })
-      .then(r => r.json())
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
       .then(d => setTemplates(d.templates || []))
-      .catch(() => {});
+      .catch(() => { /* template list is non-critical; section library will show empty */ });
   }, []);
 
   const filtered = templates.filter(t =>

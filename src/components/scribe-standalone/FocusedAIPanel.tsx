@@ -86,7 +86,10 @@ export const FocusedAIPanel: React.FC<Props> = ({
       .then(d => { setResult(d); setLoading(false); })
       .catch(e => {
         if (e.name === 'AbortError') return;
-        setError(e instanceof Error ? e.message : 'Error');
+        let msg = 'Failed to analyze section. Please try again.';
+        if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
+        else if (e instanceof Error) msg = e.message;
+        setError(msg);
         setLoading(false);
       });
     return () => controller.abort();
@@ -131,7 +134,10 @@ export const FocusedAIPanel: React.FC<Props> = ({
       }
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return;
-      setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
+      let msg = 'Failed to process suggestion. Please try again.';
+      if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
+      else if (e instanceof Error) msg = e.message;
+      setError(msg);
       setSuggestionFlow(null);
       batchQueueRef.current = [];
       setBatchTotal(0);
@@ -214,7 +220,10 @@ export const FocusedAIPanel: React.FC<Props> = ({
       setSuggestionFlow({ phase: 'preview', sectionId, noteText: data.ghostWritten, suggestionIndex });
     } catch (e) {
       if (e instanceof Error && e.name === 'AbortError') return;
-      setError(e instanceof Error ? e.message : 'Failed to process suggestion. Please try again.');
+      let msg = 'Failed to process suggestion. Please try again.';
+      if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
+      else if (e instanceof Error) msg = e.message;
+      setError(msg);
       setSuggestionFlow(null);
     }
   }, [suggestionFlow, section, noteType, verbosity]);

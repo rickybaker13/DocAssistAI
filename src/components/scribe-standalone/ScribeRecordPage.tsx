@@ -39,8 +39,11 @@ export const ScribeRecordPage: React.FC = () => {
           verbosity,
         }),
       });
+      if (!genRes.ok) {
+        const genData = await genRes.json().catch(() => ({}));
+        throw new Error((genData as any).error || `Note generation failed (${genRes.status})`);
+      }
       const genData = await genRes.json();
-      if (!genRes.ok) throw new Error(genData.error || 'Generation failed');
 
       const saveRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}/sections`, {
         method: 'POST',
@@ -55,7 +58,10 @@ export const ScribeRecordPage: React.FC = () => {
 
       navigate(`/scribe/note/${noteId}`);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
+      let msg = 'An unexpected error occurred';
+      if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
+      else if (e instanceof Error) msg = e.message;
+      setError(msg);
       setPhase('error');
     }
   };

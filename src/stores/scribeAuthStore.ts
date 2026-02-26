@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { getBackendUrl } from '../config/appConfig';
 
 export interface ScribeUser {
   id: string;
@@ -17,14 +18,6 @@ interface ScribeAuthState {
   fetchMe: () => Promise<void>;
   reset: () => void;
 }
-
-const getBackendUrl = () => {
-  try {
-    return import.meta.env?.VITE_BACKEND_URL || 'http://localhost:3000';
-  } catch {
-    return 'http://localhost:3000';
-  }
-};
 
 export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
   user: null,
@@ -45,7 +38,8 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
       set({ user: data.user, loading: false, error: null });
       return true;
     } catch (e: any) {
-      set({ loading: false, error: e.message });
+      const msg = e instanceof TypeError ? 'Unable to reach server. Check your connection.' : e.message;
+      set({ loading: false, error: msg });
       return false;
     }
   },
@@ -64,7 +58,8 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
       set({ user: data.user, loading: false, error: null });
       return true;
     } catch (e: any) {
-      set({ loading: false, error: e.message });
+      const msg = e instanceof TypeError ? 'Unable to reach server. Check your connection.' : e.message;
+      set({ loading: false, error: msg });
       return false;
     }
   },
