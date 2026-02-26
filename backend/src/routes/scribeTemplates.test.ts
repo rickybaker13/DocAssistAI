@@ -1,11 +1,13 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import scribeTemplatesRouter from './scribeTemplates';
-import { ScribeUserModel } from '../models/scribeUser';
-import { ScribeSectionTemplateModel } from '../models/scribeSectionTemplate';
-import { closeDb } from '../database/db';
+import scribeTemplatesRouter from './scribeTemplates.js';
+import { ScribeUserModel } from '../models/scribeUser.js';
+import { ScribeSectionTemplateModel } from '../models/scribeSectionTemplate.js';
+import { initPool, closePool } from '../database/db.js';
+import { runMigrations } from '../database/migrations.js';
 
 const app = express();
 app.use(express.json());
@@ -16,16 +18,18 @@ const SECRET = 'test-secret';
 let authCookie: string;
 
 describe('Scribe Templates Routes', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = SECRET;
+    await initPool();
+    await runMigrations();
     const userModel = new ScribeUserModel();
-    const user = userModel.create({ email: 'tmpl-route@test.com', passwordHash: 'hash' });
-    new ScribeSectionTemplateModel().seedPrebuilt();
+    const user = await userModel.create({ email: 'tmpl-route@test.com', passwordHash: 'hash' });
+    await new ScribeSectionTemplateModel().seedPrebuilt();
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '1h' });
     authCookie = `scribe_token=${token}`;
   });
-  afterAll(() => closeDb());
+  afterAll(async () => { await closePool(); });
 
   it('GET / — returns prebuilt + user templates', async () => {
     const res = await request(app).get('/api/scribe/templates').set('Cookie', authCookie);
@@ -37,7 +41,7 @@ describe('Scribe Templates Routes', () => {
   it('GET /prebuilt — returns only prebuilt sections', async () => {
     const res = await request(app).get('/api/scribe/templates/prebuilt').set('Cookie', authCookie);
     expect(res.status).toBe(200);
-    expect(res.body.templates.every((t: any) => t.is_prebuilt === 1)).toBe(true);
+    expect(res.body.templates.every((t: any) => t.is_prebuilt === 1 || t.is_prebuilt === true)).toBe(true);
   });
 
   it('POST / — creates custom section', async () => {
@@ -47,7 +51,7 @@ describe('Scribe Templates Routes', () => {
       .send({ name: 'My Custom Section', promptHint: 'Custom hint' });
     expect(res.status).toBe(201);
     expect(res.body.template.name).toBe('My Custom Section');
-    expect(res.body.template.is_prebuilt).toBe(0);
+    expect(res.body.template.is_prebuilt === 0 || res.body.template.is_prebuilt === false).toBe(true);
   });
 
   it('PUT /:id — updates custom section', async () => {

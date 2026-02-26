@@ -1,30 +1,36 @@
-import { getDb, closeDb } from './db.js';
+import { jest } from '@jest/globals';
+import { initPool, closePool, getPool } from './db.js';
+import { runMigrations } from './migrations.js';
 
 describe('Database', () => {
-  beforeAll(() => { process.env.NODE_ENV = 'test'; });
-  afterAll(() => closeDb());
-
-  it('creates scribe_users table', () => {
-    const db = getDb();
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scribe_users'").get();
-    expect(row).toBeTruthy();
+  beforeAll(async () => {
+    process.env.NODE_ENV = 'test';
+    await initPool();
+    await runMigrations();
   });
+  afterAll(async () => { await closePool(); });
 
-  it('creates scribe_notes table', () => {
-    const db = getDb();
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scribe_notes'").get();
-    expect(row).toBeTruthy();
+  const checkTable = async (tableName: string) => {
+    const result = await getPool().query(
+      `SELECT table_name FROM information_schema.tables WHERE table_name = $1`,
+      [tableName]
+    );
+    return (result.rowCount ?? 0) > 0;
+  };
+
+  it('creates scribe_users table', async () => {
+    expect(await checkTable('scribe_users')).toBe(true);
   });
-
-  it('creates scribe_note_sections table', () => {
-    const db = getDb();
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scribe_note_sections'").get();
-    expect(row).toBeTruthy();
+  it('creates scribe_notes table', async () => {
+    expect(await checkTable('scribe_notes')).toBe(true);
   });
-
-  it('creates scribe_section_templates table', () => {
-    const db = getDb();
-    const row = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scribe_section_templates'").get();
-    expect(row).toBeTruthy();
+  it('creates scribe_note_sections table', async () => {
+    expect(await checkTable('scribe_note_sections')).toBe(true);
+  });
+  it('creates scribe_section_templates table', async () => {
+    expect(await checkTable('scribe_section_templates')).toBe(true);
+  });
+  it('creates note_templates table', async () => {
+    expect(await checkTable('note_templates')).toBe(true);
   });
 });

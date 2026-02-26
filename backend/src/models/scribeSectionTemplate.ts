@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto';
-import Database from 'better-sqlite3';
-import { getDb } from '../database/db';
-import { PREBUILT_SECTIONS } from '../database/prebuiltSections';
+import { getPool } from '../database/db.js';
+import { PREBUILT_SECTIONS } from '../database/prebuiltSections.js';
 
 export interface ScribeSectionTemplate {
   id: string;
@@ -9,55 +8,95 @@ export interface ScribeSectionTemplate {
   name: string;
   prompt_hint: string | null;
   is_prebuilt: number;
+  category: string;
+  disciplines: string;
   created_at: string;
   updated_at: string;
 }
 
 export class ScribeSectionTemplateModel {
-  seedPrebuilt(): void {
-    const existing = getDb().prepare('SELECT COUNT(*) as count FROM scribe_section_templates WHERE is_prebuilt = 1').get() as { count: number };
-    if (existing.count > 0) return;
-    const insert = getDb().prepare(
-      'INSERT INTO scribe_section_templates (id, user_id, name, prompt_hint, is_prebuilt) VALUES (?, NULL, ?, ?, 1)'
+  async seedPrebuilt(): Promise<void> {
+    const pool = getPool();
+
+    // Rename migration: "Neurological Status" (icu) → "Neurological" (body_systems)
+    await pool.query(
+      `UPDATE scribe_section_templates
+         SET name = 'Neurological', category = 'body_systems'
+       WHERE name = 'Neurological Status' AND is_prebuilt = 1`
     );
+
     for (const s of PREBUILT_SECTIONS) {
-      insert.run(randomUUID(), s.name, s.promptHint);
+      const existing = await pool.query(
+        'SELECT 1 FROM scribe_section_templates WHERE is_prebuilt = 1 AND name = $1',
+        [s.name]
+      );
+      if ((existing.rowCount ?? 0) === 0) {
+        // New section — insert with full discipline data
+        await pool.query(
+          'INSERT INTO scribe_section_templates (id, user_id, name, prompt_hint, is_prebuilt, category, disciplines) VALUES ($1, NULL, $2, $3, 1, $4, $5)',
+          [randomUUID(), s.name, s.promptHint ?? null, s.category, JSON.stringify(s.disciplines)]
+        );
+      } else {
+        // Existing section — sync category and disciplines (idempotent)
+        await pool.query(
+          'UPDATE scribe_section_templates SET category = $1, disciplines = $2 WHERE name = $3 AND is_prebuilt = 1',
+          [s.category, JSON.stringify(s.disciplines), s.name]
+        );
+      }
     }
   }
 
-  listPrebuilt(): ScribeSectionTemplate[] {
-    return getDb().prepare('SELECT * FROM scribe_section_templates WHERE is_prebuilt = 1 ORDER BY name ASC').all() as ScribeSectionTemplate[];
+  async listPrebuilt(): Promise<ScribeSectionTemplate[]> {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM scribe_section_templates WHERE is_prebuilt = 1 ORDER BY name ASC'
+    );
+    return result.rows;
   }
 
-  listForUser(userId: string): ScribeSectionTemplate[] {
-    return getDb().prepare(
-      'SELECT * FROM scribe_section_templates WHERE is_prebuilt = 1 OR user_id = ? ORDER BY is_prebuilt DESC, name ASC'
-    ).all(userId) as ScribeSectionTemplate[];
+  async listForUser(userId: string): Promise<ScribeSectionTemplate[]> {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM scribe_section_templates WHERE is_prebuilt = 1 OR user_id = $1 ORDER BY is_prebuilt DESC, name ASC',
+      [userId]
+    );
+    return result.rows;
   }
 
-  create(input: { userId: string; name: string; promptHint?: string }): ScribeSectionTemplate {
+  async create(input: { userId: string; name: string; promptHint?: string }): Promise<ScribeSectionTemplate> {
+    const pool = getPool();
     const id = randomUUID();
-    getDb().prepare(
-      'INSERT INTO scribe_section_templates (id, user_id, name, prompt_hint, is_prebuilt) VALUES (?, ?, ?, ?, 0)'
-    ).run(id, input.userId, input.name, input.promptHint ?? null);
-    return this.findById(id, input.userId)!;
+    await pool.query(
+      'INSERT INTO scribe_section_templates (id, user_id, name, prompt_hint, is_prebuilt) VALUES ($1, $2, $3, $4, 0)',
+      [id, input.userId, input.name, input.promptHint ?? null]
+    );
+    return (await this.findById(id, input.userId))!;
   }
 
-  findById(id: string, userId: string): ScribeSectionTemplate | null {
-    return (getDb().prepare(
-      'SELECT * FROM scribe_section_templates WHERE id = ? AND (user_id = ? OR is_prebuilt = 1)'
-    ).get(id, userId) ?? null) as ScribeSectionTemplate | null;
+  async findById(id: string, userId: string): Promise<ScribeSectionTemplate | null> {
+    const pool = getPool();
+    const result = await pool.query(
+      'SELECT * FROM scribe_section_templates WHERE id = $1 AND (user_id = $2 OR is_prebuilt = 1)',
+      [id, userId]
+    );
+    return result.rows[0] ?? null;
   }
 
-  update(id: string, userId: string, fields: { name?: string; promptHint?: string }): Database.RunResult {
-    return getDb().prepare(
-      'UPDATE scribe_section_templates SET name = COALESCE(?, name), prompt_hint = COALESCE(?, prompt_hint), updated_at = ? WHERE id = ? AND user_id = ? AND is_prebuilt = 0'
-    ).run(fields.name ?? null, fields.promptHint ?? null, new Date().toISOString(), id, userId);
+  async update(id: string, userId: string, fields: { name?: string; promptHint?: string }): Promise<{ rowCount: number | null }> {
+    const pool = getPool();
+    const result = await pool.query(
+      'UPDATE scribe_section_templates SET name = COALESCE($1, name), prompt_hint = COALESCE($2, prompt_hint), updated_at = NOW() WHERE id = $3 AND user_id = $4 AND is_prebuilt = 0',
+      [fields.name ?? null, fields.promptHint ?? null, id, userId]
+    );
+    return { rowCount: result.rowCount };
   }
 
-  delete(id: string, userId: string): Database.RunResult {
-    return getDb().prepare(
-      'DELETE FROM scribe_section_templates WHERE id = ? AND user_id = ? AND is_prebuilt = 0'
-    ).run(id, userId);
+  async delete(id: string, userId: string): Promise<{ rowCount: number | null }> {
+    const pool = getPool();
+    const result = await pool.query(
+      'DELETE FROM scribe_section_templates WHERE id = $1 AND user_id = $2 AND is_prebuilt = 0',
+      [id, userId]
+    );
+    return { rowCount: result.rowCount };
   }
 }

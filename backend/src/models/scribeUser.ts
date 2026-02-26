@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { getDb } from '../database/db.js';
+import { getPool } from '../database/db.js';
 
 export interface ScribeUser {
   id: string;
@@ -12,22 +12,34 @@ export interface ScribeUser {
 }
 
 export class ScribeUserModel {
-  create(input: { email: string; passwordHash: string; name?: string; specialty?: string }): ScribeUser {
-    const db = getDb();
+  async create(input: { email: string; passwordHash: string; name?: string; specialty?: string }): Promise<ScribeUser> {
+    const pool = getPool();
     const id = randomUUID();
-    db.prepare(
-      'INSERT INTO scribe_users (id, email, password_hash, name, specialty) VALUES (?, ?, ?, ?, ?)'
-    ).run(id, input.email, input.passwordHash, input.name ?? null, input.specialty ?? null);
-    return this.findById(id)!;
+    await pool.query(
+      'INSERT INTO scribe_users (id, email, password_hash, name, specialty) VALUES ($1, $2, $3, $4, $5)',
+      [id, input.email, input.passwordHash, input.name ?? null, input.specialty ?? null]
+    );
+    return (await this.findById(id))!;
   }
 
-  findByEmail(email: string): ScribeUser | null {
-    const row = getDb().prepare('SELECT * FROM scribe_users WHERE email = ?').get(email);
-    return (row as ScribeUser) ?? null;
+  async findByEmail(email: string): Promise<ScribeUser | null> {
+    const pool = getPool();
+    const result = await pool.query('SELECT * FROM scribe_users WHERE email = $1', [email]);
+    return result.rows[0] ?? null;
   }
 
-  findById(id: string): ScribeUser | null {
-    const row = getDb().prepare('SELECT * FROM scribe_users WHERE id = ?').get(id);
-    return (row as ScribeUser) ?? null;
+  async findById(id: string): Promise<ScribeUser | null> {
+    const pool = getPool();
+    const result = await pool.query('SELECT * FROM scribe_users WHERE id = $1', [id]);
+    return result.rows[0] ?? null;
+  }
+
+  async update(id: string, fields: { name?: string | null; specialty?: string | null }): Promise<ScribeUser | null> {
+    const pool = getPool();
+    await pool.query(
+      'UPDATE scribe_users SET name = COALESCE($1, name), specialty = COALESCE($2, specialty), updated_at = NOW() WHERE id = $3',
+      [fields.name ?? null, fields.specialty ?? null, id]
+    );
+    return this.findById(id);
   }
 }

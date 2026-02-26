@@ -1,11 +1,13 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import scribeNoteTemplatesRouter from './scribeNoteTemplates';
-import { ScribeUserModel } from '../models/scribeUser';
-import { ScribeNoteTemplateModel } from '../models/scribeNoteTemplate';
-import { closeDb } from '../database/db';
+import scribeNoteTemplatesRouter from './scribeNoteTemplates.js';
+import { ScribeUserModel } from '../models/scribeUser.js';
+import { ScribeNoteTemplateModel } from '../models/scribeNoteTemplate.js';
+import { initPool, closePool } from '../database/db.js';
+import { runMigrations } from '../database/migrations.js';
 
 const app = express();
 app.use(express.json());
@@ -16,16 +18,18 @@ const SECRET = 'test-secret';
 let authCookie: string;
 
 describe('Scribe Note Templates Routes', () => {
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = SECRET;
+    await initPool();
+    await runMigrations();
     const userModel = new ScribeUserModel();
-    const user = userModel.create({ email: 'notetmpl-route@test.com', passwordHash: 'hash' });
-    new ScribeNoteTemplateModel().seedSystem();
+    const user = await userModel.create({ email: 'notetmpl-route@test.com', passwordHash: 'hash' });
+    await new ScribeNoteTemplateModel().seedSystem();
     const token = jwt.sign({ userId: user.id }, SECRET, { expiresIn: '1h' });
     authCookie = `scribe_token=${token}`;
   });
-  afterAll(() => closeDb());
+  afterAll(async () => { await closePool(); });
 
   it('GET /?noteType=progress_note — returns system + user templates', async () => {
     const res = await request(app)

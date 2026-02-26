@@ -1,10 +1,12 @@
+import { jest } from '@jest/globals';
 import request from 'supertest';
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
-import scribeNotesRouter from './scribeNotes';
-import { ScribeUserModel } from '../models/scribeUser';
-import { closeDb } from '../database/db';
+import scribeNotesRouter from './scribeNotes.js';
+import { ScribeUserModel } from '../models/scribeUser.js';
+import { initPool, closePool } from '../database/db.js';
+import { runMigrations } from '../database/migrations.js';
 
 const app = express();
 app.use(express.json());
@@ -19,13 +21,15 @@ describe('Scribe Notes Routes', () => {
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = SECRET;
+    await initPool();
+    await runMigrations();
     const userModel = new ScribeUserModel();
-    const user = userModel.create({ email: 'notes-route@test.com', passwordHash: 'hash' });
+    const user = await userModel.create({ email: 'notes-route@test.com', passwordHash: 'hash' });
     userId = user.id;
     const token = jwt.sign({ userId }, SECRET, { expiresIn: '1h' });
     authCookie = `scribe_token=${token}`;
   });
-  afterAll(() => closeDb());
+  afterAll(async () => { await closePool(); });
 
   it('POST / — creates a note', async () => {
     const res = await request(app)
