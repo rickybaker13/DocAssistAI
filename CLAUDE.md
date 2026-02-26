@@ -4,7 +4,16 @@
 - **Frontend:** React/TypeScript/Vite on `localhost:8080` — `npm run dev`
 - **Backend:** Express/TypeScript on `localhost:3000` — `cd backend && npm run dev`
 - **Scribe module:** `src/components/scribe-standalone/` (frontend) + `backend/src/routes/scribeAi.ts`
-- **DB:** SQLite via better-sqlite3 at `backend/data/scribe.db`
+- **DB:** PostgreSQL via `pg` pool (`backend/src/database/db.ts`). Production: Railway (`DATABASE_URL` auto-injected). Tests: `pg-mem` in-memory (auto-selected when `NODE_ENV=test`). `getPool()` throws if `initPool()` not called first.
+
+## Production Deployment
+
+- **Frontend:** Vercel at `https://www.docassistai.app` — Vercel redirects `docassistai.app` → `www`; always use `www` variant in CORS/cookie configs
+- **Backend:** Railway at `https://docassistai-production.up.railway.app`
+- **API routing:** `vercel.json` proxies `/api/:path*` → Railway (server-to-server, no CORS needed). Rewrite order critical: API rule MUST precede SPA `/(.*)`
+- **`appConfig.ts` backendUrl:** Uses `''` (relative) in production builds (`import.meta.env.PROD`), so Vercel proxy routes calls. Uses `VITE_BACKEND_URL || 'http://localhost:3000'` in local dev.
+- **Presidio:** Not yet deployed as Railway services — AI endpoints return 503. Auth/notes/CRUD work without it.
+- **Deploy check:** `GET https://docassistai-production.up.railway.app/api/health` → `{ presidio, analyzer, anonymizer }` — if this returns JSON the backend is up.
 
 ## Test Commands
 ```bash
@@ -19,6 +28,16 @@ npx vitest run src/
 ```
 
 ## Known Gotchas
+
+**`trust proxy` required on Railway:** `app.set('trust proxy', 1)` must be the FIRST line after `const app = express()` in `backend/src/server.ts`, before any middleware. Railway's load balancer injects `X-Forwarded-For`; without this, `express-rate-limit` throws `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR`, crashes the container, and creates a restart loop that prevents new code from ever running.
+
+**Railway crash-restart loop:** when a container keeps restarting without loading new code, it's running the last successful build. Railway → Deployments → View Logs shows the crash reason. Fix the crash in a new commit — Railway will build fresh.
+
+**Cross-domain cookies (`SameSite`):** `COOKIE_OPTS.sameSite` in `backend/src/routes/scribeAuth.ts` is `'none'` in production and `'lax'` in dev. `SameSite=Lax` blocks cookies on cross-site `fetch` even with `credentials: 'include'`. `SameSite=None` requires `secure: true` (already set in production).
+
+**`@ts-nocheck` on legacy FHIR files:** `backend/src/services/document/documentTools.ts`, `rag/embeddingService.ts`, `rag/patientDataIndexer.ts` carry `// @ts-nocheck`. They compile transitively via `src/routes/ai.ts` despite being listed in `tsconfig.json` excludes — the exclude only prevents direct compilation, not transitive imports.
+
+**ESM `.js` extensions on Railway:** Node.js v20 ESM requires explicit `.js` on all relative imports in compiled output. `tsx watch` (dev) resolves extensions automatically; compiled ESM does not. All scribe route files already fixed.
 
 **ESM + Jest:** `jest` is not auto-injected in `--experimental-vm-modules` mode. Backend test files must include `import { jest } from '@jest/globals';` or spy/mock calls will throw `ReferenceError: jest is not defined`.
 
