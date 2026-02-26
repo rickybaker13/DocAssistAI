@@ -23,3 +23,30 @@ services:
       retries: 3
       start_period: 20s
 
+  scribe-api:
+    build:
+      context: ./services/scribe
+      dockerfile: Dockerfile
+      args:
+        WHISPER_MODEL_SIZE: large-v3
+    ports: ["8000:8000"]
+    env_file: ./services/scribe/.env
+    environment:
+      - PRESIDIO_ANALYZER_URL=http://presidio-analyzer:5002
+      - PRESIDIO_ANONYMIZER_URL=http://presidio-anonymizer:5001
+    depends_on:
+      presidio-analyzer:
+        condition: service_healthy
+      presidio-anonymizer:
+        condition: service_healthy
+    restart: always
+    # 8 GB RAM Droplet: give scribe-api 6 GB, leave 2 GB for Presidio + OS
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      retries: 5
+      start_period: 60s

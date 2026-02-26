@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Sparkles, X, ArrowRight } from 'lucide-react';
-import { getBackendUrl } from '../../config/appConfig';
+import { getScribeBackendUrl } from '../../config/appConfig';
 
 interface Section {
   id: string;
@@ -68,7 +68,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     setSelectedSuggestions(new Set());
     setAddedCitationIndices(new Set());
     setBatchCurrentItem(0);
-    fetch(`${getBackendUrl()}/api/ai/scribe/focused`, {
+    fetch(`${getScribeBackendUrl()}/api/ai/scribe/focused`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -102,7 +102,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     try {
       const controller = new AbortController();
       flowAbortRef.current = controller;
-      const res = await fetch(`${getBackendUrl()}/api/ai/scribe/resolve-suggestion`, {
+      const res = await fetch(`${getScribeBackendUrl()}/api/ai/scribe/resolve-suggestion`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -202,7 +202,7 @@ export const FocusedAIPanel: React.FC<Props> = ({
     try {
       const controller = new AbortController();
       flowAbortRef.current = controller;
-      const res = await fetch(`${getBackendUrl()}/api/ai/scribe/ghost-write`, {
+      const res = await fetch(`${getScribeBackendUrl()}/api/ai/scribe/ghost-write`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

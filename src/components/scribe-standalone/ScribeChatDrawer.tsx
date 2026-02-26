@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, ArrowRight, Send } from 'lucide-react';
-import { getBackendUrl } from '../../config/appConfig';
+import { getScribeBackendUrl } from '../../config/appConfig';
 
 interface Section {
   id: string;
@@ -68,7 +68,7 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 60_000);
-      const res = await fetch(`${getBackendUrl()}/api/ai/chat`, {
+      const res = await fetch(`${getScribeBackendUrl()}/api/ai/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -113,7 +113,7 @@ export const ScribeChatDrawer: React.FC<Props> = ({ sections, noteType, verbosit
     try {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), 60_000);
-      const res = await fetch(`${getBackendUrl()}/api/ai/scribe/ghost-write`, {
+      const res = await fetch(`${getScribeBackendUrl()}/api/ai/scribe/ghost-write`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

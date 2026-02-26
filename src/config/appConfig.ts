@@ -15,6 +15,12 @@ export const appConfig = {
   // In production (Vite build), Vercel proxies /api/* → Railway so we use relative paths.
   // In local dev (Vite dev server), fall back to localhost:3000.
   backendUrl: import.meta.env.PROD ? '' : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'),
+
+  // Scribe AI Backend — DO Droplet Python service (Whisper + Presidio + Bedrock).
+  // Set VITE_DO_SCRIBE_URL in Vercel to https://<droplet-ip>:8000 once DO is deployed.
+  // Falls back to backendUrl so Railway AI routes work in the interim and in local dev.
+  scribeBackendUrl: import.meta.env.VITE_DO_SCRIBE_URL
+    ?? (import.meta.env.PROD ? '' : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000')),
   
   // AI Configuration (deprecated - now handled by backend)
   // Kept for backward compatibility during migration
@@ -30,10 +36,21 @@ export const appConfig = {
 } as const;
 
 /**
- * Get backend API URL
+ * Get Railway backend URL (auth, templates, non-PHI routes).
  */
 export const getBackendUrl = (): string => {
   return appConfig.backendUrl;
+};
+
+/**
+ * Get the scribe AI backend URL.
+ *
+ * Points to the DO Droplet Python service (Whisper + Presidio + Bedrock) when
+ * VITE_DO_SCRIBE_URL is set in the environment.  Falls back to the Railway
+ * backend so existing AI routes keep working before the DO service is deployed.
+ */
+export const getScribeBackendUrl = (): string => {
+  return appConfig.scribeBackendUrl;
 };
 
 // Deprecated functions - kept for backward compatibility

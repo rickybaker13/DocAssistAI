@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../scribe/AudioRecorder';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
-import { getBackendUrl } from '../../config/appConfig';
+import { getScribeBackendUrl } from '../../config/appConfig';
 import { localNoteStore } from '../../lib/localNoteStore';
 
 type Phase = 'record' | 'generating' | 'error';
@@ -25,7 +25,7 @@ export const ScribeRecordPage: React.FC = () => {
       localNoteStore.update(noteId, { transcript });
 
       // AI generation still goes to the Railway backend (Bedrock migration comes in Task 2)
-      const genRes = await fetch(`${getBackendUrl()}/api/ai/scribe/generate`, {
+      const genRes = await fetch(`${getScribeBackendUrl()}/api/ai/scribe/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
