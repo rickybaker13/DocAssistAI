@@ -192,6 +192,18 @@ Previous problem: Single large plan file caused `API Error: Claude's response ex
 
 ## Session History
 
+### 2026-02-27 — Session: AWS Bedrock Setup
+- Confirmed **AWS Basic Support (Free)** is sufficient — no paid support plan needed
+- Selected **Claude Sonnet 4.6** (`us.anthropic.claude-sonnet-4-6-20250514-v1:0`) as the AI model
+  - Haiku ruled out: insufficient reasoning for medical documentation quality
+  - Opus ruled out: ~5x cost for marginal gains
+- Navigated AWS Bedrock model access: Model Access page retired; models now auto-enable on first invocation
+- Submitted **Anthropic use case details** in the Bedrock Model Catalog (required for first-time Anthropic access)
+- Model access confirmed — ready for first test invocation
+- Full details saved in `docs/AWS_BEDROCK_SETUP.md`
+
+
+
 ### 2026-02-23 — Session 2
 - Recovered context from git log + plan files
 - Identified token limit problem with monolithic plan
