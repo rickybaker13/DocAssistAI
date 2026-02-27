@@ -1,35 +1,22 @@
-import OpenAI from 'openai';
-
 export class WhisperService {
-  private _client: OpenAI | null = null;
-
-  /** True when WHISPER_API_URL points to a self-hosted Whisper container. */
-  private get selfHosted(): boolean {
-    return !!process.env.WHISPER_API_URL;
-  }
-
-  private get client(): OpenAI {
-    if (!this._client) {
-      this._client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-    }
-    return this._client;
-  }
-
   async transcribe(audioBuffer: Buffer, mimeType: string): Promise<string> {
     if (!audioBuffer || audioBuffer.length === 0) {
       throw new Error('Empty audio buffer');
     }
-    return this.selfHosted
-      ? this.callSelfHosted(audioBuffer, mimeType)
-      : this.callOpenAI(audioBuffer, mimeType);
+
+    const baseUrl = (process.env.WHISPER_API_URL || '').trim().replace(/\/+$/, '');
+    if (!baseUrl) {
+      throw new Error('WHISPER_API_URL is required — self-hosted Whisper must be configured');
+    }
+
+    return this.callSelfHosted(audioBuffer, mimeType, baseUrl);
   }
 
   /**
    * Call the self-hosted Whisper ASR container (onerahmet/openai-whisper-asr-webservice).
    * Endpoint: POST /asr?task=transcribe&language=en&output=json
    */
-  private async callSelfHosted(audioBuffer: Buffer, mimeType: string): Promise<string> {
-    const baseUrl = (process.env.WHISPER_API_URL || '').trim().replace(/\/+$/, '');
+  private async callSelfHosted(audioBuffer: Buffer, mimeType: string, baseUrl: string): Promise<string> {
     const timeoutMs = parseInt(process.env.WHISPER_TIMEOUT_MS || '120000', 10);
     const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp4') ? 'mp4' : 'wav';
 
@@ -59,18 +46,5 @@ export class WhisperService {
     } finally {
       clearTimeout(timer);
     }
-  }
-
-  /** Call the OpenAI Whisper cloud API. */
-  private async callOpenAI(audioBuffer: Buffer, mimeType: string): Promise<string> {
-    const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp4') ? 'mp4' : 'wav';
-    const file = new File([audioBuffer], `recording.${ext}`, { type: mimeType });
-    const response = await this.client.audio.transcriptions.create({
-      file,
-      model: 'whisper-1',
-      language: 'en',
-      prompt: 'Medical clinical encounter. Use medical terminology accurately.',
-    });
-    return response.text;
   }
 }

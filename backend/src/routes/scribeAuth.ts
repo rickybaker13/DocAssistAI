@@ -7,7 +7,13 @@ import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
 
 const router = Router();
 const userModel = new ScribeUserModel();
-const getSecret = () => process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const getSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be set in production');
+  }
+  return secret || 'dev-secret-change-in-production';
+};
 const COOKIE = 'scribe_token';
 const COOKIE_OPTS = {
   httpOnly: true,

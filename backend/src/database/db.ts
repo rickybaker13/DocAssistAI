@@ -7,7 +7,7 @@ let _pool: pg.Pool | null = null;
 /**
  * Initialize the database pool.
  * - test:       uses pg-mem (in-memory PostgreSQL — no external DB needed)
- * - production: connects to DATABASE_URL (Railway PostgreSQL)
+ * - production: connects to DATABASE_URL (PostgreSQL)
  *
  * Call once at startup (server.ts) or in test beforeAll.
  * Safe to call multiple times — subsequent calls are no-ops.
@@ -21,7 +21,10 @@ export async function initPool(): Promise<void> {
     const { Pool: PgMemPool } = db.adapters.createPg();
     _pool = new PgMemPool() as unknown as pg.Pool;
   } else {
-    const ssl = process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined;
+    // SSL: enabled by default when DATABASE_URL is set (remote DB).
+    // Set DATABASE_SSL=false to disable (e.g., Docker Compose internal networking).
+    const needsSSL = process.env.DATABASE_URL && process.env.DATABASE_SSL !== 'false';
+    const ssl = needsSSL ? { rejectUnauthorized: false } : undefined;
     _pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl });
   }
 }
