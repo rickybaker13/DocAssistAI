@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ScribeNotePage } from './ScribeNotePage';
+import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { vi } from 'vitest';
 
-const mockNote = { id: 'note-1', note_type: 'progress_note', patient_label: 'Bed 5', status: 'draft', transcript: 'Patient came in...' };
 const mockSections = [
   { id: 's1', section_name: 'HPI', content: 'Patient presents with chest pain.', confidence: 0.9, display_order: 0 },
   { id: 's2', section_name: 'Assessment', content: 'Likely ACS.', confidence: 0.5, display_order: 1 },
@@ -11,12 +11,27 @@ const mockSections = [
 
 describe('ScribeNotePage', () => {
   beforeEach(() => {
+    // Seed the Zustand store with note data (client-side, no server fetch)
+    useScribeNoteStore.setState({
+      noteId: 'note-1',
+      noteType: 'progress_note',
+      patientLabel: 'Bed 5',
+      verbosity: 'standard',
+      transcript: 'Patient came in...',
+      sections: mockSections,
+      status: 'draft',
+    });
+
+    // Mock fetch for the section library template list (non-critical)
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ note: mockNote, sections: mockSections }),
+      json: async () => ({ templates: [] }),
     });
   });
-  afterEach(() => vi.clearAllMocks());
+  afterEach(() => {
+    vi.clearAllMocks();
+    useScribeNoteStore.getState().reset();
+  });
 
   const renderPage = () =>
     render(

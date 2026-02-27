@@ -44,6 +44,28 @@ ufw allow 22/tcp    # SSH
 ufw allow 5001/tcp  # Presidio Anonymizer
 ufw allow 5002/tcp  # Presidio Analyzer
 ufw allow 9000/tcp  # Whisper ASR
+
+# ── Fix Docker + UFW conflict ────────────────────────────────────────────────
+# Docker publishes ports via the iptables FORWARD chain, not INPUT.
+# UFW defaults FORWARD policy to DROP, which silently blocks all external
+# traffic to Docker-published ports even though "ufw allow" rules exist.
+# Fix: allow forwarding so Docker's own iptables rules can route packets.
+sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
+
+# Add NAT masquerade + forward rules for Docker bridge networks.
+if ! grep -q '# BEGIN DOCKER UFW' /etc/ufw/after.rules 2>/dev/null; then
+  cat >> /etc/ufw/after.rules <<'UFWRULES'
+
+# BEGIN DOCKER UFW
+*filter
+:ufw-user-forward - [0:0]
+-A ufw-user-forward -j RETURN
+COMMIT
+# END DOCKER UFW
+UFWRULES
+  echo "  Added Docker forwarding rules to /etc/ufw/after.rules"
+fi
+
 ufw --force enable
 
 # ── Create project directory ─────────────────────────────────────────────────
@@ -104,6 +126,12 @@ echo "==> Pulling Docker images (this may take a few minutes)"
 cd "$PROJECT_DIR"
 docker compose pull
 
+# Restart Docker daemon so it re-creates iptables rules with the new
+# FORWARD policy. Without this, containers started before the UFW fix
+# remain unreachable from outside the host.
+echo "==> Restarting Docker to apply firewall changes"
+systemctl restart docker
+
 echo "==> Starting services"
 docker compose up -d
 
@@ -126,6 +154,24 @@ check "Presidio Anonymizer" "http://localhost:5001/health"
 check "Whisper ASR"         "http://localhost:9000/"
 
 DROPLET_IP=$(curl -s http://checkip.amazonaws.com || hostname -I | awk '{print $1}')
+
+# ── Verify external reachability ──────────────────────────────────────────────
+echo ""
+echo "==> Verifying external reachability (via public IP $DROPLET_IP)"
+
+check_external() {
+  local name=$1 url=$2
+  if curl -sf --max-time 5 "$url" >/dev/null 2>&1; then
+    echo "  [OK]  $name — reachable at $url"
+  else
+    echo "  [!!]  $name — NOT reachable at $url"
+    echo "        Try: iptables -L DOCKER-USER -n   and   ufw status verbose"
+  fi
+}
+
+check_external "Presidio Analyzer"  "http://${DROPLET_IP}:5002/health"
+check_external "Presidio Anonymizer" "http://${DROPLET_IP}:5001/health"
+check_external "Whisper ASR"         "http://${DROPLET_IP}:9000/"
 
 echo ""
 echo "════════════════════════════════════════════════════════════════"

@@ -6,6 +6,7 @@ import { SectionLibrary } from './SectionLibrary';
 import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { useNoteTemplates, NoteTemplate } from '../../hooks/useNoteTemplates';
+import { useScribeNoteStore, generateNoteId } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
 const NOTE_TYPES = [
@@ -32,7 +33,6 @@ export const NoteBuilderPage: React.FC = () => {
     setNoteType, setPatientLabel, clearCanvas, setVerbosity, setSelectedTemplate,
   } = useScribeBuilderStore();
   const navigate = useNavigate();
-  const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLibrary, setShowLibrary] = useState(false);
   const [saveTemplateName, setSaveTemplateName] = useState('');
@@ -54,25 +54,15 @@ export const NoteBuilderPage: React.FC = () => {
     setVerbosity(tmpl.verbosity as Verbosity);
   };
 
-  const handleStartRecording = async () => {
+  const { initNote } = useScribeNoteStore();
+
+  const handleStartRecording = () => {
     if (canvasSections.length === 0) { setError('Add at least one section before recording'); return; }
-    setCreating(true);
     setError(null);
-    try {
-      const res = await fetch(`${getBackendUrl()}/api/scribe/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ noteType, patientLabel: patientLabel || null, verbosity }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create note');
-      navigate(`/scribe/note/${data.note.id}/record`);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'An unexpected error occurred');
-    } finally {
-      setCreating(false);
-    }
+    // Client-side only — no server call. Generate a local ID and init the store.
+    const noteId = generateNoteId();
+    initNote({ noteId, noteType, patientLabel: patientLabel || '', verbosity });
+    navigate(`/scribe/note/${noteId}/record`);
   };
 
   const handleSaveTemplate = async () => {
@@ -219,10 +209,10 @@ export const NoteBuilderPage: React.FC = () => {
       )}
 
       {error && <p className="text-sm text-red-400 bg-red-950/30 rounded p-2">{error}</p>}
-      <button onClick={handleStartRecording} disabled={creating || canvasSections.length === 0}
+      <button onClick={handleStartRecording} disabled={canvasSections.length === 0}
         className="w-full py-4 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
         <Mic size={18} aria-hidden="true" />
-        {creating ? 'Starting...' : 'Record'}
+        Record
       </button>
     </div>
   );

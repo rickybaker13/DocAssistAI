@@ -4,16 +4,8 @@ import { ArrowLeft, X } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
+import { useScribeNoteStore, type NoteSection } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
-
-interface NoteData {
-  id: string;
-  note_type: string;
-  patient_label: string | null;
-  status: string;
-  transcript: string | null;
-  verbosity: string;
-}
 
 interface SectionData {
   id: string;
@@ -82,43 +74,36 @@ const SectionLibraryForNote: React.FC<SectionLibraryForNoteProps> = ({ onSelect,
 export const ScribeNotePage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [note, setNote] = useState<NoteData | null>(null);
+
+  // Read note data from client-side Zustand store — no server fetch
+  const storeNote = useScribeNoteStore();
+  const storeSections = storeNote.sections;
+
   const [sections, setSections] = useState<SectionData[]>([]);
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focusedSection, setFocusedSection] = useState<SectionData | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
 
+  // Initialise local editing state from the Zustand store
   useEffect(() => {
-    if (!noteId) { setLoading(false); return; }
-    fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, { credentials: 'include' })
-      .then(r => {
-        if (!r.ok) throw new Error(`Failed to load note (${r.status})`);
-        return r.json();
-      })
-      .then(d => {
-        setNote(d.note);
-        setSections(d.sections || []);
-        const initial: Record<string, string> = {};
-        (d.sections || []).forEach((s: SectionData) => { initial[s.id] = s.content || ''; });
-        setEdits(initial);
-        setLoading(false);
-      })
-      .catch((e: unknown) => {
-        setError(e instanceof Error ? e.message : 'Failed to load note');
-        setLoading(false);
-      });
-  }, [noteId]);
+    if (!noteId || storeNote.noteId !== noteId) {
+      setError(storeNote.noteId ? 'Note ID mismatch' : 'No active note');
+      setLoading(false);
+      return;
+    }
+    setSections(storeSections);
+    const initial: Record<string, string> = {};
+    storeSections.forEach((s: NoteSection) => { initial[s.id] = s.content || ''; });
+    setEdits(initial);
+    setLoading(false);
+  }, [noteId, storeNote.noteId, storeSections]);
 
   const handleSectionChange = useCallback((id: string, content: string) => {
     setEdits(prev => ({ ...prev, [id]: content }));
   }, []);
 
-  // UI-only: removes section from local display state.
-  // Persisted sections (real UUIDs) are not deleted from the backend until a future
-  // endpoint (DELETE /api/scribe/notes/:noteId/sections/:sectionId) is implemented.
   const handleDeleteSection = (sectionId: string) => {
     setSections(prev => prev.filter(s => s.id !== sectionId));
     setEdits(prev => {
@@ -146,7 +131,6 @@ export const ScribeNotePage: React.FC = () => {
       ...prev,
       [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + suggestion,
     }));
-    // setFocusedSection(null) removed; panel only closes on explicit × click
   };
 
   const handleChatInsert = (sectionId: string, text: string) => {
@@ -163,23 +147,10 @@ export const ScribeNotePage: React.FC = () => {
     navigator.clipboard.writeText(fullNote);
   };
 
-  const handleFinalize = async () => {
-    if (!noteId) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'finalized' }),
-      });
-      if (!res.ok) throw new Error('Failed to finalize note');
-      navigate('/scribe/dashboard');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to finalize');
-    } finally {
-      setSaving(false);
-    }
+  const handleFinalize = () => {
+    // Client-side only — no server call
+    storeNote.setStatus('finalized');
+    navigate('/scribe/dashboard');
   };
 
   if (loading) return (
@@ -188,7 +159,7 @@ export const ScribeNotePage: React.FC = () => {
     </div>
   );
 
-  if (!note) return <div className="text-red-500 p-4">Note not found.</div>;
+  if (!storeNote.noteId) return <div className="text-red-500 p-4">Note not found.</div>;
 
   return (
     <div className="flex flex-col gap-4">
@@ -206,27 +177,26 @@ export const ScribeNotePage: React.FC = () => {
           </button>
           <div className="flex items-center gap-2">
             <h1 className="text-slate-50 font-semibold text-lg">
-              {note.patient_label || note.note_type.replace(/_/g, ' ')}
+              {storeNote.patientLabel || storeNote.noteType.replace(/_/g, ' ')}
             </h1>
             <span className="bg-slate-800 border border-slate-700 text-slate-400 text-xs px-2.5 py-1 rounded-lg">
-              {note.note_type.replace(/_/g, ' ')}
+              {storeNote.noteType.replace(/_/g, ' ')}
             </span>
             <span className={
-              note.status === 'finalized'
+              storeNote.status === 'finalized'
                 ? 'bg-emerald-950 text-emerald-400 border border-emerald-400/30 text-xs px-2.5 py-1 rounded-full'
                 : 'bg-amber-950 text-amber-400 border border-amber-400/30 text-xs px-2.5 py-1 rounded-full'
             }>
-              {note.status}
+              {storeNote.status}
             </span>
           </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={handleFinalize}
-            disabled={saving}
-            className="bg-teal-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-300 transition-colors disabled:opacity-50"
+            className="bg-teal-400 text-slate-900 text-sm font-semibold px-4 py-2 rounded-lg hover:bg-teal-300 transition-colors"
           >
-            {saving ? 'Saving...' : 'Finalize'}
+            Finalize
           </button>
         </div>
       </div>
@@ -258,17 +228,17 @@ export const ScribeNotePage: React.FC = () => {
       {focusedSection && (
         <FocusedAIPanel
           section={focusedSection}
-          transcript={note.transcript || ''}
-          noteType={note.note_type}
-          verbosity={note.verbosity}
+          transcript={storeNote.transcript || ''}
+          noteType={storeNote.noteType}
+          verbosity={storeNote.verbosity}
           onClose={() => setFocusedSection(null)}
           onApplySuggestion={handleApplySuggestion}
         />
       )}
       <ScribeChatDrawer
         sections={sections}
-        noteType={note.note_type}
-        verbosity={note.verbosity}
+        noteType={storeNote.noteType}
+        verbosity={storeNote.verbosity}
         onInsert={handleChatInsert}
       />
 

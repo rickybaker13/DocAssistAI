@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AudioRecorder } from '../scribe/AudioRecorder';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
+import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
 type Phase = 'record' | 'generating' | 'error';
@@ -10,6 +11,7 @@ export const ScribeRecordPage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { canvasSections, noteType, verbosity } = useScribeBuilderStore();
+  const { setTranscript, setSections } = useScribeNoteStore();
   const [phase, setPhase] = useState<Phase>('record');
   const [error, setError] = useState<string | null>(null);
   const [statusMsg, setStatusMsg] = useState('');
@@ -20,13 +22,8 @@ export const ScribeRecordPage: React.FC = () => {
     setPhase('generating');
     setStatusMsg('Generating note sections...');
     try {
-      const putRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ transcript }),
-      });
-      if (!putRes.ok) throw new Error('Failed to save transcript');
+      // Store transcript client-side only — never sent to DB
+      setTranscript(transcript);
 
       const genRes = await fetch(`${getBackendUrl()}/api/ai/scribe/generate`, {
         method: 'POST',
@@ -45,16 +42,15 @@ export const ScribeRecordPage: React.FC = () => {
       }
       const genData = await genRes.json();
 
-      const saveRes = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}/sections`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ sections: genData.sections }),
-      });
-      if (!saveRes.ok) {
-        const saveData = await saveRes.json().catch(() => ({}));
-        throw new Error((saveData as any).error || 'Failed to save generated sections');
-      }
+      // Store generated sections client-side only — never sent to DB
+      const sections = (genData.sections || []).map((s: any, i: number) => ({
+        id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
+        section_name: s.name,
+        content: s.content || null,
+        confidence: s.confidence ?? null,
+        display_order: i,
+      }));
+      setSections(sections);
 
       navigate(`/scribe/note/${noteId}`);
     } catch (e: unknown) {

@@ -87,6 +87,7 @@ recognizers:
       - name: dob_full_pattern
         regex: "(?:date of birth|born on)[:\\s]*\\d{1,2}[/\\-]\\d{1,2}[/\\-]\\d{2,4}"
         score: 0.85
+    context: ["dob", "date of birth", "born", "birthday", "birth date"]
     type: custom
     supported_entity: DATE_OF_BIRTH
 
@@ -106,6 +107,7 @@ recognizers:
       - name: account_pattern
         regex: "(?:account|acct)[\\s#:]*[A-Z0-9\\-]{4,16}"
         score: 0.75
+    context: ["account", "acct", "account number", "account no"]
     type: custom
     supported_entity: ACCOUNT_NUMBER
 
