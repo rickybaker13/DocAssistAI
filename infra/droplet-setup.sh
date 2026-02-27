@@ -53,7 +53,6 @@ ufw allow 9000/tcp  # Whisper ASR
 sed -i 's/DEFAULT_FORWARD_POLICY="DROP"/DEFAULT_FORWARD_POLICY="ACCEPT"/' /etc/default/ufw
 
 # Add NAT masquerade + forward rules for Docker bridge networks.
-# These go in /etc/ufw/after.rules BEFORE the existing *filter section.
 if ! grep -q '# BEGIN DOCKER UFW' /etc/ufw/after.rules 2>/dev/null; then
   cat >> /etc/ufw/after.rules <<'UFWRULES'
 

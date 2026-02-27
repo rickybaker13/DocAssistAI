@@ -50,7 +50,6 @@ router.get('/health', async (_req: Request, res: Response) => {
     analyzer: analyzer.status,
     anonymizer: anonymizer.status,
     whisper: whisper.status,
-    // Include error details only when something is wrong (helps debug connectivity)
     ...(analyzer.error && { analyzerError: analyzer.error }),
     ...(anonymizer.error && { anonymizerError: anonymizer.error }),
     ...(whisper.error && { whisperError: whisper.error }),
