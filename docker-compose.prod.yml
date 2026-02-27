@@ -1,0 +1,28 @@
+# Production overlay — use alongside docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# What this adds vs base:
+#   - Caddy reverse proxy for HTTPS (auto TLS via Let's Encrypt)
+#   - Removes host-facing port 8000 from scribe-api (Caddy handles all ingress)
+
+services:
+  scribe-api:
+    ports: []   # Remove host-facing 8000 — Caddy proxies internally; 8000 stays off the public internet
+
+  caddy:
+    image: caddy:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - scribe-api
+    restart: always
+
+volumes:
+  caddy_data:
+  caddy_config:
