@@ -15,33 +15,6 @@ CREATE TABLE IF NOT EXISTS scribe_users (
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS scribe_notes (
-  id            TEXT PRIMARY KEY,
-  user_id       TEXT NOT NULL REFERENCES scribe_users(id),
-  note_type     TEXT NOT NULL,
-  patient_label TEXT,
-  transcript    TEXT,
-  status        TEXT DEFAULT 'draft',
-  verbosity     TEXT NOT NULL DEFAULT 'standard',
-  deleted_at    TIMESTAMPTZ,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE IF NOT EXISTS scribe_note_sections (
-  id                TEXT PRIMARY KEY,
-  note_id           TEXT NOT NULL REFERENCES scribe_notes(id),
-  section_name      TEXT NOT NULL,
-  content           TEXT,
-  prompt_hint       TEXT,
-  display_order     INTEGER NOT NULL DEFAULT 0,
-  confidence        REAL,
-  focused_ai_result TEXT,
-  chat_insertions   TEXT DEFAULT '[]',
-  created_at        TIMESTAMPTZ DEFAULT NOW(),
-  updated_at        TIMESTAMPTZ DEFAULT NOW()
-);
-
 CREATE TABLE IF NOT EXISTS scribe_section_templates (
   id          TEXT PRIMARY KEY,
   user_id     TEXT REFERENCES scribe_users(id),
@@ -78,12 +51,6 @@ interface ColumnMigration {
 }
 
 const COLUMN_MIGRATIONS: ColumnMigration[] = [
-  // Added verbosity to notes in v0.2
-  {
-    table: 'scribe_notes',
-    column: 'verbosity',
-    sql: `ALTER TABLE scribe_notes ADD COLUMN verbosity TEXT NOT NULL DEFAULT 'standard'`,
-  },
   // Added category + disciplines to section templates in v0.3 (Phase 6 — discipline filtering)
   {
     table: 'scribe_section_templates',
