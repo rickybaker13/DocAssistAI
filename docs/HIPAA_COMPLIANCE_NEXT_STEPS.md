@@ -1,145 +1,149 @@
-# DocAssistAI — HIPAA Compliance Next Steps
+# DocAssistAI — HIPAA Compliance & Infrastructure Next Steps
 
 _Last updated: 2026-02-27_
 
 ---
 
+## Target Architecture: Consolidate onto DigitalOcean
+
+Eliminate Railway entirely. Move the Express backend + PostgreSQL onto the existing DigitalOcean droplet (8 GB RAM / 4 vCPU) alongside Whisper and Presidio. Vercel serves static files only — no API proxy, no PHI transit.
+
+```
+Browser (Vercel — static only)          DO Droplet (8GB/4CPU)                  AWS
+──────────────────────────────          ─────────────────────                  ───
+        │                                       │
+        │── POST audio ──── HTTPS ────────────▶ │
+        │                                       │── localhost ──▶ Whisper → transcript
+        │                                       │── localhost ──▶ Presidio → scrub
+        │                                       │── HTTPS ─────▶ Bedrock (scrubbed text only)
+        │                                       │◀─ HTTPS ───── Bedrock (AI response)
+        │                                       │── re-inject real values (in-memory, never persisted)
+        │◀──── structured note ── HTTPS ───────│
+        │                                       │
+        │── login/logout ── HTTPS ────────────▶ │  Express API
+        │                                       │  PostgreSQL (user accounts, audit logs)
+        │                                       │  Whisper (Docker)
+        │                                       │  Presidio Analyzer + Anonymizer (Docker)
+```
+
+**Key properties:**
+- Raw PHI (audio, transcripts, notes) never leaves the droplet until scrubbed
+- Whisper + Presidio calls are `localhost` — zero network latency, no TLS needed internally
+- Only scrubbed (de-identified) text reaches AWS Bedrock
+- Vercel serves the React bundle only — no PHI touches Vercel infrastructure
+- 2 vendors handle PHI: **DigitalOcean** (infrastructure) and **AWS** (scrubbed AI inference)
+
+---
+
 ## 1. Business Associate Agreements (BAAs)
 
-### Required BAAs
+### Required (2 total)
 
-| Vendor | Why PHI Touches It | BAA Availability | Action |
-|---|---|---|---|
-| **AWS (Bedrock)** | LLM processes de-identified clinical text. Even scrubbed text contains diagnoses, treatments, and medications that may qualify as PHI in context. | AWS offers BAAs on all accounts — Bedrock is a HIPAA-eligible service. | Enable the AWS BAA in the AWS Management Console under **AWS Artifact > Agreements**. Accept the AWS BAA and the HIPAA Addendum. No cost. |
-| **DigitalOcean** | Hosts Presidio (receives raw PHI for de-identification) and Whisper (receives raw audio of patient encounters). | DigitalOcean offers BAAs. Must be requested via support or account settings. | Request a BAA from DigitalOcean support or via the account compliance page. |
-| **Railway** | Hosts the backend server — raw PHI (transcripts, note content, patient context) lives in memory during request processing. PostgreSQL stores user accounts. | Railway's BAA availability is unclear — investigate directly. | Contact Railway support to ask if they offer a BAA. **If not, plan migration to a HIPAA-eligible hosting provider** (AWS ECS/Fargate, GCP Cloud Run, or Azure Container Apps). |
-| **Vercel** | `vercel.json` rewrites proxy all `/api/*` requests through Vercel's edge infrastructure, meaning raw PHI passes through Vercel servers in transit. | Vercel offers BAAs on **Enterprise plans only**. | Either upgrade to Vercel Enterprise and sign a BAA, **or** point the frontend directly to the Railway backend URL (bypassing the proxy) and handle CORS accordingly. |
-
-### Conditionally Required BAAs
-
-| Vendor | Condition | Action |
+| Vendor | Why | Action |
 |---|---|---|
-| **OpenAI** | Only if `WHISPER_API_URL` is ever unset in production, causing the Whisper fallback to send raw patient audio to OpenAI's cloud API. | As long as `WHISPER_API_URL` is set (self-hosted Whisper on DO), no OpenAI BAA is needed. Consider removing the fallback path entirely to eliminate risk. |
-| **Anthropic (direct API)** | Only if `EXTERNAL_AI_TYPE` is switched from `bedrock` to `anthropic`. | Not needed while using Bedrock. If switching, Anthropic offers BAAs on certain plans. |
+| **AWS** | Bedrock processes de-identified clinical text (diagnoses, treatments, medications — may qualify as PHI in context even after scrubbing). | Accept the AWS BAA in **AWS Console → AWS Artifact → Agreements**. Bedrock is a HIPAA-eligible service. Free, takes 5 minutes. |
+| **DigitalOcean** | Hosts the entire backend: raw audio, transcripts, clinical notes, Presidio PII processing, user accounts, audit logs. | Request a BAA from DigitalOcean support or via the account compliance page. DO offers BAAs. |
 
 ### NOT Required
 
-| Vendor | Reason |
+| Vendor | Why |
 |---|---|
-| **Microsoft (Presidio)** | Open-source software, self-hosted on your DigitalOcean droplet. No data leaves to Microsoft. |
+| **Railway** | Being eliminated — no PHI or infrastructure after migration. |
+| **Vercel** | Serves static frontend assets only. No API proxy, no PHI transit. |
+| **Microsoft** | Presidio is open-source, self-hosted. No data leaves to Microsoft. |
+| **OpenAI** | Whisper fallback code path will be removed (see §3). Self-hosted Whisper only. |
+| **Anthropic** | Using Bedrock (AWS handles the BAA). Direct API not used in production. |
 
 ---
 
-## 2. Critical Security Gaps
+## 2. Migration Plan: Railway → DigitalOcean
 
-### A. No Encryption in Transit: Railway ↔ DigitalOcean Droplet
+### Phase 1 — TLS & Reverse Proxy
 
-**Risk:** Raw PHI (transcripts, clinical text, audio) is transmitted over **plaintext HTTP** between Railway and the DigitalOcean droplet. This is a direct HIPAA violation (45 CFR 164.312(e)(1) — Transmission Security).
+Add Caddy (auto-provisions Let's Encrypt certs) to the droplet.
 
-**Current state:**
-```
-PRESIDIO_ANALYZER_URL=http://159.203.87.97:5002     # ← HTTP, not HTTPS
-PRESIDIO_ANONYMIZER_URL=http://159.203.87.97:5001   # ← HTTP, not HTTPS
-WHISPER_API_URL=http://159.203.87.97:9000            # ← HTTP, not HTTPS
-```
+1. Point `api.docassistai.app` DNS to the droplet IP
+2. Add Caddy to Docker Compose as the entry point
+3. Caddy terminates TLS, reverse-proxies to internal services:
+   - `/api/*` → Express backend (port 3000)
+   - Whisper and Presidio remain internal-only (localhost, no external exposure)
+4. Update UFW: open port 443, close ports 5001/5002/9000 from external access (Caddy handles ingress, services are localhost-only behind it)
 
-**Fix options (pick one):**
-1. **Nginx reverse proxy + Let's Encrypt** — Add a domain (e.g., `services.docassistai.app`), install Nginx on the droplet with a TLS cert, proxy to Docker containers internally. Change Railway env vars to `https://services.docassistai.app`.
-2. **WireGuard VPN tunnel** — Private encrypted tunnel between Railway and the droplet. More complex but avoids needing a domain/cert.
-3. **Caddy reverse proxy** — Simpler than Nginx, auto-provisions TLS certs.
+### Phase 2 — PostgreSQL on the Droplet
 
-**Priority: CRITICAL — must fix before handling real patient data.**
+1. Add PostgreSQL container to Docker Compose (or install natively)
+   - Mount a Docker volume for data persistence
+   - Enable DO automated droplet backups ($1.60/mo for weekly snapshots)
+2. Migrate the `scribe_users` + related tables from Railway PostgreSQL
+   - `pg_dump` from Railway → `psql` import on droplet
+3. Update `DATABASE_URL` to point to `localhost:5432`
+4. Remove `rejectUnauthorized: false` SSL hack — localhost connection doesn't need SSL
 
-### B. Audit Logs Lost on Container Restart
+### Phase 3 — Express Backend on the Droplet
 
-**Risk:** Audit logs are written to the local filesystem (`./logs/audit.log`) via Winston. Railway containers are ephemeral — logs are destroyed on every deploy or restart. HIPAA requires 6-year retention (45 CFR 164.530(j)).
+1. Add the backend as a Docker container in Compose (multi-stage build, already has a Dockerfile)
+2. Environment variables: set `PRESIDIO_ANALYZER_URL=http://presidio-analyzer:3000`, `WHISPER_API_URL=http://whisper:9000`, etc. — Docker Compose internal networking, no public URLs
+3. Caddy routes `/api/*` → `backend:3000`
+4. Update CORS: allow `https://www.docassistai.app`
+5. Verify health check: `GET https://api.docassistai.app/api/health`
 
-**Fix:** Send audit logs to a durable, tamper-evident destination:
-- Railway's built-in log drain → external log service
-- Direct to a managed service: AWS CloudWatch, Datadog, or Papertrail
-- Write audit events to the PostgreSQL database (simplest — already have a DB)
+### Phase 4 — Frontend Cutover
 
-### C. Hardcoded Fallback JWT Secret
+1. Update `appConfig.ts`: production `backendUrl` → `https://api.docassistai.app`
+2. Remove the `/api/:path*` rewrite from `vercel.json`
+3. Update cookie config: `SameSite=None; Secure=true` (cross-domain: Vercel → DO)
+4. Test full flow: login → record audio → transcribe → AI analysis → structured note
 
-**Risk:** `scribeAuth.ts` line 10 falls back to `'dev-secret-change-in-production'` if `JWT_SECRET` is unset. Anyone who finds this string can forge auth tokens.
+### Phase 5 — Decommission Railway
 
-```typescript
-const getSecret = () => process.env.JWT_SECRET || 'dev-secret-change-in-production';
-```
+1. Verify everything works on DO for 48+ hours
+2. Export final Railway PostgreSQL backup as insurance
+3. Delete Railway project
+4. Remove Railway references from documentation
 
-**Fix:** Hard-fail in production if `JWT_SECRET` is missing:
-```typescript
-const getSecret = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret && process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET must be set in production');
-  }
-  return secret || 'dev-secret-change-in-production';
-};
-```
+### Phase 6 — Deployment Pipeline
 
-### D. SSL Certificate Validation Disabled
-
-**Risk:** Database connection uses `rejectUnauthorized: false`, making it vulnerable to MITM attacks.
-
-```typescript
-const ssl = process.env.DATABASE_URL ? { rejectUnauthorized: false } : undefined;
-```
-
-**Fix:** Use Railway's provided CA certificate, or at minimum document why this is acceptable for the Railway internal network.
+Replace Railway's auto-deploy with one of:
+- **GitHub Actions**: on push to `main`, SSH into droplet, `git pull && docker compose up --build -d`
+- **Simple webhook**: lightweight endpoint on the droplet that triggers rebuild
+- **Manual**: `ssh root@droplet 'cd /opt/docassistai && git pull && docker compose up --build -d'`
 
 ---
 
-## 3. High-Priority Gaps
+## 3. Security Gaps to Fix (Priority Order)
 
-### E. No Multi-Factor Authentication (MFA)
+### Critical — Before Handling Real Patient Data
 
-HIPAA recommends MFA for PHI access (45 CFR 164.312(d) — Person or Entity Authentication). Current auth is email + password only.
+| # | Gap | Fix | Effort |
+|---|---|---|---|
+| 1 | **Sign AWS BAA** | Accept in AWS Artifact → Agreements | 5 min |
+| 2 | **Request DO BAA** | Contact DigitalOcean support | 1 day (wait) |
+| 3 | **TLS on droplet** | Caddy + Let's Encrypt (part of migration Phase 1) | 1–2 hrs |
+| 4 | **Hardcoded JWT secret fallback** | Hard-fail in production if `JWT_SECRET` is unset | 10 min |
+| 5 | **Remove OpenAI Whisper fallback** | Delete the `callOpenAI` code path in `whisperService.ts`. Self-hosted only. Eliminates accidental PHI leak to OpenAI. | 15 min |
+| 6 | **Audit logs to durable storage** | Write audit events to PostgreSQL instead of ephemeral filesystem. On the droplet the filesystem is persistent (unlike Railway), but DB storage is more queryable and easier to back up. | 2–4 hrs |
+| 7 | **Scrub console.log output** | Remove or redact any `console.log` that could contain clinical content (system prompts, transcripts, note text). | 1–2 hrs |
 
-**Fix:** Add TOTP-based MFA (e.g., `otplib` or `speakeasy` npm packages) or integrate an auth provider that supports MFA (Auth0, AWS Cognito).
+### High Priority — Soon After Launch
 
-### F. No Token Revocation / Session Invalidation
+| # | Gap | Fix | Effort |
+|---|---|---|---|
+| 8 | **Automatic session timeout** | Frontend idle timer (15–30 min inactivity → logout). Required by 45 CFR 164.312(a)(2)(iii). | 2–3 hrs |
+| 9 | **MFA** | TOTP-based (e.g., `otplib`). HIPAA recommends for PHI access. | 1–2 days |
+| 10 | **Token revocation** | Server-side session table or token blocklist. Force logout on password change. | 4–6 hrs |
+| 11 | **Password reset flow** | Email-based reset with time-limited token. | 4–6 hrs |
 
-JWTs are self-contained with 7-day or 30-day expiry. No ability to:
-- Revoke a compromised token
-- Force logout on password change
-- "Logout all devices"
+### Moderate — As Product Matures
 
-**Fix:** Add a server-side session table or token blocklist. On logout/password change, invalidate all active tokens.
-
-### G. No Automatic Session Timeout
-
-No idle timeout — sessions last the full JWT lifetime (7 or 30 days) regardless of activity. HIPAA requires automatic logoff after inactivity (45 CFR 164.312(a)(2)(iii)).
-
-**Fix:** Add an idle timer on the frontend (e.g., 15–30 minutes of inactivity triggers logout). Optionally use short-lived JWTs with a refresh token pattern.
-
-### H. No Password Reset / Change Flow
-
-No endpoint for password change or email-based password reset. Users cannot recover from compromised credentials.
-
-### I. Console.log May Leak PHI to Railway Logs
-
-Several backend files (e.g., `aiService.ts`) log system prompt previews and request metadata via `console.log`. On Railway, this output goes to Railway's logging infrastructure, which may not be HIPAA-compliant.
-
-**Fix:** Scrub or redact all `console.log` output that could contain clinical content. Use structured logging with explicit PHI-free fields.
-
----
-
-## 4. Moderate Gaps
-
-| Gap | Description | Fix |
+| # | Gap | Fix |
 |---|---|---|
-| **No RBAC** | Single user role — no admin vs. clinician distinction, no "need to know" access control. | Add role column to `scribe_users`, enforce in middleware. |
-| **No data retention policy** | No automatic deletion of old data, no patient data deletion capability. | Define retention periods, add cleanup jobs. |
-| **No backup / disaster recovery plan** | No documented DB backup procedure. Railway PostgreSQL may have built-in backups — verify. | Document backup strategy, test restores. |
-| **OpenAI Whisper fallback** | If `WHISPER_API_URL` is ever unset, raw patient audio goes to OpenAI cloud without a BAA. | Remove the fallback code path or gate it behind an explicit opt-in env var. |
-| **Frontend stores patient IDs in sessionStorage** | Accessible to any JS on the same origin (XSS risk). | Minimize client-side PHI storage; use server-side session state. |
+| 12 | **RBAC** | Add role column to `scribe_users`, enforce in middleware. |
+| 13 | **Data retention policy** | Define retention periods, add cleanup jobs. |
+| 14 | **Backup & disaster recovery plan** | Document backup strategy (DO snapshots + `pg_dump` cron), test restores. |
 
 ---
 
-## 5. What's Already Done (Strengths)
-
-These measures are already implemented and working:
+## 4. What's Already Done (Strengths)
 
 - **Presidio-based PII de-identification** — All text scrubbed before every LLM call
 - **Fail-closed design** — 503 returned if Presidio is unreachable; LLM never called
@@ -150,23 +154,20 @@ These measures are already implemented and working:
 - **CORS whitelisting** — Only configured frontend origins allowed
 - **Helmet.js security headers**
 - **Rate limiting** — Global and per-endpoint
-- **Audit logging middleware** — Logs PHI access, AI usage, auth events (needs durable storage)
+- **Audit logging middleware** — Logs PHI access, AI usage, auth events
 - **Self-hosted Whisper and Presidio** — PHI stays on infrastructure you control
 - **UFW firewall on droplet** — Only SSH + service ports exposed
 
 ---
 
-## 6. Recommended Priority Order
+## 5. Consolidated Cost Estimate (Post-Migration)
 
-1. **Sign AWS BAA** — Free, takes 5 minutes in AWS Artifact
-2. **Request DigitalOcean BAA** — Contact support
-3. **Add TLS to droplet** (Nginx/Caddy + Let's Encrypt) — Fixes the HTTP plaintext gap
-4. **Investigate Railway BAA** — Contact support; plan migration if unavailable
-5. **Investigate Vercel BAA** — Enterprise plan, or remove the API proxy
-6. **Fix JWT secret fallback** — Hard-fail in production
-7. **Move audit logs to durable storage** — DB or external log service
-8. **Add MFA** — TOTP-based
-9. **Add session timeout + token revocation**
-10. **Add password reset flow**
-11. **Scrub console.log output**
-12. **Remove OpenAI Whisper fallback** (or gate behind explicit opt-in)
+| Item | Monthly Cost |
+|---|---|
+| DigitalOcean Droplet (8GB / 4CPU) | ~$48 |
+| DO automated backups | ~$1.60 |
+| Vercel (free tier or Pro at $20) | $0–20 |
+| AWS Bedrock (usage-based) | Variable |
+| Domain (annual, amortized) | ~$1 |
+| **Railway** | **$0 (eliminated)** |
+| **Total infrastructure** | **~$50–70/mo + Bedrock usage** |
