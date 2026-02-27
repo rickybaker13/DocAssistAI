@@ -1,0 +1,113 @@
+# DocAssistAI — Production Docker Compose (DigitalOcean Droplet)
+#
+# All services on one host. Only Caddy is exposed externally (ports 80/443).
+# Presidio, Whisper, PostgreSQL, and the Express backend communicate over
+# Docker's internal network — no PHI leaves the machine until scrubbed.
+#
+# Usage:
+#   cd /opt/docassistai
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Requires: .env file alongside this file (see .env.example)
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-docassistai}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-docassistai}
+      - DATABASE_SSL=false
+      - PRESIDIO_ANALYZER_URL=http://presidio-analyzer:3000
+      - PRESIDIO_ANONYMIZER_URL=http://presidio-anonymizer:3000
+      - WHISPER_API_URL=http://whisper:9000
+      - FRONTEND_URL=https://www.docassistai.app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      presidio-analyzer:
+        condition: service_healthy
+      presidio-anonymizer:
+        condition: service_healthy
+      whisper:
+        condition: service_healthy
+    restart: always
+
+  postgres:
+    image: postgres:16-alpine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-docassistai}
+      POSTGRES_USER: ${POSTGRES_USER:-docassistai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    expose:
+      - "5432"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-docassistai}"]
+      interval: 10s
+      retries: 5
+      start_period: 10s
+
+  presidio-analyzer:
+    image: mcr.microsoft.com/presidio-analyzer:latest
+    volumes:
+      - ./presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
+    expose:
+      - "3000"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:3000/health')\""]
+      interval: 10s
+      retries: 5
+      start_period: 45s
+
+  presidio-anonymizer:
+    image: mcr.microsoft.com/presidio-anonymizer:latest
+    expose:
+      - "3000"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:3000/health')\""]
+      interval: 10s
+      retries: 3
+      start_period: 20s
+
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:latest
+    environment:
+      - ASR_MODEL=base
+      - ASR_ENGINE=faster_whisper
+    expose:
+      - "9000"
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:9000/')\""]
+      interval: 15s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  caddy_data:
+  caddy_config:
+  pgdata:

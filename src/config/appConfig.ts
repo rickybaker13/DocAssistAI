@@ -12,9 +12,10 @@ export const appConfig = {
   redirectUri: import.meta.env.VITE_REDIRECT_URI || 'http://localhost:8080/redirect.html',
   
   // Backend Configuration
-  // In production (Vite build), Vercel proxies /api/* → Railway so we use relative paths.
-  // In local dev (Vite dev server), fall back to localhost:3000.
-  backendUrl: import.meta.env.PROD ? '' : (import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000'),
+  // Production: direct to DO droplet via Caddy (HTTPS).
+  // Local dev: fall back to localhost:3000.
+  backendUrl: import.meta.env.VITE_BACKEND_URL
+    || (import.meta.env.PROD ? 'https://api.docassistai.app' : 'http://localhost:3000'),
   
   // AI Configuration (deprecated - now handled by backend)
   // Kept for backward compatibility during migration
