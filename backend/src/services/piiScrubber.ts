@@ -30,7 +30,7 @@ const UNAVAILABLE_MSG =
 // ── Internal: call Presidio Analyzer ─────────────────────────────────────────
 
 async function analyzeText(text: string): Promise<AnalyzerResult[]> {
-  const analyzerUrl = process.env.PRESIDIO_ANALYZER_URL || 'http://localhost:5002';
+  const analyzerUrl = (process.env.PRESIDIO_ANALYZER_URL || 'http://localhost:5002').trim().replace(/\/+$/, '');
   const timeoutMs = parseInt(process.env.PRESIDIO_TIMEOUT_MS || '5000', 10);
 
   const controller = new AbortController();
