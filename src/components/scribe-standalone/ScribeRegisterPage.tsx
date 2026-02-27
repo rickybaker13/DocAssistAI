@@ -2,12 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { Sparkles } from 'lucide-react';
-
-const SPECIALTIES = [
-  'Critical Care / Intensivist', 'Hospital Medicine', 'Internal Medicine',
-  'Emergency Medicine', 'Neurology', 'Surgery', 'Cardiology',
-  'Physical Therapy', 'Occupational Therapy', 'Other',
-];
+import { DISCIPLINE_OPTIONS } from '../../lib/disciplines';
 
 export const ScribeRegisterPage: React.FC = () => {
   const { register, loading, error, user } = useScribeAuthStore();
@@ -71,7 +66,7 @@ export const ScribeRegisterPage: React.FC = () => {
                 className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-colors"
               >
                 <option value="">Select specialty...</option>
-                {SPECIALTIES.map(s => <option key={s} value={s}>{s}</option>)}
+                {DISCIPLINE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
             {error && (

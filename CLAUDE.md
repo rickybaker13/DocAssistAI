@@ -12,8 +12,10 @@
 - **Backend:** Railway at `https://docassistai-production.up.railway.app`
 - **API routing:** `vercel.json` proxies `/api/:path*` → Railway (server-to-server, no CORS needed). Rewrite order critical: API rule MUST precede SPA `/(.*)`
 - **`appConfig.ts` backendUrl:** Uses `''` (relative) in production builds (`import.meta.env.PROD`), so Vercel proxy routes calls. Uses `VITE_BACKEND_URL || 'http://localhost:3000'` in local dev.
-- **Presidio:** Not yet deployed as Railway services — AI endpoints return 503. Auth/notes/CRUD work without it.
-- **Deploy check:** `GET https://docassistai-production.up.railway.app/api/health` → `{ presidio, analyzer, anonymizer }` — if this returns JSON the backend is up.
+- **DigitalOcean Droplet:** Runs Presidio (analyzer + anonymizer) and self-hosted Whisper ASR via Docker Compose. Setup script: `infra/droplet-setup.sh`. Services exposed on ports 5002/5001/9000.
+- **AI Provider:** AWS Bedrock (`EXTERNAL_AI_TYPE=bedrock`). Uses the AWS SDK credential chain. Model: `us.anthropic.claude-sonnet-4-6-20250514-v1:0`. Pluggable — can switch back to direct Anthropic API via `EXTERNAL_AI_TYPE=anthropic`.
+- **Whisper:** Self-hosted on DigitalOcean droplet (`WHISPER_API_URL`). Falls back to OpenAI cloud API if `WHISPER_API_URL` is unset.
+- **Deploy check:** `GET https://docassistai-production.up.railway.app/api/health` → `{ presidio, analyzer, anonymizer, whisper }` — if this returns JSON the backend is up.
 
 ## Test Commands
 ```bash
