@@ -3,9 +3,9 @@ import { Router, Request, Response } from 'express';
 const router = Router();
 
 router.get('/health', async (_req: Request, res: Response) => {
-  const analyzerUrl = process.env.PRESIDIO_ANALYZER_URL || 'http://localhost:5002';
-  const anonymizerUrl = process.env.PRESIDIO_ANONYMIZER_URL || 'http://localhost:5001';
-  const whisperUrl = process.env.WHISPER_API_URL || '';
+  const analyzerUrl = (process.env.PRESIDIO_ANALYZER_URL || 'http://localhost:5002').trim().replace(/\/+$/, '');
+  const anonymizerUrl = (process.env.PRESIDIO_ANONYMIZER_URL || 'http://localhost:5001').trim().replace(/\/+$/, '');
+  const whisperUrl = (process.env.WHISPER_API_URL || '').trim().replace(/\/+$/, '');
   const timeoutMs = 3000;
 
   async function checkService(url: string): Promise<{ status: 'ok' | 'unavailable'; error?: string }> {

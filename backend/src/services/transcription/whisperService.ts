@@ -29,7 +29,7 @@ export class WhisperService {
    * Endpoint: POST /asr?task=transcribe&language=en&output=json
    */
   private async callSelfHosted(audioBuffer: Buffer, mimeType: string): Promise<string> {
-    const baseUrl = (process.env.WHISPER_API_URL || '').replace(/\/+$/, '');
+    const baseUrl = (process.env.WHISPER_API_URL || '').trim().replace(/\/+$/, '');
     const timeoutMs = parseInt(process.env.WHISPER_TIMEOUT_MS || '120000', 10);
     const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp4') ? 'mp4' : 'wav';
 
