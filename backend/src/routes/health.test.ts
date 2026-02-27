@@ -87,4 +87,29 @@ describe('GET /api/health', () => {
     expect(res.body.analyzer).toBe('unavailable');
     expect(res.body.anonymizer).toBe('ok');
   });
+
+  it('includes error details when services are unreachable', async () => {
+    mockFetch
+      .mockRejectedValueOnce(new Error('ECONNREFUSED'))
+      .mockResolvedValueOnce(makeErrorResponse());
+
+    const res = await request(app).get('/api/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.analyzerError).toBe('ECONNREFUSED');
+    expect(res.body.anonymizerError).toBe('HTTP 503');
+  });
+
+  it('omits error fields when services are healthy', async () => {
+    mockFetch
+      .mockResolvedValueOnce(makeOkResponse())
+      .mockResolvedValueOnce(makeOkResponse());
+
+    const res = await request(app).get('/api/health');
+
+    expect(res.status).toBe(200);
+    expect(res.body.analyzerError).toBeUndefined();
+    expect(res.body.anonymizerError).toBeUndefined();
+    expect(res.body.whisperError).toBeUndefined();
+  });
 });
