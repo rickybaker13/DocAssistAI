@@ -131,14 +131,22 @@ check() {
   fi
 }
 
-echo "==> Internal health checks (localhost)"
-check "PostgreSQL"          "localhost:5432"  # pg_isready is better, but curl is simpler here
-check "Presidio Analyzer"   "http://localhost:5002/health" 2>/dev/null || true
-check "Presidio Anonymizer" "http://localhost:5001/health" 2>/dev/null || true
-check "Whisper ASR"         "http://localhost:9000/"       2>/dev/null || true
+# Services are NOT exposed on host ports — check health via docker exec.
+docker_check() {
+  local name=$1 container=$2 url=$3
+  if docker compose -f docker-compose.prod.yml exec -T "$container" \
+       python -c "import urllib.request; urllib.request.urlopen('$url')" 2>/dev/null; then
+    echo "  [OK]  $name"
+  else
+    echo "  [!!]  $name — not responding yet (may still be starting)"
+  fi
+}
 
-# These services are NOT exposed externally — only Caddy is.
-# Use docker compose exec to verify internal connectivity instead:
+echo "==> Internal health checks (via docker exec)"
+docker_check "Presidio Analyzer"   presidio-analyzer   "http://localhost:3000/health"
+docker_check "Presidio Anonymizer" presidio-anonymizer  "http://localhost:3000/health"
+docker_check "Whisper ASR"         whisper              "http://localhost:9000/"
+
 echo ""
 echo "==> Container status"
 docker compose -f docker-compose.prod.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"

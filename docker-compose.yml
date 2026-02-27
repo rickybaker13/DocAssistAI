@@ -3,9 +3,7 @@ services:
     image: mcr.microsoft.com/presidio-analyzer:latest
     ports: ["5002:3000"]
     volumes:
-      - ./backend/presidio-config:/usr/bin/presidio/conf
-    environment:
-      - RECOGNIZER_REGISTRY_CONF_FILE=/usr/bin/presidio/conf/recognizers.yaml
+      - ./backend/presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:3000/health')\""]

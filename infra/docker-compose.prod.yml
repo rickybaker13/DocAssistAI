@@ -72,9 +72,7 @@ services:
   presidio-analyzer:
     image: mcr.microsoft.com/presidio-analyzer:latest
     volumes:
-      - ./presidio-config:/usr/bin/presidio/conf
-    environment:
-      - RECOGNIZER_REGISTRY_CONF_FILE=/usr/bin/presidio/conf/recognizers.yaml
+      - ./presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
     expose:
       - "3000"
     restart: always
