@@ -6,9 +6,9 @@
 #
 # Usage:
 #   cd /opt/docassistai
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f infra/docker-compose.prod.yml up -d --build
 #
-# Requires: .env file alongside this file (see .env.example)
+# Requires: .env file in /opt/docassistai (parent of infra/)
 
 services:
   caddy:
@@ -26,12 +26,12 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     expose:
       - "3000"
     env_file:
-      - .env
+      - ../.env
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -72,7 +72,7 @@ services:
   presidio-analyzer:
     image: mcr.microsoft.com/presidio-analyzer:latest
     volumes:
-      - ./presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
+      - ../backend/presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
     expose:
       - "3000"
     restart: always
