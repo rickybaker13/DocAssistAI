@@ -11,6 +11,7 @@ import { useAuthStore } from '../../stores/authStore';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorMessage from '../common/ErrorMessage';
 import NoteTypeExplorer from './NoteTypeExplorer';
+import { getBackendUrl } from '../../config/appConfig';
 
 export default function NoteDiscovery() {
   const { patientSummary } = usePatientStore();
@@ -74,8 +75,7 @@ export default function NoteDiscovery() {
 
       // Optionally send to backend for AI analysis
       try {
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-        const response = await fetch(`${backendUrl}/api/discovery/analyze-notes`, {
+        const response = await fetch(`${getBackendUrl()}/api/discovery/analyze-notes`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

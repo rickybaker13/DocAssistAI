@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useScribeStore } from '../../stores/scribeStore';
+import { getBackendUrl } from '../../config/appConfig';
 
 interface Props {
   onTranscript: (transcript: string) => void;
@@ -103,10 +104,7 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
     // Fix 3: Signal that transcription is in progress
     setTranscribing(true);
     try {
-      const backendUrl = typeof import.meta !== 'undefined' && import.meta.env
-        ? (import.meta.env.VITE_BACKEND_URL ?? '')
-        : '';
-      const res = await fetch(`${backendUrl}/api/ai/transcribe`, {
+      const res = await fetch(`${getBackendUrl()}/api/ai/transcribe`, {
         method: 'POST',
         body: formData,
         headers: { 'X-Patient-Id': sessionStorage.getItem('patientId') ?? '' },

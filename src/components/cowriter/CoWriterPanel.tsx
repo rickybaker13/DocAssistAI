@@ -1,5 +1,6 @@
 // src/components/cowriter/CoWriterPanel.tsx
 import React, { useState } from 'react';
+import { getBackendUrl } from '../../config/appConfig';
 
 const NOTE_TYPES = [
   'Progress Note', 'H&P', 'Transfer Note', 'Accept Note',
@@ -31,7 +32,7 @@ export const CoWriterPanel: React.FC = () => {
     setError(null);
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/api/ai/generate-document`,
+        `${getBackendUrl()}/api/ai/generate-document`,
         {
           method: 'POST',
           headers: {

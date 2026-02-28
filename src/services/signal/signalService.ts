@@ -1,7 +1,8 @@
 import axios from 'axios';
 import { ICUPatientData } from '../../types';
+import { getBackendUrl } from '../../config/appConfig';
 
-const BASE = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+const BASE = getBackendUrl();
 
 export const signalService = {
   async process(patientData: ICUPatientData, hoursBack: number, sessionId: string) {
