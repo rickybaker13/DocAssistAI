@@ -7,13 +7,14 @@
 import axios from 'axios';
 import { AIMessage, AIResponse } from '../../types';
 import { smartAuthService } from '../auth/smartAuthService';
+import { getBackendUrl } from '../../config/appConfig';
 
 class AIService {
   private backendUrl: string;
 
   constructor() {
     // Backend API URL - defaults to localhost in dev, can be configured via env
-    this.backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    this.backendUrl = getBackendUrl();
   }
 
   /**

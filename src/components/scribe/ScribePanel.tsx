@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useScribeStore } from '../../stores/scribeStore';
 import { AudioRecorder } from './AudioRecorder';
 import { NoteEditor } from './NoteEditor';
+import { getBackendUrl } from '../../config/appConfig';
 
 const NOTE_TYPES = [
   'Progress Note',
@@ -44,12 +45,7 @@ export const ScribePanel: React.FC = () => {
     setGenerating(true);
     setError(null);
     try {
-      const backendUrl =
-        typeof import.meta !== 'undefined' && import.meta.env
-          ? (import.meta.env.VITE_BACKEND_URL ?? '')
-          : '';
-
-      const res = await fetch(`${backendUrl}/api/ai/generate-document`, {
+      const res = await fetch(`${getBackendUrl()}/api/ai/generate-document`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

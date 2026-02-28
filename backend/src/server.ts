@@ -34,7 +34,7 @@ const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:8080').repla
 
 // Build allowed origins set — always include both www and non-www variants
 // so the CORS config works regardless of which variant Vercel serves as primary.
-// Production domain is hardcoded as a safety net in case FRONTEND_URL is unset on Railway.
+// Production domain is hardcoded as a safety net in case FRONTEND_URL is unset on the DO droplet.
 const ALLOWED_ORIGINS = new Set<string>([
   FRONTEND_URL,
   'https://www.docassistai.app',

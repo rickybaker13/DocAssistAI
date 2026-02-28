@@ -6,12 +6,13 @@
 import axios from 'axios';
 import { GeneratedDocument, QualityCheck } from '../stores/documentStore';
 import { PatientSummary } from '../types';
+import { getBackendUrl } from '../../config/appConfig';
 
 class DocumentService {
   private backendUrl: string;
 
   constructor() {
-    this.backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    this.backendUrl = getBackendUrl();
   }
 
   /**
