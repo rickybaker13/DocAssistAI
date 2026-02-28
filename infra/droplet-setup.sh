@@ -99,10 +99,13 @@ fi
 ln -sf "$PROJECT_DIR/infra/docker-compose.prod.yml" "$PROJECT_DIR/docker-compose.prod.yml"
 ln -sf "$PROJECT_DIR/infra/Caddyfile" "$PROJECT_DIR/Caddyfile"
 
-# Copy presidio config to project root if not already there
-if [ -d "$PROJECT_DIR/backend/presidio-config" ] && [ ! -d "$PROJECT_DIR/presidio-config" ]; then
-  cp -r "$PROJECT_DIR/backend/presidio-config" "$PROJECT_DIR/presidio-config"
-fi
+# Copy presidio recognizers config to project root.
+# Always copy explicitly — Docker auto-creates missing bind-mount sources as
+# directories, which would leave a recognizers.yaml/ dir instead of a file.
+mkdir -p "$PROJECT_DIR/presidio-config"
+# Remove if Docker previously auto-created it as a directory
+[ -d "$PROJECT_DIR/presidio-config/recognizers.yaml" ] && rm -rf "$PROJECT_DIR/presidio-config/recognizers.yaml"
+cp "$PROJECT_DIR/backend/presidio-config/recognizers.yaml" "$PROJECT_DIR/presidio-config/recognizers.yaml"
 
 # ── Pull images and build ────────────────────────────────────────────────────
 echo "==> Pulling Docker images and building backend (this may take a few minutes)"
