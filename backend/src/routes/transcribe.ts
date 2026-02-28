@@ -106,6 +106,10 @@ router.post('/transcribe', (req: Request, res: Response, next: NextFunction) => 
       return res.status(400).json({ error: message });
     }
 
+    if (message.includes('WHISPER_API_URL is required')) {
+      return res.status(503).json({ error: 'Transcription service is not configured on this server' });
+    }
+
     return res.status(500).json({ error: 'Transcription failed' });
   }
 });
