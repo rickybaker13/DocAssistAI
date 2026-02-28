@@ -15,7 +15,7 @@
 - **AI Provider:** AWS Bedrock (`EXTERNAL_AI_TYPE=bedrock`). Uses the AWS SDK credential chain. Model: `us.anthropic.claude-sonnet-4-6-20250514-v1:0`. Pluggable — can switch back to direct Anthropic API via `EXTERNAL_AI_TYPE=anthropic`.
 - **Whisper:** Self-hosted on DigitalOcean droplet (`WHISPER_API_URL`). OpenAI fallback has been removed — `WHISPER_API_URL` is required.
 - **Deploy check:** `GET https://api.docassistai.app/api/health` → `{ presidio, analyzer, anonymizer, whisper }` — if this returns JSON the backend is up.
-- **Deploy flow:** `ssh root@droplet 'cd /opt/docassistai && git pull && docker compose -f docker-compose.prod.yml up -d --build'`
+- **Deploy flow:** `ssh root@droplet 'cd /opt/docassistai && git pull && docker compose -f infra/docker-compose.prod.yml up -d --build'`
 
 ## Test Commands
 ```bash
