@@ -53,7 +53,7 @@ export const aiConfig: AIConfig = {
     },
     bedrock: {
       region: process.env.AWS_REGION || 'us-east-1',
-      model: process.env.BEDROCK_MODEL || 'us.anthropic.claude-3-5-sonnet-20241022-v2:0',
+      model: process.env.BEDROCK_MODEL || 'us.anthropic.claude-sonnet-4-6',
     },
   },
   selfHosted: {
