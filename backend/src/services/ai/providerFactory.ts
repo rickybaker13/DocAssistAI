@@ -7,7 +7,6 @@ import { aiConfig } from '../../config/aiConfig.js';
 import { OpenAIProvider } from './providers/openai.js';
 import { OpenRouterProvider } from './providers/openrouter.js';
 import { AnthropicProvider } from './providers/anthropic.js';
-import { BedrockProvider } from './providers/bedrock.js';
 import { SelfHostedProvider } from './providers/selfHosted.js';
 import { AIProvider } from './providers/base.js';
 
@@ -50,14 +49,6 @@ export function createAIProvider(): AIProvider {
       cachedProvider = new AnthropicProvider(
         aiConfig.external.anthropic.apiKey,
         aiConfig.external.anthropic.model
-      );
-    } else if (aiConfig.external.type === 'bedrock') {
-      if (!aiConfig.external.bedrock?.region) {
-        throw new Error('AWS region not configured for Bedrock');
-      }
-      cachedProvider = new BedrockProvider(
-        aiConfig.external.bedrock.region,
-        aiConfig.external.bedrock.model
       );
     } else {
       throw new Error(`Unknown external AI type: ${aiConfig.external.type}`);
