@@ -35,7 +35,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
-    "@aws-sdk/client-bedrock-runtime": "^3.999.0",
     "@types/multer": "^2.0.0",
     "@types/pg": "^8.16.0",
     "axios": "^1.6.2",

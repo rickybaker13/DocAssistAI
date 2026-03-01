@@ -10,7 +10,7 @@ dotenv.config();
 export interface AIConfig {
   provider: 'external' | 'self-hosted';
   external?: {
-    type: 'openai' | 'openrouter' | 'anthropic' | 'bedrock';
+    type: 'openai' | 'openrouter' | 'anthropic';
     openai?: {
       apiKey: string;
       model: string;
@@ -21,10 +21,6 @@ export interface AIConfig {
     };
     anthropic?: {
       apiKey: string;
-      model: string;
-    };
-    bedrock?: {
-      region: string;
       model: string;
     };
   };
@@ -38,7 +34,7 @@ export interface AIConfig {
 export const aiConfig: AIConfig = {
   provider: (process.env.AI_PROVIDER || 'external') as 'external' | 'self-hosted',
   external: {
-    type: (process.env.EXTERNAL_AI_TYPE || 'anthropic') as 'openai' | 'openrouter' | 'anthropic' | 'bedrock',
+    type: (process.env.EXTERNAL_AI_TYPE || 'anthropic') as 'openai' | 'openrouter' | 'anthropic',
     openai: {
       apiKey: process.env.OPENAI_API_KEY || '',
       model: process.env.OPENAI_MODEL || 'gpt-4',
@@ -50,10 +46,6 @@ export const aiConfig: AIConfig = {
     anthropic: {
       apiKey: process.env.ANTHROPIC_API_KEY || '',
       model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
-    },
-    bedrock: {
-      region: process.env.AWS_REGION || 'us-east-1',
-      model: process.env.BEDROCK_MODEL || 'us.anthropic.claude-sonnet-4-6',
     },
   },
   selfHosted: {
@@ -84,12 +76,6 @@ export function validateAIConfig(): { valid: boolean; error?: string } {
       if (!aiConfig.external.anthropic?.apiKey) {
         return { valid: false, error: 'Anthropic API key not configured' };
       }
-    } else if (aiConfig.external.type === 'bedrock') {
-      if (!aiConfig.external.bedrock?.region) {
-        return { valid: false, error: 'AWS region not configured for Bedrock' };
-      }
-      // AWS credentials are resolved via the SDK credential chain
-      // (env vars, shared credentials file, instance profile, etc.)
     }
   } else if (aiConfig.provider === 'self-hosted') {
     if (!aiConfig.selfHosted?.url || !aiConfig.selfHosted?.model) {
