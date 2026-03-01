@@ -12,7 +12,7 @@
 - **Backend:** DigitalOcean droplet at `https://api.docassistai.app` — runs the entire backend stack via Docker Compose (`infra/docker-compose.prod.yml`).
 - **`appConfig.ts` backendUrl:** Uses `'https://api.docassistai.app'` in production builds. Uses `VITE_BACKEND_URL || 'http://localhost:3000'` in local dev.
 - **Droplet stack:** Caddy (TLS/reverse proxy) · Express API · PostgreSQL · Presidio (analyzer + anonymizer) · Whisper ASR. Only Caddy is exposed externally (ports 80/443). All other services communicate over Docker's internal network.
-- **AI Provider:** AWS Bedrock (`EXTERNAL_AI_TYPE=bedrock`). Uses the AWS SDK credential chain. Model: `us.anthropic.claude-sonnet-4-6`. Pluggable — can switch back to direct Anthropic API via `EXTERNAL_AI_TYPE=anthropic`.
+- **AI Provider:** Direct Anthropic API (`EXTERNAL_AI_TYPE=anthropic`). Model: `claude-sonnet-4-6`. Pluggable — set `EXTERNAL_AI_TYPE=bedrock` + AWS creds to use Bedrock, or `EXTERNAL_AI_TYPE=openrouter` + `OPENROUTER_MODEL=google/gemini-2.0-pro-exp-02-05` for Gemini. Provider switch is env-var only — zero code changes required. See `backend/.env.example` for all options.
 - **Whisper:** Self-hosted on DigitalOcean droplet (`WHISPER_API_URL`). OpenAI fallback has been removed — `WHISPER_API_URL` is required.
 - **Deploy check:** `GET https://api.docassistai.app/api/health` → `{ presidio, analyzer, anonymizer, whisper }` — if this returns JSON the backend is up.
 - **Deploy flow:** `ssh root@droplet 'cd /opt/docassistai && git pull && docker compose -f infra/docker-compose.prod.yml up -d --build'`
