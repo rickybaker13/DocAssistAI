@@ -11,6 +11,13 @@ const TOKEN_PRESERVATION_INSTRUCTION = `\nText may contain privacy-protection to
 const router = Router();
 router.use(scribeAuthMiddleware);
 
+function aiErrorResponse(res: Response, err: any) {
+  if (err?.isThrottling) {
+    return res.status(429).json({ error: 'AI service is temporarily unavailable due to rate limits. Please wait a moment and try again.' });
+  }
+  return res.status(500).json({ error: err.message });
+}
+
 /**
  * Helper: extract text content from aiService.chat response.
  * The real service returns AIResponse { content: string }, but
@@ -118,7 +125,7 @@ Confidence is 0.0–1.0: 1.0 = fully supported by transcript, 0.0 = not in trans
 
     return res.json({ sections: parsed.sections });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return aiErrorResponse(res, err);
   }
 });
 
@@ -220,7 +227,7 @@ Keep each field concise. Suggestions should be actionable one-liners.`;
 
     return res.json(parsed);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return aiErrorResponse(res, err);
   }
 });
 
@@ -301,7 +308,7 @@ Output ONLY the note text. Nothing else.`;
     const ghostWritten = piiScrubber.reInject(extractContent(raw).trim(), subMapGhost);
     return res.json({ ghostWritten });
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return aiErrorResponse(res, err);
   }
 });
 
@@ -432,7 +439,7 @@ Return one of these two JSON shapes:
 
     return res.json(parsed);
   } catch (err: any) {
-    return res.status(500).json({ error: err.message });
+    return aiErrorResponse(res, err);
   }
 });
 
