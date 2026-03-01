@@ -2,7 +2,7 @@
  * TypeScript type definitions for DocAssistAI
  */
 
-import { fhir } from 'fhirclient';
+import type { fhir } from 'fhirclient';
 
 // FHIR Types (re-exported from fhirclient)
 export type Patient = fhir.Patient;
