@@ -25,54 +25,77 @@ export class BedrockProvider extends BaseAIProvider {
     messages: AIMessage[],
     options?: { temperature?: number; maxTokens?: number },
   ): Promise<AIResponse> {
-    try {
-      // Separate system messages — Converse API takes them separately
-      const systemMessages = messages.filter((m) => m.role === 'system');
-      const conversationMessages = messages.filter((m) => m.role !== 'system');
+    // Separate system messages — Converse API takes them separately
+    const systemMessages = messages.filter((m) => m.role === 'system');
+    const conversationMessages = messages.filter((m) => m.role !== 'system');
 
-      const system: SystemContentBlock[] = systemMessages.length
-        ? [{ text: systemMessages.map((m) => m.content).join('\n') }]
-        : [];
+    const system: SystemContentBlock[] = systemMessages.length
+      ? [{ text: systemMessages.map((m) => m.content).join('\n') }]
+      : [];
 
-      const converseMessages: Message[] = conversationMessages.map((m) => ({
-        role: m.role as 'user' | 'assistant',
-        content: [{ text: m.content }],
-      }));
+    const converseMessages: Message[] = conversationMessages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: [{ text: m.content }],
+    }));
 
-      const command = new ConverseCommand({
-        modelId: this.model,
-        messages: converseMessages,
-        ...(system.length && { system }),
-        inferenceConfig: {
-          maxTokens: options?.maxTokens ?? 4096,
-          temperature: options?.temperature ?? 0.7,
-        },
-      });
+    const command = new ConverseCommand({
+      modelId: this.model,
+      messages: converseMessages,
+      ...(system.length && { system }),
+      inferenceConfig: {
+        maxTokens: options?.maxTokens ?? 4096,
+        temperature: options?.temperature ?? 0.7,
+      },
+    });
 
-      const response = await this.client.send(command);
+    const MAX_RETRIES = 2;
+    let lastError: any;
 
-      const textBlock = response.output?.message?.content?.find(
-        (b) => b.text !== undefined,
-      );
-      if (!textBlock?.text) {
-        throw new Error('No text content in Bedrock Converse response');
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await this.client.send(command);
+
+        const textBlock = response.output?.message?.content?.find(
+          (b) => b.text !== undefined,
+        );
+        if (!textBlock?.text) {
+          throw new Error('No text content in Bedrock Converse response');
+        }
+
+        return {
+          content: textBlock.text,
+          model: this.model,
+          provider: 'bedrock',
+          usage: {
+            prompt_tokens: response.usage?.inputTokens,
+            completion_tokens: response.usage?.outputTokens,
+            total_tokens: response.usage?.totalTokens,
+          },
+        };
+      } catch (error: any) {
+        lastError = error;
+        const code = error.name || error.__type || '';
+
+        // ThrottlingException — retry for transient rate limits; give up
+        // immediately for daily quota exhaustion (message contains "per day").
+        const isThrottling = code === 'ThrottlingException';
+        const isDailyQuota = isThrottling && /per day/i.test(error.message || '');
+
+        if (isThrottling && !isDailyQuota && attempt < MAX_RETRIES) {
+          const delay = Math.pow(2, attempt) * 1000; // 1s, 2s
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+
+        const message = error.message || String(error);
+        const err = new Error(`AWS Bedrock API error [${code || 'UnknownError'}]: ${message}`);
+        (err as any).isThrottling = isThrottling;
+        throw err;
       }
-
-      return {
-        content: textBlock.text,
-        model: this.model,
-        provider: 'bedrock',
-        usage: {
-          prompt_tokens: response.usage?.inputTokens,
-          completion_tokens: response.usage?.outputTokens,
-          total_tokens: response.usage?.totalTokens,
-        },
-      };
-    } catch (error: any) {
-      const code = error.name || error.__type || 'UnknownError';
-      const message = error.message || String(error);
-      throw new Error(`AWS Bedrock API error [${code}]: ${message}`);
     }
+
+    // Unreachable — loop always returns or throws — but satisfies TS.
+    throw lastError;
   }
 
   // Override to avoid making a live Bedrock call on every health check.
