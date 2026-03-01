@@ -69,9 +69,17 @@ export class BedrockProvider extends BaseAIProvider {
         },
       };
     } catch (error: any) {
-      throw new Error(
-        `AWS Bedrock API error: ${error.message || String(error)}`,
-      );
+      const code = error.name || error.__type || 'UnknownError';
+      const message = error.message || String(error);
+      throw new Error(`AWS Bedrock API error [${code}]: ${message}`);
     }
+  }
+
+  // Override to avoid making a live Bedrock call on every health check.
+  // Cloud API providers don't have a cheap ping endpoint — config validity
+  // is the best proxy, and real credential/access errors surface on the
+  // first actual AI call.
+  async isAvailable(): Promise<boolean> {
+    return Boolean(this.model && this.client);
   }
 }
