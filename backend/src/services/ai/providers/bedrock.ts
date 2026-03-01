@@ -1,11 +1,14 @@
 /**
  * AWS Bedrock Provider
- * Handles communication with Claude via AWS Bedrock Runtime
+ * Uses the Bedrock Converse API — works with all model families:
+ * Amazon Nova, Meta Llama, DeepSeek, Mistral, Anthropic Claude, etc.
  */
 
 import {
   BedrockRuntimeClient,
-  InvokeModelCommand,
+  ConverseCommand,
+  type Message,
+  type SystemContentBlock,
 } from '@aws-sdk/client-bedrock-runtime';
 import { BaseAIProvider } from './base.js';
 import { AIMessage, AIResponse } from '../../../types/index.js';
@@ -15,9 +18,6 @@ export class BedrockProvider extends BaseAIProvider {
 
   constructor(region: string, model: string) {
     super('bedrock', model);
-    // Credentials are resolved automatically by the AWS SDK credential chain:
-    // env vars (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY), shared credentials
-    // file, ECS task role, EC2 instance profile, etc.
     this.client = new BedrockRuntimeClient({ region });
   }
 
@@ -26,53 +26,46 @@ export class BedrockProvider extends BaseAIProvider {
     options?: { temperature?: number; maxTokens?: number },
   ): Promise<AIResponse> {
     try {
-      // Separate system messages (Bedrock Claude uses the same Messages API shape)
+      // Separate system messages — Converse API takes them separately
       const systemMessages = messages.filter((m) => m.role === 'system');
-      const userMessages = messages.filter((m) => m.role !== 'system');
+      const conversationMessages = messages.filter((m) => m.role !== 'system');
 
-      const system =
-        systemMessages.map((m) => m.content).join('\n') || undefined;
+      const system: SystemContentBlock[] = systemMessages.length
+        ? [{ text: systemMessages.map((m) => m.content).join('\n') }]
+        : [];
 
-      const body: Record<string, unknown> = {
-        anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: options?.maxTokens ?? 4096,
-        temperature: options?.temperature ?? 0.7,
-        messages: userMessages.map((m) => ({
-          role: m.role as 'user' | 'assistant',
-          content: m.content,
-        })),
-      };
-      if (system) {
-        body.system = system;
-      }
+      const converseMessages: Message[] = conversationMessages.map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: [{ text: m.content }],
+      }));
 
-      const command = new InvokeModelCommand({
+      const command = new ConverseCommand({
         modelId: this.model,
-        contentType: 'application/json',
-        accept: 'application/json',
-        body: new TextEncoder().encode(JSON.stringify(body)),
+        messages: converseMessages,
+        ...(system.length && { system }),
+        inferenceConfig: {
+          maxTokens: options?.maxTokens ?? 4096,
+          temperature: options?.temperature ?? 0.7,
+        },
       });
 
       const response = await this.client.send(command);
-      const result = JSON.parse(new TextDecoder().decode(response.body));
 
-      const textBlock = (result.content as Array<{ type: string; text?: string }>)?.find(
-        (b) => b.type === 'text',
+      const textBlock = response.output?.message?.content?.find(
+        (b) => b.text !== undefined,
       );
       if (!textBlock?.text) {
-        throw new Error('No text content in Bedrock response');
+        throw new Error('No text content in Bedrock Converse response');
       }
 
       return {
         content: textBlock.text,
-        model: result.model ?? this.model,
+        model: this.model,
         provider: 'bedrock',
         usage: {
-          prompt_tokens: result.usage?.input_tokens,
-          completion_tokens: result.usage?.output_tokens,
-          total_tokens:
-            (result.usage?.input_tokens ?? 0) +
-            (result.usage?.output_tokens ?? 0),
+          prompt_tokens: response.usage?.inputTokens,
+          completion_tokens: response.usage?.outputTokens,
+          total_tokens: response.usage?.totalTokens,
         },
       };
     } catch (error: any) {
