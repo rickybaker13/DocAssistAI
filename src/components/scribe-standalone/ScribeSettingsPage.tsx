@@ -4,6 +4,7 @@ import { ArrowLeft, Settings } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
 import { DISCIPLINE_OPTIONS } from '../../lib/disciplines';
+import { InstallMobileAppCard } from './InstallMobileAppCard';
 
 export const ScribeSettingsPage: React.FC = () => {
   const navigate = useNavigate();
@@ -142,6 +143,8 @@ export const ScribeSettingsPage: React.FC = () => {
           </button>
         </form>
       </div>
+
+      <InstallMobileAppCard />
     </div>
   );
 };
