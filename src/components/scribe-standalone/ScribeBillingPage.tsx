@@ -1,20 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface BillingMethod {
-  id: 'square_card' | 'block_card' | 'bitcoin' | 'usdc' | 'usdt';
+  id: 'square_card' | 'block_card';
   label: string;
   type: string;
-  discountPercent?: number;
-  networks?: string[];
 }
 
 interface BillingOptionsResponse {
   subscription: {
     monthlyPriceUsd: number;
     trialDays: number;
-    bitcoinDiscountPercent: number;
-    bitcoinEffectivePriceUsd: number;
   };
   methods: BillingMethod[];
 }
@@ -22,7 +18,6 @@ interface BillingOptionsResponse {
 export const ScribeBillingPage: React.FC = () => {
   const [options, setOptions] = useState<BillingOptionsResponse | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
-  const [network, setNetwork] = useState('ethereum');
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -42,10 +37,6 @@ export const ScribeBillingPage: React.FC = () => {
     load();
   }, []);
 
-  const selectedMethod = useMemo(
-    () => options?.methods.find((method) => method.id === paymentMethod) ?? null,
-    [options, paymentMethod],
-  );
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -61,7 +52,6 @@ export const ScribeBillingPage: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({
           paymentMethod,
-          network: paymentMethod === 'usdc' || paymentMethod === 'usdt' ? network : undefined,
           phone: phone || undefined,
         }),
       });
@@ -87,7 +77,6 @@ export const ScribeBillingPage: React.FC = () => {
         <h1 className="text-xl font-semibold text-slate-100">Billing & Subscriptions</h1>
         <p className="text-sm text-slate-400 mt-2">
           ${options.subscription.monthlyPriceUsd}/month with a {options.subscription.trialDays}-day free trial.
-          Pay with Bitcoin and receive a {options.subscription.bitcoinDiscountPercent}% discount (${options.subscription.bitcoinEffectivePriceUsd}/month).
         </p>
       </header>
 
@@ -107,22 +96,6 @@ export const ScribeBillingPage: React.FC = () => {
           </select>
         </div>
 
-        {(paymentMethod === 'usdc' || paymentMethod === 'usdt') && selectedMethod?.networks && (
-          <div>
-            <label className="text-xs uppercase tracking-wide text-slate-400">Network</label>
-            <select
-              value={network}
-              onChange={(e) => setNetwork(e.target.value)}
-              className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-            >
-              {selectedMethod.networks.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
 
         <div>
           <label className="text-xs uppercase tracking-wide text-slate-400">Mobile number for SMS updates (optional)</label>
