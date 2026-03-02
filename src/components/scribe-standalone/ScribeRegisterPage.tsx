@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { Sparkles } from 'lucide-react';
 import { DISCIPLINE_OPTIONS } from '../../lib/disciplines';
+import { SocialMediaLinks } from './SocialMediaLinks';
 
 export const ScribeRegisterPage: React.FC = () => {
   const { register, loading, error, user } = useScribeAuthStore();
@@ -87,6 +88,8 @@ export const ScribeRegisterPage: React.FC = () => {
             Sign in
           </Link>
         </p>
+
+        <SocialMediaLinks />
       </div>
     </div>
   );
