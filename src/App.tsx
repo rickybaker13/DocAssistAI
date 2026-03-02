@@ -3,6 +3,8 @@ import { ScribeLayout } from './components/scribe-standalone/ScribeLayout';
 import { ScribeAuthGuard } from './components/scribe-standalone/ScribeAuthGuard';
 import { ScribeLoginPage } from './components/scribe-standalone/ScribeLoginPage';
 import { ScribeRegisterPage } from './components/scribe-standalone/ScribeRegisterPage';
+import { ScribeForgotPasswordPage } from './components/scribe-standalone/ScribeForgotPasswordPage';
+import { ScribeResetPasswordPage } from './components/scribe-standalone/ScribeResetPasswordPage';
 import { NoteBuilderPage } from './components/scribe-standalone/NoteBuilderPage';
 import { ScribeRecordPage } from './components/scribe-standalone/ScribeRecordPage';
 import { ScribeNotePage } from './components/scribe-standalone/ScribeNotePage';
@@ -15,6 +17,8 @@ function App() {
       <Routes>
         <Route path="/scribe/login" element={<ScribeLoginPage />} />
         <Route path="/scribe/register" element={<ScribeRegisterPage />} />
+        <Route path="/scribe/forgot-password" element={<ScribeForgotPasswordPage />} />
+        <Route path="/scribe/reset-password" element={<ScribeResetPasswordPage />} />
         <Route
           path="/scribe/*"
           element={

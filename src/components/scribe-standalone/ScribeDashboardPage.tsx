@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Settings, FileText } from 'lucide-react';
+import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 
 export const ScribeDashboardPage: React.FC = () => {
-  const { noteId, noteType, patientLabel, status, reset } = useScribeNoteStore();
+  const { noteId, noteType, patientLabel, status, encounters, openEncounter, removeEncounter, reset } = useScribeNoteStore();
 
   const handleDiscard = () => {
     reset();
@@ -12,7 +12,6 @@ export const ScribeDashboardPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-50 tracking-tight">My Notes</h1>
         <div className="flex items-center gap-2">
@@ -23,17 +22,80 @@ export const ScribeDashboardPage: React.FC = () => {
           >
             <Settings size={18} />
           </Link>
-          <Link
-            to="/scribe/note/new"
-            className="hidden md:flex items-center gap-1.5 bg-teal-400 text-slate-900 rounded-lg px-4 py-2 text-sm font-semibold hover:bg-teal-300 transition-colors"
-          >
-            <Plus size={16} />
-            New Note
-          </Link>
         </div>
       </div>
 
-      {/* Current in-progress note (client-side only) */}
+      <Link
+        to="/scribe/note/new"
+        className="w-full py-4 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 transition-colors flex items-center justify-center gap-2"
+      >
+        <Mic size={18} aria-hidden="true" />
+        Record Next Encounter
+      </Link>
+
+      {encounters.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Recent Encounters</p>
+          <div className="flex flex-col gap-2">
+            {encounters.map((item) => (
+              <div key={item.noteId} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText size={20} className="text-teal-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-100">{item.patientLabel || item.noteType.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-slate-400">{item.noteType.replace(/_/g, ' ')}</p>
+                  </div>
+                  {item.status === 'processing' && (
+                    <span className="inline-flex items-center gap-1.5 bg-blue-950 text-blue-400 border border-blue-400/30 text-xs px-2.5 py-1 rounded-full">
+                      <Loader2 size={12} className="animate-spin" />
+                      Processing
+                    </span>
+                  )}
+                  {item.status === 'ready' && (
+                    <span className="inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-400/30 text-xs px-2.5 py-1 rounded-full">
+                      <CheckCircle2 size={12} />
+                      Ready
+                    </span>
+                  )}
+                  {item.status === 'failed' && (
+                    <span className="inline-flex items-center gap-1.5 bg-red-950 text-red-400 border border-red-400/30 text-xs px-2.5 py-1 rounded-full">
+                      <AlertCircle size={12} />
+                      Failed
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {item.status === 'ready' ? (
+                    <Link
+                      to={`/scribe/note/${item.noteId}`}
+                      onClick={() => {
+                        openEncounter(item.noteId);
+                      }}
+                      className="px-3 py-1.5 bg-teal-400 text-slate-900 font-semibold rounded-lg text-sm hover:bg-teal-300 transition-colors"
+                    >
+                      Open
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="px-3 py-1.5 border border-slate-700 text-slate-500 rounded-lg text-sm cursor-not-allowed"
+                    >
+                      Open
+                    </button>
+                  )}
+                  <button
+                    onClick={() => removeEncounter(item.noteId)}
+                    className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {noteId ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Current Note</p>
@@ -70,7 +132,7 @@ export const ScribeDashboardPage: React.FC = () => {
             </div>
           </div>
         </div>
-      ) : (
+      ) : encounters.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-slate-400 text-base mb-2">No notes yet</p>
           <p className="text-slate-400 text-sm mb-4">Record your first patient encounter to get started</p>
@@ -78,9 +140,8 @@ export const ScribeDashboardPage: React.FC = () => {
             Create first note →
           </Link>
         </div>
-      )}
+      ) : null}
 
-      {/* Mobile FAB */}
       <Link
         to="/scribe/note/new"
         aria-label="New Note"

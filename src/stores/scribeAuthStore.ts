@@ -14,6 +14,8 @@ interface ScribeAuthState {
   error: string | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   register: (email: string, password: string, name?: string, specialty?: string) => Promise<boolean>;
+  requestPasswordReset: (email: string) => Promise<boolean>;
+  resetPassword: (token: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   reset: () => void;
@@ -56,6 +58,46 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
       const data = await res.json();
       if (!res.ok) { set({ loading: false, error: data.error || 'Registration failed' }); return false; }
       set({ user: data.user, loading: false, error: null });
+      return true;
+    } catch (e: any) {
+      const msg = e instanceof TypeError ? 'Unable to reach server. Check your connection.' : e.message;
+      set({ loading: false, error: msg });
+      return false;
+    }
+  },
+
+  requestPasswordReset: async (email) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/auth/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) { set({ loading: false, error: data.error || 'Password reset request failed' }); return false; }
+      set({ loading: false, error: null });
+      return true;
+    } catch (e: any) {
+      const msg = e instanceof TypeError ? 'Unable to reach server. Check your connection.' : e.message;
+      set({ loading: false, error: msg });
+      return false;
+    }
+  },
+
+  resetPassword: async (token, password) => {
+    set({ loading: true, error: null });
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ token, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { set({ loading: false, error: data.error || 'Password reset failed' }); return false; }
+      set({ loading: false, error: null });
       return true;
     } catch (e: any) {
       const msg = e instanceof TypeError ? 'Unable to reach server. Check your connection.' : e.message;

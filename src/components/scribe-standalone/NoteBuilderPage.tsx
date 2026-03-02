@@ -7,7 +7,6 @@ import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { useNoteTemplates, NoteTemplate } from '../../hooks/useNoteTemplates';
 import { useScribeNoteStore, generateNoteId } from '../../stores/scribeNoteStore';
-import { getBackendUrl } from '../../config/appConfig';
 
 const NOTE_TYPES = [
   { value: 'progress_note', label: 'Progress Note' },

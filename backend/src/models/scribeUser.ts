@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { getPool } from '../database/db.js';
 
 export interface ScribeUser {
@@ -41,5 +41,39 @@ export class ScribeUserModel {
       [fields.name ?? null, fields.specialty ?? null, id]
     );
     return this.findById(id);
+  }
+
+  async createPasswordResetToken(userId: string): Promise<string> {
+    const pool = getPool();
+    const rawToken = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    await pool.query('DELETE FROM scribe_password_reset_tokens WHERE user_id = $1', [userId]);
+    await pool.query(
+      `INSERT INTO scribe_password_reset_tokens (id, user_id, token_hash, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '30 minutes')`,
+      [randomUUID(), userId, tokenHash]
+    );
+    return rawToken;
+  }
+
+  async consumePasswordResetToken(token: string): Promise<string | null> {
+    const pool = getPool();
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const result = await pool.query(
+      `SELECT id, user_id
+       FROM scribe_password_reset_tokens
+       WHERE token_hash = $1 AND used_at IS NULL AND expires_at > NOW()
+       LIMIT 1`,
+      [tokenHash]
+    );
+    const row = result.rows[0];
+    if (!row) return null;
+    await pool.query('UPDATE scribe_password_reset_tokens SET used_at = NOW() WHERE id = $1', [row.id]);
+    return row.user_id as string;
+  }
+
+  async updatePassword(userId: string, passwordHash: string): Promise<void> {
+    const pool = getPool();
+    await pool.query('UPDATE scribe_users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, userId]);
   }
 }

@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { initPool, closePool } from '../database/db.js';
 import { runMigrations } from '../database/migrations.js';
 import scribeAuthRouter from './scribeAuth.js';
+import { ScribeUserModel } from '../models/scribeUser.js';
 
 const app = express();
 app.use(express.json());
@@ -12,6 +13,7 @@ app.use(cookieParser());
 app.use('/api/scribe/auth', scribeAuthRouter);
 
 describe('Scribe Auth Routes', () => {
+  const userModel = new ScribeUserModel();
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = 'test-secret';
@@ -61,5 +63,35 @@ describe('Scribe Auth Routes', () => {
   it('POST /logout — returns 200 and clears cookie', async () => {
     const res = await request(app).post('/api/scribe/auth/logout');
     expect(res.status).toBe(200);
+  });
+
+  it('POST /forgot-password — returns generic success for unknown account', async () => {
+    const res = await request(app).post('/api/scribe/auth/forgot-password').send({ email: 'unknown@test.com' });
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
+
+  it('POST /reset-password — updates password with valid token', async () => {
+    await request(app).post('/api/scribe/auth/register').send({ email: 'reset@test.com', password: 'oldpassword123' });
+    const user = await userModel.findByEmail('reset@test.com');
+    expect(user).toBeTruthy();
+    const token = await userModel.createPasswordResetToken(user!.id);
+
+    const resetRes = await request(app)
+      .post('/api/scribe/auth/reset-password')
+      .send({ token, password: 'newpassword123' });
+    expect(resetRes.status).toBe(200);
+
+    const loginRes = await request(app)
+      .post('/api/scribe/auth/login')
+      .send({ email: 'reset@test.com', password: 'newpassword123' });
+    expect(loginRes.status).toBe(200);
+  });
+
+  it('POST /reset-password — rejects invalid token', async () => {
+    const res = await request(app)
+      .post('/api/scribe/auth/reset-password')
+      .send({ token: 'invalid-token', password: 'newpassword123' });
+    expect(res.status).toBe(400);
   });
 });
