@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getPool } from '../database/db.js';
 
-export type PaymentMethod = 'square_card' | 'block_card' | 'bitcoin' | 'usdc' | 'usdt';
+export type PaymentMethod = 'square_card' | 'block_card';
 
 export interface ScribeBillingPreference {
   id: string;
@@ -22,7 +22,6 @@ interface CreateBillingPreferenceInput {
   email: string;
   phone?: string;
   paymentMethod: PaymentMethod;
-  network?: string;
 }
 
 export class ScribeBillingModel {
@@ -30,7 +29,7 @@ export class ScribeBillingModel {
     const pool = getPool();
     const id = randomUUID();
     const monthlyPriceUsd = 20;
-    const discountPercent = input.paymentMethod === 'bitcoin' ? 15 : 0;
+    const discountPercent = 0;
     const effectivePriceUsd = Number((monthlyPriceUsd * (1 - discountPercent / 100)).toFixed(2));
     const trialDays = 7;
 
@@ -53,7 +52,7 @@ export class ScribeBillingModel {
         input.email,
         input.phone ?? null,
         input.paymentMethod,
-        input.network ?? null,
+        null,
         monthlyPriceUsd,
         discountPercent,
         effectivePriceUsd,
