@@ -9,6 +9,7 @@ import {
   LogOut,
   Sparkles,
   Settings,
+  CreditCard,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { to: '/scribe/note/new',  icon: Plus,            label: 'New Note'  },
   { to: '/scribe/templates', icon: FileText,         label: 'Templates' },
   { to: '/scribe/settings',  icon: Settings,         label: 'Settings'  },
+  { to: '/scribe/billing',   icon: CreditCard,       label: 'Billing'   },
 ];
 
 export const ScribeLayout: React.FC = () => {
