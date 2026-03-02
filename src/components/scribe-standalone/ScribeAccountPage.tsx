@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CreditCard, Settings, AlertTriangle, CircleCheck } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CircleCheck, CreditCard, KeyRound, Mail, MessageSquare } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
 
@@ -12,11 +12,22 @@ interface BillingHistoryEntry {
   createdAt: string;
 }
 
+interface BillingMethod {
+  id: 'square_card' | 'block_card' | 'bitcoin' | 'usdc' | 'usdt';
+  label: string;
+  type: string;
+  discountPercent?: number;
+  networks?: string[];
+}
+
 interface BillingOptionsResponse {
   subscription: {
     monthlyPriceUsd: number;
     trialDays: number;
+    bitcoinDiscountPercent: number;
+    bitcoinEffectivePriceUsd: number;
   };
+  methods: BillingMethod[];
 }
 
 export const ScribeAccountPage: React.FC = () => {
@@ -24,7 +35,13 @@ export const ScribeAccountPage: React.FC = () => {
   const { user } = useScribeAuthStore();
   const [history, setHistory] = useState<BillingHistoryEntry[]>([]);
   const [options, setOptions] = useState<BillingOptionsResponse | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
+  const [network, setNetwork] = useState('ethereum');
+  const [phone, setPhone] = useState('');
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loadingBilling, setLoadingBilling] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -40,8 +57,19 @@ export const ScribeAccountPage: React.FC = () => {
 
         const historyData = await historyRes.json();
         const optionsData = await optionsRes.json();
+        const latest = historyData.entries?.[0] as BillingHistoryEntry | undefined;
+
         setHistory(historyData.entries || []);
         setOptions(optionsData);
+        if (latest?.paymentMethod) {
+          setPaymentMethod(latest.paymentMethod as BillingMethod['id']);
+        }
+        if (latest?.network) {
+          setNetwork(latest.network);
+        }
+        if (latest?.phone) {
+          setPhone(latest.phone);
+        }
       } catch {
         setError('Could not load all account details right now.');
       }
@@ -51,6 +79,43 @@ export const ScribeAccountPage: React.FC = () => {
   }, []);
 
   const latestPreference = history[0];
+
+  const selectedMethod = useMemo(
+    () => options?.methods.find((method) => method.id === paymentMethod) ?? null,
+    [options, paymentMethod],
+  );
+
+  const handleBillingUpdate = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoadingBilling(true);
+    setBillingMessage(null);
+    setCheckoutUrl(null);
+    setError(null);
+
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/billing/checkout-request`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          paymentMethod,
+          network: paymentMethod === 'usdc' || paymentMethod === 'usdt' ? network : undefined,
+          phone: phone || undefined,
+        }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || 'Could not update billing preference.');
+        return;
+      }
+
+      setBillingMessage(data.message || 'Billing preference saved.');
+      setCheckoutUrl(data.checkoutUrl || null);
+    } finally {
+      setLoadingBilling(false);
+    }
+  };
 
   return (
     <section className="space-y-5">
@@ -65,19 +130,21 @@ export const ScribeAccountPage: React.FC = () => {
       <header className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-2">
         <h1 className="text-xl font-semibold text-slate-100">Account</h1>
         <p className="text-sm text-slate-400">
-          Manage your subscription, billing preferences, payment method, and profile settings.
+          Manage billing, payment method, password, and your contact information from one place.
         </p>
       </header>
 
       <div className="grid gap-4">
         <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Subscription</h2>
+          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Billing information</h2>
           <div className="flex items-center gap-2 text-sm text-emerald-400">
             <CircleCheck size={16} />
             <span>Active plan</span>
           </div>
           <p className="text-sm text-slate-300">
-            {options ? `$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial.` : 'Loading subscription pricing...'}
+            {options
+              ? `$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial. Pay with Bitcoin for ${options.subscription.bitcoinDiscountPercent}% off ($${options.subscription.bitcoinEffectivePriceUsd}/month).`
+              : 'Loading subscription pricing...'}
           </p>
           <p className="text-xs text-slate-500">
             Need to cancel? You can cancel anytime and your plan remains active through the current billing cycle.
@@ -91,29 +158,99 @@ export const ScribeAccountPage: React.FC = () => {
           </a>
         </article>
 
-        <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Payment method</h2>
+        <form onSubmit={handleBillingUpdate} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Change billing method</h2>
+          <div>
+            <label className="text-xs uppercase tracking-wide text-slate-400">Payment method</label>
+            <select
+              value={paymentMethod}
+              onChange={(e) => setPaymentMethod(e.target.value as BillingMethod['id'])}
+              className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+            >
+              {(options?.methods ?? []).map((method) => (
+                <option key={method.id} value={method.id}>
+                  {method.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(paymentMethod === 'usdc' || paymentMethod === 'usdt') && selectedMethod?.networks && (
+            <div>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Network</label>
+              <select
+                value={network}
+                onChange={(e) => setNetwork(e.target.value)}
+                className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              >
+                {selectedMethod.networks.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div>
+            <label className="text-xs uppercase tracking-wide text-slate-400">SMS phone number</label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+14155551234"
+              className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+            />
+          </div>
+
           <p className="text-sm text-slate-300">
             {latestPreference
               ? `Current preference: ${latestPreference.paymentMethod.replace('_', ' ')}${latestPreference.network ? ` on ${latestPreference.network}` : ''}.`
               : 'No payment method selected yet.'}
           </p>
-          <Link to="/scribe/billing" className="inline-flex items-center gap-2 text-sm text-teal-300 hover:text-teal-200">
+
+          {error && <p className="text-sm text-red-400">{error}</p>}
+          {billingMessage && (
+            <div className="text-sm text-emerald-400 space-y-1">
+              <p>{billingMessage}</p>
+              {checkoutUrl && (
+                <a href={checkoutUrl} target="_blank" rel="noreferrer" className="text-teal-300 underline">
+                  Continue to checkout
+                </a>
+              )}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loadingBilling || !options}
+            className="inline-flex items-center gap-2 bg-teal-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+          >
             <CreditCard size={14} />
-            Update payment method
+            {loadingBilling ? 'Saving...' : 'Save billing method'}
+          </button>
+        </form>
+
+        <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Change password</h2>
+          <p className="text-sm text-slate-300">For security, use the password reset flow to set a new password.</p>
+          <Link to="/scribe/forgot-password" className="inline-flex items-center gap-2 text-sm text-teal-300 hover:text-teal-200">
+            <KeyRound size={14} />
+            Change password
           </Link>
         </article>
 
         <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Profile</h2>
-          <p className="text-sm text-slate-300">Signed in as {user?.email ?? 'Loading user…'}</p>
-          <Link to="/scribe/settings" className="inline-flex items-center gap-2 text-sm text-teal-300 hover:text-teal-200">
-            <Settings size={14} />
-            Edit profile settings
-          </Link>
+          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Contact information</h2>
+          <div className="text-sm text-slate-300 space-y-2">
+            <p className="flex items-center gap-2"><Mail size={14} className="text-slate-400" /> Email: {user?.email ?? 'Loading...'}</p>
+            <p className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /> SMS: {phone || 'Not set'}</p>
+          </div>
+          <p className="text-xs text-slate-500">Need to change your account email? Contact support and we can update it securely.</p>
+          <a href="mailto:support@docassistai.com?subject=Update%20my%20DocAssist%20account%20contact%20information" className="inline-flex items-center gap-2 text-sm text-teal-300 hover:text-teal-200">
+            Contact support
+          </a>
         </article>
-
-        {error && <p className="text-sm text-amber-300">{error}</p>}
       </div>
     </section>
   );

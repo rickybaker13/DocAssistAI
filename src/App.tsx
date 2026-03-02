@@ -10,7 +10,6 @@ import { ScribeRecordPage } from './components/scribe-standalone/ScribeRecordPag
 import { ScribeNotePage } from './components/scribe-standalone/ScribeNotePage';
 import { ScribeDashboardPage } from './components/scribe-standalone/ScribeDashboardPage';
 import { ScribeSettingsPage } from './components/scribe-standalone/ScribeSettingsPage';
-import { ScribeBillingPage } from './components/scribe-standalone/ScribeBillingPage';
 import { ScribeAccountPage } from './components/scribe-standalone/ScribeAccountPage';
 
 function App() {
@@ -31,13 +30,15 @@ function App() {
         >
           <Route path="dashboard" element={<ScribeDashboardPage />} />
           <Route path="settings" element={<ScribeSettingsPage />} />
-          <Route path="billing" element={<ScribeBillingPage />} />
+          <Route path="billing" element={<Navigate to="/scribe/account" replace />} />
           <Route path="account" element={<ScribeAccountPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
           <Route path="note/:id/record" element={<ScribeRecordPage />} />
           <Route path="note/:id" element={<ScribeNotePage />} />
           <Route index element={<Navigate to="/scribe/dashboard" replace />} />
         </Route>
+        <Route path="/account" element={<Navigate to="/scribe/account" replace />} />
+        <Route path="/billing" element={<Navigate to="/scribe/account" replace />} />
         <Route path="*" element={<Navigate to="/scribe/login" replace />} />
       </Routes>
     </BrowserRouter>
