@@ -5,26 +5,24 @@ import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
-type Phase = 'record' | 'generating' | 'error';
+type Phase = 'record' | 'error';
 
 export const ScribeRecordPage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canvasSections, noteType, verbosity } = useScribeBuilderStore();
-  const { setTranscript, setSections } = useScribeNoteStore();
+  const { canvasSections, noteType, patientLabel, verbosity } = useScribeBuilderStore();
+  const { enqueueEncounter, completeEncounter, failEncounter } = useScribeNoteStore();
   const [phase, setPhase] = useState<Phase>('record');
   const [error, setError] = useState<string | null>(null);
-  const [statusMsg, setStatusMsg] = useState('');
 
   if (!noteId) return <div className="text-red-400 p-4">Invalid note ID.</div>;
 
   const handleTranscript = async (transcript: string) => {
-    setPhase('generating');
-    setStatusMsg('Generating note sections...');
-    try {
-      // Store transcript client-side only — never sent to DB
-      setTranscript(transcript);
+    enqueueEncounter({ noteId, noteType, patientLabel, verbosity, transcript });
+    navigate('/scribe/dashboard');
 
+    void (async () => {
+    try {
       const genRes = await fetch(`${getBackendUrl()}/api/ai/scribe/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -50,16 +48,14 @@ export const ScribeRecordPage: React.FC = () => {
         confidence: s.confidence ?? null,
         display_order: i,
       }));
-      setSections(sections);
-
-      navigate(`/scribe/note/${noteId}`);
+      completeEncounter(noteId, sections);
     } catch (e: unknown) {
       let msg = 'An unexpected error occurred';
       if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
       else if (e instanceof Error) msg = e.message;
-      setError(msg);
-      setPhase('error');
+      failEncounter(noteId, msg);
     }
+    })();
   };
 
   const handleError = (msg: string) => {
@@ -77,13 +73,6 @@ export const ScribeRecordPage: React.FC = () => {
           </p>
           <AudioRecorder onTranscript={handleTranscript} onError={handleError} />
         </>
-      )}
-
-      {phase === 'generating' && (
-        <div className="flex flex-col items-center gap-4">
-          <div className="animate-spin h-10 w-10 border-4 border-teal-500 border-t-transparent rounded-full" />
-          <p className="text-sm text-slate-400 animate-pulse">{statusMsg || 'Processing...'}</p>
-        </div>
       )}
 
       {phase === 'error' && (

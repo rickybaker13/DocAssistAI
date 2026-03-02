@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
+import { emailService } from '../services/email/emailService.js';
 
 const router = Router();
 const userModel = new ScribeUserModel();
@@ -23,21 +24,26 @@ const COOKIE_OPTS = {
 };
 
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: () => process.env.NODE_ENV === 'test', // Don't rate limit tests
+  skip: () => process.env.NODE_ENV === 'test',
 });
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
 
-// POST /api/scribe/auth/register
+function buildResetUrl(token: string): string {
+  const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/+$/, '');
+  return `${frontendBase}/scribe/reset-password?token=${encodeURIComponent(token)}`;
+}
+
 router.post('/register', authLimiter, async (req: Request, res: Response) => {
   const { email, password, name, specialty } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' }) as any;
-  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' }) as any;
+  if (password.length < MIN_PASSWORD_LENGTH) return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }) as any;
   if (await userModel.findByEmail(email)) return res.status(409).json({ error: 'Email already registered' }) as any;
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -47,7 +53,6 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
 });
 
-// POST /api/scribe/auth/login
 router.post('/login', authLimiter, async (req: Request, res: Response) => {
   const { email, password, rememberMe } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
@@ -61,14 +66,47 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
   return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
 });
 
-// GET /api/scribe/auth/me
+router.post('/forgot-password', authLimiter, async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'Valid email address required' }) as any;
+  }
+
+  const user = await userModel.findByEmail(email);
+  if (user) {
+    const resetToken = await userModel.createPasswordResetToken(user.id);
+    await emailService.sendPasswordResetEmail(user.email, buildResetUrl(resetToken));
+  }
+
+  return res.json({ ok: true, message: 'If an account exists for that email, a reset link has been sent.' });
+});
+
+router.post('/reset-password', authLimiter, async (req: Request, res: Response) => {
+  const { token, password } = req.body;
+  if (typeof token !== 'string' || !token.trim()) {
+    return res.status(400).json({ error: 'Reset token is required' }) as any;
+  }
+  if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+    return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }) as any;
+  }
+
+  const userId = await userModel.consumePasswordResetToken(token);
+  if (!userId) {
+    return res.status(400).json({ error: 'Reset token is invalid or expired' }) as any;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+  await userModel.updatePassword(userId, passwordHash);
+
+  return res.json({ ok: true });
+});
+
 router.get('/me', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const user = await userModel.findById(req.scribeUserId!);
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
   return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
 });
 
-// PATCH /api/scribe/auth/profile
 router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const { name, specialty } = req.body;
   const user = await userModel.update(req.scribeUserId!, { name, specialty });
@@ -76,7 +114,6 @@ router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Respons
   return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
 });
 
-// POST /api/scribe/auth/logout
 router.post('/logout', (_req: Request, res: Response) => {
   res.cookie(COOKIE, '', { ...COOKIE_OPTS, maxAge: 0 });
   return res.json({ ok: true });

@@ -71,6 +71,11 @@ export const ScribeLoginPage: React.FC = () => {
         </div>
 
         <p className="text-center text-sm text-slate-500 mt-5">
+          <Link to="/scribe/forgot-password" className="text-slate-400 hover:text-slate-300 transition-colors mr-3">
+            Forgot password?
+          </Link>
+        </p>
+        <p className="text-center text-sm text-slate-500 mt-2">
           No account?{' '}
           <Link to="/scribe/register" className="text-teal-400 hover:text-teal-300 transition-colors">
             Create account
