@@ -88,7 +88,9 @@ export const ScribeLayout: React.FC = () => {
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
 
         {/* Mobile top bar (< md) */}
-        <header className="md:hidden sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between">
+        <header
+          className="md:hidden sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] flex items-center justify-between"
+        >
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-teal-400 rounded-md flex items-center justify-center">
               <Sparkles size={15} className="text-slate-900" />
