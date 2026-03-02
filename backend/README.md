@@ -74,6 +74,18 @@ AUDIT_LOG_PATH=./logs/audit.log
 ENABLE_PHI_REDACTION=false  # Set true to redact PHI before sending to AI
 ```
 
+
+### Billing Checkout URLs (Scribe)
+
+```env
+SQUARE_CHECKOUT_URL=https://squareup.com/checkout-link
+BLOCK_CHECKOUT_URL=https://your-block-provider-link
+BITCOIN_CHECKOUT_URL=https://your-bitcoin-checkout-link
+STABLECOIN_CHECKOUT_URL=https://your-stablecoin-checkout-link
+```
+
+These URLs are optional. If unset, `/api/scribe/billing/checkout-request` still stores the user's billing preference (email + optional phone + selected payment rail) and returns a message that checkout links are not yet configured.
+
 ## API Endpoints
 
 ### POST /api/ai/chat

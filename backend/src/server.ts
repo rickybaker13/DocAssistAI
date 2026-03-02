@@ -21,6 +21,7 @@ import scribeAuthRouter from './routes/scribeAuth.js';
 import scribeTemplatesRouter from './routes/scribeTemplates.js';
 import scribeAiRouter from './routes/scribeAi.js';
 import scribeNoteTemplatesRouter from './routes/scribeNoteTemplates.js';
+import scribeBillingRouter from './routes/scribeBilling.js';
 import healthRouter from './routes/health.js';
 import { initPool } from './database/db.js';
 import { runMigrations } from './database/migrations.js';
@@ -109,6 +110,7 @@ app.use('/api/scribe/auth', scribeAuthRouter);
 app.use('/api/scribe/templates', scribeTemplatesRouter);
 app.use('/api/ai/scribe', scribeAiRouter);
 app.use('/api/scribe/note-templates', scribeNoteTemplatesRouter);
+app.use('/api/scribe/billing', scribeBillingRouter);
 app.use('/api', healthRouter);
 
 // Health check

@@ -37,6 +37,20 @@ CREATE TABLE IF NOT EXISTS note_templates (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+
+CREATE TABLE IF NOT EXISTS scribe_billing_preferences (
+  id                  TEXT PRIMARY KEY,
+  user_id             TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  email               TEXT NOT NULL,
+  phone               TEXT,
+  payment_method      TEXT NOT NULL,
+  network             TEXT,
+  monthly_price_usd   NUMERIC(10,2) NOT NULL,
+  discount_percent    NUMERIC(5,2) NOT NULL DEFAULT 0,
+  effective_price_usd NUMERIC(10,2) NOT NULL,
+  trial_days          INTEGER NOT NULL DEFAULT 7,
+  created_at          TIMESTAMPTZ DEFAULT NOW()
+);
 CREATE TABLE IF NOT EXISTS scribe_password_reset_tokens (
   id         TEXT PRIMARY KEY,
   user_id    TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
