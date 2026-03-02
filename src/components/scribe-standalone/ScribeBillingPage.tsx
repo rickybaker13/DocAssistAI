@@ -2,19 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface BillingMethod {
-  id: 'square_card' | 'block_card' | 'bitcoin';
+  id: 'square_card' | 'block_card';
   label: string;
   type: string;
-  discountPercent?: number;
-  networks?: string[];
 }
 
 interface BillingOptionsResponse {
   subscription: {
     monthlyPriceUsd: number;
     trialDays: number;
-    bitcoinDiscountPercent: number;
-    bitcoinEffectivePriceUsd: number;
   };
   methods: BillingMethod[];
 }
@@ -81,7 +77,6 @@ export const ScribeBillingPage: React.FC = () => {
         <h1 className="text-xl font-semibold text-slate-100">Billing & Subscriptions</h1>
         <p className="text-sm text-slate-400 mt-2">
           ${options.subscription.monthlyPriceUsd}/month with a {options.subscription.trialDays}-day free trial.
-          Pay with Bitcoin and receive a {options.subscription.bitcoinDiscountPercent}% discount (${options.subscription.bitcoinEffectivePriceUsd}/month).
         </p>
       </header>
 

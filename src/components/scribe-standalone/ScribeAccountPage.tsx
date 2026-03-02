@@ -13,19 +13,15 @@ interface BillingHistoryEntry {
 }
 
 interface BillingMethod {
-  id: 'square_card' | 'block_card' | 'bitcoin';
+  id: 'square_card' | 'block_card';
   label: string;
   type: string;
-  discountPercent?: number;
-  networks?: string[];
 }
 
 interface BillingOptionsResponse {
   subscription: {
     monthlyPriceUsd: number;
     trialDays: number;
-    bitcoinDiscountPercent: number;
-    bitcoinEffectivePriceUsd: number;
   };
   methods: BillingMethod[];
 }
@@ -134,7 +130,7 @@ export const ScribeAccountPage: React.FC = () => {
           </div>
           <p className="text-sm text-slate-300">
             {options
-              ? `$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial. Pay with Bitcoin for ${options.subscription.bitcoinDiscountPercent}% off ($${options.subscription.bitcoinEffectivePriceUsd}/month).`
+              ? `$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial.`
               : 'Loading subscription pricing...'}
           </p>
           <p className="text-xs text-slate-500">

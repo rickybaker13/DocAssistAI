@@ -14,25 +14,21 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
     subscription: {
       monthlyPriceUsd: 20,
       trialDays: 7,
-      bitcoinDiscountPercent: 15,
-      bitcoinEffectivePriceUsd: 17,
     },
     methods: [
       { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
       { id: 'block_card', label: 'Credit Card (Block)', type: 'card' },
-      { id: 'bitcoin', label: 'Bitcoin (via Block)', type: 'crypto', discountPercent: 15 },
     ],
   });
 });
 
 router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res: Response) => {
-  const { paymentMethod, network, phone } = req.body as {
+  const { paymentMethod, phone } = req.body as {
     paymentMethod?: PaymentMethod;
-    network?: string;
     phone?: string;
   };
 
-  if (!paymentMethod || !['square_card', 'block_card', 'bitcoin'].includes(paymentMethod)) {
+  if (!paymentMethod || !['square_card', 'block_card'].includes(paymentMethod)) {
     return res.status(400).json({ error: 'Unsupported payment method' });
   }
 
@@ -50,13 +46,11 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     email: user.email,
     phone,
     paymentMethod,
-    network,
   });
 
   const checkoutTargets: Record<PaymentMethod, string | undefined> = {
     square_card: process.env.SQUARE_CHECKOUT_URL,
     block_card: process.env.BLOCK_CHECKOUT_URL,
-    bitcoin: process.env.BITCOIN_CHECKOUT_URL,
   };
 
   return res.status(201).json({
