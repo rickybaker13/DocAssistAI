@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, CircleCheck, CreditCard, KeyRound, Mail, MessageSquare } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
@@ -13,7 +13,7 @@ interface BillingHistoryEntry {
 }
 
 interface BillingMethod {
-  id: 'square_card' | 'block_card' | 'bitcoin' | 'usdc' | 'usdt';
+  id: 'square_card' | 'block_card' | 'bitcoin';
   label: string;
   type: string;
   discountPercent?: number;
@@ -36,7 +36,6 @@ export const ScribeAccountPage: React.FC = () => {
   const [history, setHistory] = useState<BillingHistoryEntry[]>([]);
   const [options, setOptions] = useState<BillingOptionsResponse | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
-  const [network, setNetwork] = useState('ethereum');
   const [phone, setPhone] = useState('');
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
@@ -64,9 +63,6 @@ export const ScribeAccountPage: React.FC = () => {
         if (latest?.paymentMethod) {
           setPaymentMethod(latest.paymentMethod as BillingMethod['id']);
         }
-        if (latest?.network) {
-          setNetwork(latest.network);
-        }
         if (latest?.phone) {
           setPhone(latest.phone);
         }
@@ -80,10 +76,6 @@ export const ScribeAccountPage: React.FC = () => {
 
   const latestPreference = history[0];
 
-  const selectedMethod = useMemo(
-    () => options?.methods.find((method) => method.id === paymentMethod) ?? null,
-    [options, paymentMethod],
-  );
 
   const handleBillingUpdate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -99,7 +91,6 @@ export const ScribeAccountPage: React.FC = () => {
         credentials: 'include',
         body: JSON.stringify({
           paymentMethod,
-          network: paymentMethod === 'usdc' || paymentMethod === 'usdt' ? network : undefined,
           phone: phone || undefined,
         }),
       });
@@ -175,22 +166,6 @@ export const ScribeAccountPage: React.FC = () => {
             </select>
           </div>
 
-          {(paymentMethod === 'usdc' || paymentMethod === 'usdt') && selectedMethod?.networks && (
-            <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Network</label>
-              <select
-                value={network}
-                onChange={(e) => setNetwork(e.target.value)}
-                className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-              >
-                {selectedMethod.networks.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
 
           <div>
             <label className="text-xs uppercase tracking-wide text-slate-400">SMS phone number</label>

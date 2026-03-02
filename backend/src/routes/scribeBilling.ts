@@ -7,8 +7,6 @@ const router = Router();
 const billingModel = new ScribeBillingModel();
 const userModel = new ScribeUserModel();
 
-const SUPPORTED_NETWORKS = ['ethereum', 'solana', 'avax', 'arbitrum'] as const;
-type StablecoinNetwork = (typeof SUPPORTED_NETWORKS)[number];
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 
 router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
@@ -22,9 +20,7 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
     methods: [
       { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
       { id: 'block_card', label: 'Credit Card (Block)', type: 'card' },
-      { id: 'bitcoin', label: 'Bitcoin', type: 'crypto', discountPercent: 15 },
-      { id: 'usdc', label: 'USDC', type: 'stablecoin', networks: SUPPORTED_NETWORKS },
-      { id: 'usdt', label: 'USDT', type: 'stablecoin', networks: SUPPORTED_NETWORKS },
+      { id: 'bitcoin', label: 'Bitcoin (via Block)', type: 'crypto', discountPercent: 15 },
     ],
   });
 });
@@ -36,12 +32,8 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     phone?: string;
   };
 
-  if (!paymentMethod || !['square_card', 'block_card', 'bitcoin', 'usdc', 'usdt'].includes(paymentMethod)) {
+  if (!paymentMethod || !['square_card', 'block_card', 'bitcoin'].includes(paymentMethod)) {
     return res.status(400).json({ error: 'Unsupported payment method' });
-  }
-
-  if ((paymentMethod === 'usdc' || paymentMethod === 'usdt') && (!network || !SUPPORTED_NETWORKS.includes(network as StablecoinNetwork))) {
-    return res.status(400).json({ error: 'Stablecoin payments require a supported network' });
   }
 
   if (phone && !PHONE_RE.test(phone)) {
@@ -65,8 +57,6 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     square_card: process.env.SQUARE_CHECKOUT_URL,
     block_card: process.env.BLOCK_CHECKOUT_URL,
     bitcoin: process.env.BITCOIN_CHECKOUT_URL,
-    usdc: process.env.STABLECOIN_CHECKOUT_URL,
-    usdt: process.env.STABLECOIN_CHECKOUT_URL,
   };
 
   return res.status(201).json({
