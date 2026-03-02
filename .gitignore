@@ -44,3 +44,6 @@ backend/data/*.db
 .firecrawl/
 
 .worktrees/
+
+# Generated PWA raster icons (built from public/icon.svg)
+public/generated/*.png
