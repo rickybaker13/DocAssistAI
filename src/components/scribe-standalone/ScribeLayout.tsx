@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { to: '/scribe/templates', icon: FileText,         label: 'Templates' },
   { to: '/scribe/settings',  icon: Settings,         label: 'Settings'  },
   { to: '/scribe/billing',   icon: CreditCard,       label: 'Billing'   },
+  { to: '/scribe/account',   icon: User,             label: 'Account'   },
 ];
 
 export const ScribeLayout: React.FC = () => {
@@ -123,13 +124,6 @@ export const ScribeLayout: React.FC = () => {
               <span>{label}</span>
             </Link>
           ))}
-          <button
-            onClick={handleLogout}
-            className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 text-xs font-medium text-slate-500 hover:text-red-400 transition-colors"
-          >
-            <User size={20} />
-            <span>Account</span>
-          </button>
         </nav>
 
       </div>
