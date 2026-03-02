@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Sparkles } from 'lucide-react';
+import { Copy, Sparkles, Trash2 } from 'lucide-react';
 import { useCodingHighlights, Match } from '../../hooks/useCodingHighlights';
 import { CodingTermPopover } from './CodingTermPopover';
 
@@ -137,10 +137,23 @@ export const NoteSectionEditor: React.FC<Props> = ({ section, onChange, onFocuse
             <Sparkles size={14} aria-hidden="true" />
             Focused AI
           </button>
-          <button onClick={copySection} aria-label="Copy section" className="text-xs text-slate-400 hover:text-slate-200 px-1" title="Copy section">⎘</button>
+          <button
+            onClick={copySection}
+            aria-label="Copy section"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-300 hover:bg-slate-700 hover:text-slate-100 transition-colors"
+            title="Copy section"
+          >
+            <Copy size={16} aria-hidden="true" />
+          </button>
           {onDelete && (
-            <button onClick={onDelete} aria-label={`Delete ${section.section_name} section`}
-              className="text-xs text-slate-600 hover:text-red-400 px-1 transition-colors" title="Remove section">×</button>
+            <button
+              onClick={onDelete}
+              aria-label={`Delete ${section.section_name} section`}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+              title="Remove section"
+            >
+              <Trash2 size={16} aria-hidden="true" />
+            </button>
           )}
         </div>
       </div>
