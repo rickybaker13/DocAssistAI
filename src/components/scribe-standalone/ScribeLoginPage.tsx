@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { Sparkles } from 'lucide-react';
+import { SocialMediaLinks } from './SocialMediaLinks';
 
 export const ScribeLoginPage: React.FC = () => {
   const { login, loading, error, user } = useScribeAuthStore();
@@ -81,6 +82,8 @@ export const ScribeLoginPage: React.FC = () => {
             Create account
           </Link>
         </p>
+
+        <SocialMediaLinks />
       </div>
     </div>
   );

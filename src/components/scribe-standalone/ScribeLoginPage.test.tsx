@@ -29,6 +29,16 @@ describe('ScribeLoginPage', () => {
     await waitFor(() => expect(mockLogin).toHaveBeenCalledWith('a@b.com', 'password123', false));
   });
 
+
+  it('shows follow and post social links', () => {
+    render(<MemoryRouter><ScribeLoginPage /></MemoryRouter>);
+    expect(screen.getAllByRole('link', { name: /linkedin/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /^x$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /facebook/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /reddit/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('link', { name: /whatsapp/i }).length).toBeGreaterThan(0);
+  });
+
   it('has a link to the register page', () => {
     render(<MemoryRouter><ScribeLoginPage /></MemoryRouter>);
     expect(screen.getByRole('link', { name: /create account/i })).toBeInTheDocument();
