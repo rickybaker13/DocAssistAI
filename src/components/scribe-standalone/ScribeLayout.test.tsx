@@ -16,6 +16,20 @@ describe('ScribeLayout', () => {
     expect(screen.getAllByText(/DocAssist Scribe/i).length).toBeGreaterThanOrEqual(1);
   });
 
+
+  it('shows Account navigation item', () => {
+    render(
+      <MemoryRouter initialEntries={['/scribe/dashboard']}>
+        <Routes>
+          <Route path="/scribe/*" element={<ScribeLayout />}>
+            <Route path="dashboard" element={<div>Dashboard</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(screen.getAllByText('Account').length).toBeGreaterThanOrEqual(1);
+  });
+
   it('renders child route content via Outlet', () => {
     render(
       <MemoryRouter initialEntries={['/scribe/dashboard']}>
