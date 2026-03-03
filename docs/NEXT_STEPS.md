@@ -82,11 +82,90 @@ Then deploy to production:
 ssh root@159.203.87.97 'cd /opt/docassistai && git pull origin main && docker compose -f infra/docker-compose.prod.yml up -d --build'
 ```
 
+### 6. PostgreSQL Production Hardening Checklist (Droplet Docker)
+Use this checklist on the production droplet to ensure PostgreSQL is ready for production operations.
+
+#### A) Credentials and secret rotation
+- [ ] Confirm `POSTGRES_PASSWORD` is not a placeholder/default in `/opt/docassistai/.env`
+- [ ] Rotate `POSTGRES_PASSWORD` to a long random value (at least 32 chars)
+- [ ] Re-deploy services to pick up rotated credentials
+
+```bash
+cd /opt/docassistai
+grep -n '^POSTGRES_PASSWORD=' .env
+docker compose -f infra/docker-compose.prod.yml up -d
+docker compose -f infra/docker-compose.prod.yml exec backend sh -lc 'echo "$DATABASE_URL"'
+```
+
+#### B) Runtime and connectivity checks
+- [ ] Postgres container is healthy
+- [ ] Backend `DATABASE_URL` points to `postgresql://...@postgres:5432/...`
+- [ ] Postgres responds to SQL queries
+
+```bash
+docker compose -f infra/docker-compose.prod.yml ps
+docker compose -f infra/docker-compose.prod.yml exec postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select version();"'
+docker compose -f infra/docker-compose.prod.yml exec postgres sh -lc 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "show max_connections; show shared_buffers; show wal_level;"'
+```
+
+#### C) Persistence checks
+- [ ] Volume backing `/var/lib/postgresql/data` exists and is mounted
+- [ ] No accidental ephemeral-only deployment
+
+```bash
+docker volume ls | grep pgdata
+docker inspect $(docker compose -f infra/docker-compose.prod.yml ps -q postgres) --format '{{json .Mounts}}'
+```
+
+#### D) Backup readiness (must pass)
+- [ ] `pg_dump` works and produces a non-empty backup file
+- [ ] Backups are copied off-host (DO Spaces/S3/other)
+- [ ] Restore drill performed at least monthly
+
+```bash
+mkdir -p /opt/docassistai/backups
+docker compose -f infra/docker-compose.prod.yml exec -T postgres sh -lc 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > /opt/docassistai/backups/quick-backup.sql
+ls -lh /opt/docassistai/backups/quick-backup.sql
+```
+
+#### E) Security posture
+- [ ] Postgres is not exposed publicly (`5432` should not be host-bound)
+- [ ] Only Caddy exposes internet ports (`80/443`)
+- [ ] Droplet firewall allows only required inbound ports
+
+```bash
+docker compose -f infra/docker-compose.prod.yml ps
+ss -lntp | rg ':5432|:80|:443'
+ufw status
+```
+
+#### F) Monitoring and operational hygiene
+- [ ] Alerts configured for container restarts, disk usage, memory pressure
+- [ ] Host patching/reboot cadence defined and documented
+- [ ] Log retention/rotation configured for Docker and app logs
+
+Suggested periodic checks:
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.RunningFor}}'
+docker stats --no-stream
+df -h
+free -h
+```
+
+#### G) Optional: move to DigitalOcean Managed PostgreSQL
+If you want managed failover, automated backups, and patch management:
+- Provision DO Managed PostgreSQL cluster
+- Update `DATABASE_URL` to managed cluster endpoint
+- Run migration/restore from current containerized DB
+- Validate app behavior and cut over
+- Keep old containerized DB read-only briefly during verification, then decommission
+
 ---
 
 ## Medium-Term (Next 1–2 Weeks)
 
-### 6. Email Service (SES)
+### 7. Email Service (SES)
 Not yet implemented. Needed for:
 - **Email verification on signup** — prevent fake email registrations
 - **Password reset / forgot password flow**
@@ -99,7 +178,7 @@ Steps when ready:
 4. Configure SES in AWS (verify domain, request production access to exit sandbox)
 5. Add `SES_FROM_EMAIL`, `SES_REGION` env vars
 
-### 7. Bedrock `ListFoundationModels` Permission
+### 8. Bedrock `ListFoundationModels` Permission
 The IAM user currently cannot list available models (`bedrock:ListFoundationModels` denied). Add this to the IAM policy if you want to programmatically check model availability:
 ```json
 {
@@ -109,7 +188,7 @@ The IAM user currently cannot list available models (`bedrock:ListFoundationMode
 }
 ```
 
-### 8. Frontend Error Handling for AI Throttling
+### 9. Frontend Error Handling for AI Throttling
 Currently, if Bedrock returns a throttling error, the user sees a raw error message. Consider adding:
 - A user-friendly "AI service is temporarily busy, please try again in a moment" message
 - Automatic retry with exponential backoff for transient throttle errors in the Bedrock provider
@@ -118,15 +197,15 @@ Currently, if Bedrock returns a throttling error, the user sees a raw error mess
 
 ## Longer-Term
 
-### 9. Streaming Responses
+### 10. Streaming Responses
 The current Bedrock provider uses `InvokeModelCommand` (non-streaming). For better UX on long note generations, switch to `InvokeModelWithResponseStreamCommand` so users see text appear progressively.
 
-### 10. RAG / Patient Data Indexing
+### 11. RAG / Patient Data Indexing
 The codebase has `backend/src/services/rag/` with embedding service, vector store, and patient data indexer — but these require an embedding API key that isn't configured. When ready:
 - Configure embedding service (OpenAI embeddings or Bedrock Titan Embeddings)
 - Index patient data for context-aware responses
 
-### 11. HIPAA Compliance Checklist
+### 12. HIPAA Compliance Checklist
 See `docs/HIPAA_COMPLIANCE_NEXT_STEPS.md` for the full checklist. Key remaining items:
 - BAA with AWS (for Bedrock + SES)
 - BAA with DigitalOcean (for the droplet)
