@@ -163,7 +163,7 @@ export const SectionLibrary: React.FC = () => {
       )}
 
       {/* Section list */}
-      <div className="overflow-y-auto flex-1 p-2 flex flex-col gap-1">
+      <div className="overflow-y-auto overscroll-contain touch-pan-y flex-1 p-2 flex flex-col gap-1" style={{ WebkitOverflowScrolling: 'touch' }}>
         {activeTab === 'mine' && hasDiscipline && (
           myFiltered.length === 0 ? (
             <p className="text-slate-500 text-xs text-center py-6">

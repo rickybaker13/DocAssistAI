@@ -138,7 +138,10 @@ export const NoteBuilderPage: React.FC = () => {
 
       {/* Section builder */}
       <div className="lg:grid lg:grid-cols-2 lg:gap-4">
-        <div className={`${showLibrary ? 'block' : 'hidden'} lg:block bg-slate-900 border border-slate-700 rounded-xl overflow-hidden`} style={{ maxHeight: '60vh' }}>
+        <div
+          className={`${showLibrary ? 'fixed inset-x-0 bottom-0 z-40 block h-[70vh]' : 'hidden'} lg:static lg:block lg:h-auto bg-slate-900 border border-slate-700 rounded-t-2xl lg:rounded-xl overflow-hidden`}
+          style={{ maxHeight: '70vh' }}
+        >
           <div className="px-3 py-2 border-b border-slate-700 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-50">Section Library</h2>
             <button onClick={() => setShowLibrary(false)} aria-label="Close section library" className="lg:hidden text-slate-400">
