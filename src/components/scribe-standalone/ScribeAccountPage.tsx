@@ -218,7 +218,7 @@ export const ScribeAccountPage: React.FC = () => {
             <p className="flex items-center gap-2"><MessageSquare size={14} className="text-slate-400" /> SMS: {phone || 'Not set'}</p>
           </div>
           <p className="text-xs text-slate-500">Need to change your account email? Contact support and we can update it securely.</p>
-          <a href="mailto:support@docassistai.com?subject=Update%20my%20DocAssist%20account%20contact%20information" className="inline-flex items-center gap-2 text-sm text-teal-300 hover:text-teal-200">
+          <a href="mailto:admin@docassistai.app?subject=Update%20my%20DocAssist%20account%20contact%20information" className="inline-flex items-center gap-2 text-sm text-teal-300 hover:text-teal-200">
             Contact support
           </a>
         </article>
