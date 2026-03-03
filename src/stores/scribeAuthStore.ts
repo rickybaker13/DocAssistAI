@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getBackendUrl } from '../config/appConfig';
+import { useScribeNoteStore } from './scribeNoteStore';
 
 export interface ScribeUser {
   id: string;
@@ -21,7 +22,12 @@ interface ScribeAuthState {
   reset: () => void;
 }
 
-export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
+function clearNotesOnUserChange(nextUserId: string | null, prevUserId: string | null): void {
+  if (prevUserId && nextUserId && prevUserId === nextUserId) return;
+  useScribeNoteStore.getState().reset();
+}
+
+export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
   user: null,
   loading: false,
   error: null,
@@ -37,6 +43,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
       });
       const data = await res.json();
       if (!res.ok) { set({ loading: false, error: data.error || 'Login failed' }); return false; }
+      clearNotesOnUserChange(data.user.id, get().user?.id ?? null);
       set({ user: data.user, loading: false, error: null });
       return true;
     } catch (e: any) {
@@ -57,6 +64,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
       });
       const data = await res.json();
       if (!res.ok) { set({ loading: false, error: data.error || 'Registration failed' }); return false; }
+      clearNotesOnUserChange(data.user.id, get().user?.id ?? null);
       set({ user: data.user, loading: false, error: null });
       return true;
     } catch (e: any) {
@@ -108,6 +116,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
 
   logout: async () => {
     await fetch(`${getBackendUrl()}/api/scribe/auth/logout`, { method: 'POST', credentials: 'include' });
+    clearNotesOnUserChange(null, get().user?.id ?? null);
     set({ user: null, error: null });
   },
 
@@ -115,10 +124,16 @@ export const useScribeAuthStore = create<ScribeAuthState>((set) => ({
     set({ loading: true });
     try {
       const res = await fetch(`${getBackendUrl()}/api/scribe/auth/me`, { credentials: 'include' });
-      if (!res.ok) { set({ user: null, loading: false }); return; }
+      if (!res.ok) {
+        clearNotesOnUserChange(null, get().user?.id ?? null);
+        set({ user: null, loading: false });
+        return;
+      }
       const data = await res.json();
+      clearNotesOnUserChange(data.user.id, get().user?.id ?? null);
       set({ user: data.user, loading: false });
     } catch {
+      clearNotesOnUserChange(null, get().user?.id ?? null);
       set({ user: null, loading: false });
     }
   },
