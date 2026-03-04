@@ -81,6 +81,10 @@ export const ScribeAccountPage: React.FC = () => {
         setOptions(DEFAULT_BILLING_OPTIONS);
         hadFailure = true;
         loadError = ACCOUNT_DETAILS_FALLBACK_ERROR;
+          hadFailure = true;
+        }
+      } catch {
+        hadFailure = true;
       }
 
       try {
@@ -106,6 +110,14 @@ export const ScribeAccountPage: React.FC = () => {
       } catch {
         historyFailed = true;
         hadFailure = true;
+          hadFailure = true;
+        }
+      } catch {
+        hadFailure = true;
+      }
+
+      if (hadFailure) {
+        setError('Could not load all account details right now.');
       }
 
       if (historyFailed) {
@@ -247,7 +259,7 @@ export const ScribeAccountPage: React.FC = () => {
             />
           </div>
 
-          {paymentMethod === 'square_card' && (
+          {paymentMethod === 'square_card' && options && options.methods.some((m) => m.id === 'square_card') && (
             <div className="space-y-2">
               <p className="text-xs text-slate-400">
                 Enter your card details below. Card number, CVV, and expiration are collected in Square's encrypted iframe.
