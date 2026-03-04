@@ -75,16 +75,38 @@ ENABLE_PHI_REDACTION=false  # Set true to redact PHI before sending to AI
 ```
 
 
-### Billing Checkout URLs (Scribe)
+### Billing Checkout URLs + Embedded Card (Scribe)
 
 ```env
-SQUARE_CHECKOUT_URL=https://squareup.com/checkout-link
-BLOCK_CHECKOUT_URL=https://your-block-provider-link
-BITCOIN_CHECKOUT_URL=https://your-bitcoin-checkout-link
-STABLECOIN_CHECKOUT_URL=https://your-stablecoin-checkout-link
+# Hosted Square link fallback for card billing preference flow
+SQUARE_CHECKOUT_URL=https://square.link/u/your-card-checkout-link
+
+# Hosted Square link fallback for Bitcoin option
+SQUARE_BITCOIN_CHECKOUT_URL=https://square.link/u/your-bitcoin-checkout-link
+
+# Required for embedded card entry (Web Payments SDK)
+SQUARE_WEB_APP_ID=sq0idp-xxxx
+SQUARE_LOCATION_ID=L1234567890
+SQUARE_ACCESS_TOKEN=EAAAxxxx
+SQUARE_ENVIRONMENT=sandbox
 ```
 
-These URLs are optional. If unset, `/api/scribe/billing/checkout-request` still stores the user's billing preference (email + optional phone + selected payment rail) and returns a message that checkout links are not yet configured.
+- `/api/scribe/billing/checkout-request` returns a hosted `checkoutUrl` only when the matching checkout-link env var is set.
+- `/api/scribe/billing/square-card-payment` processes embedded card payments and requires `SQUARE_WEB_APP_ID`, `SQUARE_LOCATION_ID`, and `SQUARE_ACCESS_TOKEN`.
+
+#### Square setup checklist
+
+1. In Square Dashboard, create your subscription/payment links (card + optional bitcoin) and set checkout-link env vars.
+2. In Square Developer dashboard, copy your **Web Payments SDK Application ID** to `SQUARE_WEB_APP_ID`.
+3. Copy your Square location ID to `SQUARE_LOCATION_ID`.
+4. Copy your Square access token to `SQUARE_ACCESS_TOKEN`.
+5. Set `SQUARE_ENVIRONMENT=sandbox` for testing (or `production` for live processing).
+6. Restart backend and verify `/api/scribe/billing/square-config` returns `enabled: true`.
+
+### Frontend env vars for billing
+
+No Square secret is required in frontend env files.
+The UI loads the Square SDK and publishable config from backend; frontend only needs backend connectivity (`VITE_BACKEND_URL`).
 
 ## API Endpoints
 
@@ -310,4 +332,3 @@ All providers implement the same interface, making it easy to:
 4. Test with mock data or Oracle Health sandbox
 
 For frontend setup, see the main [README.md](../README.md).
-

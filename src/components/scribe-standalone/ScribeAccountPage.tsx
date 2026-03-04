@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, CircleCheck, CreditCard, KeyRound, Mail, MessageSquare } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
+import { SquareCardForm } from './SquareCardForm';
 
 interface BillingHistoryEntry {
   id: string;
@@ -25,6 +26,13 @@ interface BillingOptionsResponse {
   };
   methods: BillingMethod[];
 }
+
+const SquareBadge: React.FC = () => (
+  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
+    <img src="/square-wordmark.svg" alt="Square" className="h-4 w-auto" />
+    <span className="text-xs font-medium text-emerald-200">PCI-compliant checkout</span>
+  </div>
+);
 
 export const ScribeAccountPage: React.FC = () => {
   const navigate = useNavigate();
@@ -128,7 +136,10 @@ export const ScribeAccountPage: React.FC = () => {
 
       <div className="grid gap-4">
         <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-          <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Billing information</h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Billing information</h2>
+            <SquareBadge />
+          </div>
           <div className="flex items-center gap-2 text-sm text-emerald-400">
             <CircleCheck size={16} />
             <span>Active plan</span>
@@ -140,6 +151,9 @@ export const ScribeAccountPage: React.FC = () => {
           </p>
           <p className="text-xs text-slate-500">
             Need to cancel? You can cancel anytime and your plan remains active through the current billing cycle.
+          </p>
+          <p className="text-xs text-slate-500">
+            Payments are processed through Square secure checkout (embedded card form or hosted checkout link).
           </p>
           <a
             href="mailto:support@docassistai.com?subject=Cancel%20my%20DocAssist%20Scribe%20subscription"
@@ -194,6 +208,25 @@ export const ScribeAccountPage: React.FC = () => {
             />
           </div>
 
+          {paymentMethod === 'square_card' && (
+            <div className="space-y-2">
+              <p className="text-xs text-slate-400">
+                Enter your card details below. Card number, CVV, and expiration are collected in Square's encrypted iframe.
+              </p>
+              <SquareCardForm
+                phone={phone}
+                onSuccess={(msg) => {
+                  setBillingMessage(msg);
+                  setError(null);
+                }}
+                onError={(msg) => {
+                  setError(msg);
+                  setBillingMessage(null);
+                }}
+              />
+            </div>
+          )}
+
           <p className="text-sm text-slate-300">
             {latestPreference
               ? `Current preference: ${latestPreference.paymentMethod.replace('_', ' ')}${latestPreference.network ? ` on ${latestPreference.network}` : ''}.`
@@ -205,11 +238,21 @@ export const ScribeAccountPage: React.FC = () => {
             <div className="text-sm text-emerald-400 space-y-1">
               <p>{billingMessage}</p>
               {checkoutUrl && (
-                <a href={checkoutUrl} target="_blank" rel="noreferrer" className="text-teal-300 underline">
-                  Continue to checkout
-                </a>
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                  <p className="text-emerald-300 text-xs uppercase tracking-wide">Square checkout ready</p>
+                  <a href={checkoutUrl} target="_blank" rel="noreferrer" className="text-teal-300 underline font-medium">
+                    Open secure Square checkout
+                  </a>
+                </div>
               )}
             </div>
+          )}
+
+          {paymentMethod !== 'square_card' && !checkoutUrl && !loadingBilling && (
+            <p className="text-xs text-amber-300">
+              If checkout is unavailable, set <code className="text-amber-200">SQUARE_CHECKOUT_URL</code> and{' '}
+              <code className="text-amber-200">SQUARE_BITCOIN_CHECKOUT_URL</code> on the backend.
+            </p>
           )}
 
           <button
@@ -218,7 +261,7 @@ export const ScribeAccountPage: React.FC = () => {
             className="inline-flex items-center gap-2 bg-teal-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
           >
             <CreditCard size={14} />
-            {loadingBilling ? 'Saving...' : 'Save billing method'}
+            {loadingBilling ? 'Saving...' : paymentMethod === 'square_card' ? 'Get hosted checkout link' : 'Save billing method'}
           </button>
         </form>
 
