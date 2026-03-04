@@ -77,12 +77,7 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
       try {
         const cfgRes = await fetch(`${getBackendUrl()}/api/scribe/billing/square-config`, { credentials: 'include' });
         const cfg = (await cfgRes.json()) as SquareConfigResponse;
-
         if (!cfgRes.ok || !cfg.enabled || !cfg.appId || !cfg.locationId) {
-          setEnabled(false);
-          if (!cfgRes.ok) {
-            onError('Unable to load Square configuration from backend. Confirm you are signed in and backend is reachable.');
-          }
           return;
         }
 
