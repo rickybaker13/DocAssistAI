@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getPool } from '../database/db.js';
 
-export type PaymentMethod = 'square_card' | 'block_card';
+export type PaymentMethod = 'square_card' | 'square_bitcoin';
 
 export interface ScribeBillingPreference {
   id: string;
@@ -22,6 +22,7 @@ interface CreateBillingPreferenceInput {
   email: string;
   phone?: string;
   paymentMethod: PaymentMethod;
+  network?: string;
 }
 
 export class ScribeBillingModel {
@@ -52,7 +53,7 @@ export class ScribeBillingModel {
         input.email,
         input.phone ?? null,
         input.paymentMethod,
-        null,
+        input.network ?? null,
         monthlyPriceUsd,
         discountPercent,
         effectivePriceUsd,

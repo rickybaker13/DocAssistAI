@@ -13,7 +13,7 @@ interface BillingHistoryEntry {
 }
 
 interface BillingMethod {
-  id: 'square_card' | 'block_card';
+  id: 'square_card' | 'square_bitcoin';
   label: string;
   type: string;
 }
@@ -33,6 +33,7 @@ export const ScribeAccountPage: React.FC = () => {
   const [options, setOptions] = useState<BillingOptionsResponse | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
   const [phone, setPhone] = useState('');
+  const [network, setNetwork] = useState<'bitcoin' | 'lightning'>('bitcoin');
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,10 +58,13 @@ export const ScribeAccountPage: React.FC = () => {
         setHistory(historyData.entries || []);
         setOptions(optionsData);
         if (latest?.paymentMethod) {
-          setPaymentMethod(latest.paymentMethod as BillingMethod['id']);
+          setPaymentMethod((latest.paymentMethod === 'bitcoin' ? 'square_bitcoin' : latest.paymentMethod) as BillingMethod['id']);
         }
         if (latest?.phone) {
           setPhone(latest.phone);
+        }
+        if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
+          setNetwork(latest.network);
         }
       } catch {
         setError('Could not load all account details right now.');
@@ -88,6 +92,7 @@ export const ScribeAccountPage: React.FC = () => {
         body: JSON.stringify({
           paymentMethod,
           phone: phone || undefined,
+          network: paymentMethod === 'square_bitcoin' ? network : undefined,
         }),
       });
       const data = await res.json();
@@ -161,6 +166,21 @@ export const ScribeAccountPage: React.FC = () => {
               ))}
             </select>
           </div>
+
+
+          {paymentMethod === 'square_bitcoin' && (
+            <div>
+              <label className="text-xs uppercase tracking-wide text-slate-400">Bitcoin network</label>
+              <select
+                value={network}
+                onChange={(e) => setNetwork(e.target.value as 'bitcoin' | 'lightning')}
+                className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="bitcoin">Bitcoin (on-chain)</option>
+                <option value="lightning">Lightning</option>
+              </select>
+            </div>
+          )}
 
 
           <div>

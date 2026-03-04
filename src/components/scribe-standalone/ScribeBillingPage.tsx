@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface BillingMethod {
-  id: 'square_card' | 'block_card';
+  id: 'square_card' | 'square_bitcoin';
   label: string;
   type: string;
 }
@@ -19,6 +19,7 @@ export const ScribeBillingPage: React.FC = () => {
   const [options, setOptions] = useState<BillingOptionsResponse | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
   const [phone, setPhone] = useState('');
+  const [network, setNetwork] = useState<'bitcoin' | 'lightning'>('bitcoin');
   const [message, setMessage] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export const ScribeBillingPage: React.FC = () => {
         body: JSON.stringify({
           paymentMethod,
           phone: phone || undefined,
+          network: paymentMethod === 'square_bitcoin' ? network : undefined,
         }),
       });
       const data = await res.json();
@@ -97,6 +99,21 @@ export const ScribeBillingPage: React.FC = () => {
         </div>
 
 
+        {paymentMethod === 'square_bitcoin' && (
+          <div>
+            <label className="text-xs uppercase tracking-wide text-slate-400">Bitcoin network</label>
+            <select
+              value={network}
+              onChange={(e) => setNetwork(e.target.value as 'bitcoin' | 'lightning')}
+              className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
+            >
+              <option value="bitcoin">Bitcoin (on-chain)</option>
+              <option value="lightning">Lightning</option>
+            </select>
+          </div>
+        )}
+
+
         <div>
           <label className="text-xs uppercase tracking-wide text-slate-400">Mobile number for SMS updates (optional)</label>
           <input
@@ -125,7 +142,7 @@ export const ScribeBillingPage: React.FC = () => {
           disabled={loading}
           className="bg-teal-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
         >
-          {loading ? 'Preparing checkout...' : 'Save billing preference'}
+          {loading ? 'Preparing checkout...' : 'Continue to payment'}
         </button>
       </form>
     </section>
