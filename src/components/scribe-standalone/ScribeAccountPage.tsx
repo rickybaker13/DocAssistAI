@@ -27,6 +27,14 @@ interface BillingOptionsResponse {
   methods: BillingMethod[];
 }
 
+const DEFAULT_BILLING_OPTIONS: BillingOptionsResponse = {
+  subscription: { monthlyPriceUsd: 20, trialDays: 7 },
+  methods: [
+    { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
+    { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
+  ],
+};
+
 const SquareBadge: React.FC = () => (
   <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
     <img src="/square-wordmark.svg" alt="Square" className="h-4 w-auto" />
@@ -49,7 +57,7 @@ export const ScribeAccountPage: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      let optionsLoaded = false;
+      let hadFailure = false;
       let historyFailed = false;
 
       try {
@@ -60,27 +68,14 @@ export const ScribeAccountPage: React.FC = () => {
           if (optionsData.methods.length > 0) {
             setPaymentMethod(optionsData.methods[0].id);
           }
-          optionsLoaded = true;
         } else {
-          setOptions({
-            subscription: { monthlyPriceUsd: 20, trialDays: 7 },
-            methods: [
-              { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
-              { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
-            ],
-          });
-          optionsLoaded = true;
+          setOptions(DEFAULT_BILLING_OPTIONS);
+          hadFailure = true;
           setError('Could not load all account details right now. Showing billing defaults while connection recovers.');
         }
       } catch {
-        setOptions({
-          subscription: { monthlyPriceUsd: 20, trialDays: 7 },
-          methods: [
-            { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
-            { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
-          ],
-        });
-        optionsLoaded = true;
+        setOptions(DEFAULT_BILLING_OPTIONS);
+        hadFailure = true;
         setError('Could not load all account details right now. Showing billing defaults while connection recovers.');
       }
 
@@ -102,15 +97,17 @@ export const ScribeAccountPage: React.FC = () => {
           }
         } else {
           historyFailed = true;
+          hadFailure = true;
         }
       } catch {
         historyFailed = true;
+        hadFailure = true;
       }
 
-      if (!optionsLoaded) {
-        setError('Could not load all account details right now.');
-      } else if (historyFailed) {
+      if (historyFailed) {
         setError('Could not load billing history yet. You can still choose a payment method below.');
+      } else if (hadFailure) {
+        setError('Could not load all account details right now.');
       }
     };
 
