@@ -11,6 +11,7 @@ import { ScribeNotePage } from './components/scribe-standalone/ScribeNotePage';
 import { ScribeDashboardPage } from './components/scribe-standalone/ScribeDashboardPage';
 import { ScribeSettingsPage } from './components/scribe-standalone/ScribeSettingsPage';
 import { ScribeAccountPage } from './components/scribe-standalone/ScribeAccountPage';
+import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
         >
           <Route path="dashboard" element={<ScribeDashboardPage />} />
           <Route path="settings" element={<ScribeSettingsPage />} />
+          <Route path="templates" element={<TemplatesPage />} />
           <Route path="billing" element={<Navigate to="/scribe/account" replace />} />
           <Route path="account" element={<ScribeAccountPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
