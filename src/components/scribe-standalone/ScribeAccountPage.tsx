@@ -59,6 +59,7 @@ export const ScribeAccountPage: React.FC = () => {
     const load = async () => {
       let hadFailure = false;
       let historyFailed = false;
+      let loadError: string | null = null;
 
       try {
         const optionsRes = await fetch(`${getBackendUrl()}/api/scribe/billing/options`, { credentials: 'include' });
@@ -71,12 +72,12 @@ export const ScribeAccountPage: React.FC = () => {
         } else {
           setOptions(DEFAULT_BILLING_OPTIONS);
           hadFailure = true;
-          setError('Could not load all account details right now. Showing billing defaults while connection recovers.');
+          loadError = 'Could not load all account details right now. Showing billing defaults while connection recovers.';
         }
       } catch {
         setOptions(DEFAULT_BILLING_OPTIONS);
         hadFailure = true;
-        setError('Could not load all account details right now. Showing billing defaults while connection recovers.');
+        loadError = 'Could not load all account details right now. Showing billing defaults while connection recovers.';
       }
 
       try {
@@ -105,10 +106,12 @@ export const ScribeAccountPage: React.FC = () => {
       }
 
       if (historyFailed) {
-        setError('Could not load billing history yet. You can still choose a payment method below.');
+        loadError = 'Could not load billing history yet. You can still choose a payment method below.';
       } else if (hadFailure) {
-        setError('Could not load all account details right now.');
+        loadError = loadError ?? 'Could not load all account details right now.';
       }
+
+      setError(loadError);
     };
 
     load();
