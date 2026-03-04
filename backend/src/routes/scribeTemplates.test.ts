@@ -44,6 +44,12 @@ describe('Scribe Templates Routes', () => {
     expect(res.body.templates.every((t: any) => t.is_prebuilt === 1 || t.is_prebuilt === true)).toBe(true);
   });
 
+  it('GET /prebuilt — includes Vital Signs section', async () => {
+    const res = await request(app).get('/api/scribe/templates/prebuilt').set('Cookie', authCookie);
+    expect(res.status).toBe(200);
+    expect(res.body.templates.some((t: any) => t.name === 'Vital Signs')).toBe(true);
+  });
+
   it('POST / — creates custom section', async () => {
     const res = await request(app)
       .post('/api/scribe/templates')
