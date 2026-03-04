@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface BillingMethod {
-  id: 'square_card' | 'bitcoin';
+  id: 'square_card' | 'square_bitcoin';
   label: string;
   type: string;
 }
@@ -54,7 +54,7 @@ export const ScribeBillingPage: React.FC = () => {
         body: JSON.stringify({
           paymentMethod,
           phone: phone || undefined,
-          network: paymentMethod === 'bitcoin' ? network : undefined,
+          network: paymentMethod === 'square_bitcoin' ? network : undefined,
         }),
       });
       const data = await res.json();
@@ -99,7 +99,7 @@ export const ScribeBillingPage: React.FC = () => {
         </div>
 
 
-        {paymentMethod === 'bitcoin' && (
+        {paymentMethod === 'square_bitcoin' && (
           <div>
             <label className="text-xs uppercase tracking-wide text-slate-400">Bitcoin network</label>
             <select

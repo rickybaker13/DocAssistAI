@@ -17,7 +17,7 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
     },
     methods: [
       { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
-      { id: 'bitcoin', label: 'Bitcoin (On-chain or Lightning)', type: 'crypto' },
+      { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
     ],
   });
 });
@@ -29,7 +29,7 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     network?: string;
   };
 
-  if (!paymentMethod || !['square_card', 'bitcoin'].includes(paymentMethod)) {
+  if (!paymentMethod || !['square_card', 'square_bitcoin'].includes(paymentMethod)) {
     return res.status(400).json({ error: 'Unsupported payment method' });
   }
 
@@ -41,7 +41,7 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     return res.status(400).json({ error: 'Network must be either bitcoin or lightning' });
   }
 
-  if (paymentMethod !== 'bitcoin' && network) {
+  if (paymentMethod !== 'square_bitcoin' && network) {
     return res.status(400).json({ error: 'Network is only supported for Bitcoin payments' });
   }
 
@@ -55,12 +55,12 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     email: user.email,
     phone,
     paymentMethod,
-    network: paymentMethod === 'bitcoin' ? network ?? 'bitcoin' : undefined,
+    network: paymentMethod === 'square_bitcoin' ? network ?? 'bitcoin' : undefined,
   });
 
   const checkoutTargets: Record<PaymentMethod, string | undefined> = {
     square_card: process.env.SQUARE_CHECKOUT_URL,
-    bitcoin: process.env.BITCOIN_CHECKOUT_URL,
+    square_bitcoin: process.env.SQUARE_BITCOIN_CHECKOUT_URL,
   };
 
   return res.status(201).json({

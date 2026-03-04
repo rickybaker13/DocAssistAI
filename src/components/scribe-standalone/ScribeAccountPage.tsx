@@ -13,7 +13,7 @@ interface BillingHistoryEntry {
 }
 
 interface BillingMethod {
-  id: 'square_card' | 'bitcoin';
+  id: 'square_card' | 'square_bitcoin';
   label: string;
   type: string;
 }
@@ -58,7 +58,7 @@ export const ScribeAccountPage: React.FC = () => {
         setHistory(historyData.entries || []);
         setOptions(optionsData);
         if (latest?.paymentMethod) {
-          setPaymentMethod(latest.paymentMethod as BillingMethod['id']);
+          setPaymentMethod((latest.paymentMethod === 'bitcoin' ? 'square_bitcoin' : latest.paymentMethod) as BillingMethod['id']);
         }
         if (latest?.phone) {
           setPhone(latest.phone);
@@ -92,7 +92,7 @@ export const ScribeAccountPage: React.FC = () => {
         body: JSON.stringify({
           paymentMethod,
           phone: phone || undefined,
-          network: paymentMethod === 'bitcoin' ? network : undefined,
+          network: paymentMethod === 'square_bitcoin' ? network : undefined,
         }),
       });
       const data = await res.json();
@@ -168,7 +168,7 @@ export const ScribeAccountPage: React.FC = () => {
           </div>
 
 
-          {paymentMethod === 'bitcoin' && (
+          {paymentMethod === 'square_bitcoin' && (
             <div>
               <label className="text-xs uppercase tracking-wide text-slate-400">Bitcoin network</label>
               <select
