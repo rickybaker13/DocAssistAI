@@ -16,7 +16,7 @@ interface ScribeAuthState {
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   register: (email: string, password: string, name?: string, specialty?: string) => Promise<boolean>;
   requestPasswordReset: (email: string) => Promise<boolean>;
-  resetPassword: (token: string, password: string) => Promise<boolean>;
+  resetPassword: (payload: { password: string; token?: string; email?: string; otp?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   reset: () => void;
@@ -94,14 +94,14 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
     }
   },
 
-  resetPassword: async (token, password) => {
+  resetPassword: async ({ token, email, otp, password }) => {
     set({ loading: true, error: null });
     try {
       const res = await fetch(`${getBackendUrl()}/api/scribe/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ token, password }),
+        body: JSON.stringify({ token, email, otp, password }),
       });
       const data = await res.json();
       if (!res.ok) { set({ loading: false, error: data.error || 'Password reset failed' }); return false; }

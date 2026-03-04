@@ -59,6 +59,15 @@ CREATE TABLE IF NOT EXISTS scribe_password_reset_tokens (
   used_at    TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS scribe_password_reset_otps (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  otp_hash   TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at    TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,10 @@ export interface ScribeUser {
 }
 
 export class ScribeUserModel {
+  private hashValue(value: string): string {
+    return createHash('sha256').update(value).digest('hex');
+  }
+
   async create(input: { email: string; passwordHash: string; name?: string; specialty?: string }): Promise<ScribeUser> {
     const pool = getPool();
     const id = randomUUID();
@@ -46,7 +50,7 @@ export class ScribeUserModel {
   async createPasswordResetToken(userId: string): Promise<string> {
     const pool = getPool();
     const rawToken = randomUUID().replace(/-/g, '') + randomUUID().replace(/-/g, '');
-    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const tokenHash = this.hashValue(rawToken);
     await pool.query('DELETE FROM scribe_password_reset_tokens WHERE user_id = $1', [userId]);
     await pool.query(
       `INSERT INTO scribe_password_reset_tokens (id, user_id, token_hash, expires_at)
@@ -58,7 +62,7 @@ export class ScribeUserModel {
 
   async consumePasswordResetToken(token: string): Promise<string | null> {
     const pool = getPool();
-    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const tokenHash = this.hashValue(token);
     const result = await pool.query(
       `SELECT id, user_id
        FROM scribe_password_reset_tokens
@@ -70,6 +74,36 @@ export class ScribeUserModel {
     if (!row) return null;
     await pool.query('UPDATE scribe_password_reset_tokens SET used_at = NOW() WHERE id = $1', [row.id]);
     return row.user_id as string;
+  }
+
+  async createPasswordResetOtp(userId: string): Promise<string> {
+    const pool = getPool();
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
+    const otpHash = this.hashValue(otp);
+    await pool.query('DELETE FROM scribe_password_reset_otps WHERE user_id = $1', [userId]);
+    await pool.query(
+      `INSERT INTO scribe_password_reset_otps (id, user_id, otp_hash, expires_at)
+       VALUES ($1, $2, $3, NOW() + INTERVAL '15 minutes')`,
+      [randomUUID(), userId, otpHash],
+    );
+    return otp;
+  }
+
+  async consumePasswordResetOtp(userId: string, otp: string): Promise<boolean> {
+    const pool = getPool();
+    const otpHash = this.hashValue(otp);
+    const result = await pool.query(
+      `SELECT id
+       FROM scribe_password_reset_otps
+       WHERE user_id = $1 AND otp_hash = $2 AND used_at IS NULL AND expires_at > NOW()
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [userId, otpHash],
+    );
+    const row = result.rows[0];
+    if (!row) return false;
+    await pool.query('UPDATE scribe_password_reset_otps SET used_at = NOW() WHERE id = $1', [row.id]);
+    return true;
   }
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
