@@ -21,10 +21,53 @@ interface Props {
   onError: (message: string) => void;
 }
 
+interface SquareConfigResponse {
+  appId: string | null;
+  locationId: string | null;
+  environment?: 'sandbox' | 'production';
+  enabled: boolean;
+}
+
+const SQUARE_SDK_SELECTOR = 'script[data-square-sdk="true"]';
+
+const ensureSquareSdkLoaded = async (): Promise<void> => {
+  if (window.Square) {
+    return;
+  }
+
+  const existingScript = document.querySelector<HTMLScriptElement>(SQUARE_SDK_SELECTOR);
+
+  if (existingScript) {
+    await new Promise<void>((resolve, reject) => {
+      if (window.Square) {
+        resolve();
+        return;
+      }
+
+      existingScript.addEventListener('load', () => resolve(), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Failed to load Square SDK.')), { once: true });
+    });
+
+    return;
+  }
+
+  const script = document.createElement('script');
+  script.src = 'https://web.squarecdn.com/v1/square.js';
+  script.async = true;
+  script.dataset.squareSdk = 'true';
+  document.body.appendChild(script);
+
+  await new Promise<void>((resolve, reject) => {
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Failed to load Square SDK.'));
+  });
+};
+
 export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [enabled, setEnabled] = useState(false);
+  const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox');
   const cardRef = useRef<{ tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }> } | null>(null);
 
   useEffect(() => {
@@ -33,24 +76,15 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
     const init = async () => {
       try {
         const cfgRes = await fetch(`${getBackendUrl()}/api/scribe/billing/square-config`, { credentials: 'include' });
-        const cfg = await cfgRes.json();
-        if (!cfgRes.ok || !cfg.enabled) {
+        const cfg = (await cfgRes.json()) as SquareConfigResponse;
+        if (!cfgRes.ok || !cfg.enabled || !cfg.appId || !cfg.locationId) {
           return;
         }
 
+        setEnvironment(cfg.environment === 'production' ? 'production' : 'sandbox');
         setEnabled(true);
 
-        if (!document.querySelector('script[data-square-sdk="true"]')) {
-          const script = document.createElement('script');
-          script.src = 'https://web.squarecdn.com/v1/square.js';
-          script.async = true;
-          script.dataset.squareSdk = 'true';
-          document.body.appendChild(script);
-          await new Promise<void>((resolve, reject) => {
-            script.onload = () => resolve();
-            script.onerror = () => reject(new Error('Failed to load Square SDK.'));
-          });
-        }
+        await ensureSquareSdkLoaded();
 
         if (!window.Square) {
           throw new Error('Square SDK unavailable.');
@@ -127,7 +161,12 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
     <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950 p-4">
       <div className="flex items-center justify-between gap-2 text-xs text-slate-400">
         <span>Card details</span>
-        <span className="inline-flex items-center gap-1 text-emerald-300"><Lock size={13} />256-bit SSL encryption</span>
+        <div className="inline-flex items-center gap-2">
+          <span className="inline-flex items-center gap-1 text-emerald-300"><Lock size={13} />256-bit SSL encryption</span>
+          <span className="rounded-full border border-slate-600 px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-300">
+            {environment}
+          </span>
+        </div>
       </div>
       <div id="square-card-container" className="min-h-20 rounded-lg border border-slate-700 bg-slate-900 p-2" />
       <button
