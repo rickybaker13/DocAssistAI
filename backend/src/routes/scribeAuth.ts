@@ -34,11 +34,6 @@ const authLimiter = rateLimit({
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
-function buildResetUrl(token: string): string {
-  const frontendBase = (process.env.FRONTEND_URL || 'http://localhost:8080').replace(/\/+$/, '');
-  return `${frontendBase}/scribe/reset-password?token=${encodeURIComponent(token)}`;
-}
-
 router.post('/register', authLimiter, async (req: Request, res: Response) => {
   const { email, password, name, specialty } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
@@ -74,25 +69,39 @@ router.post('/forgot-password', authLimiter, async (req: Request, res: Response)
 
   const user = await userModel.findByEmail(email);
   if (user) {
-    const resetToken = await userModel.createPasswordResetToken(user.id);
-    await emailService.sendPasswordResetEmail(user.email, buildResetUrl(resetToken));
+    const otp = await userModel.createPasswordResetOtp(user.id);
+    await emailService.sendPasswordResetOtpEmail(user.email, otp);
   }
 
-  return res.json({ ok: true, message: 'If an account exists for that email, a reset link has been sent.' });
+  return res.json({ ok: true, message: 'If an account exists for that email, a one-time code has been sent.' });
 });
 
 router.post('/reset-password', authLimiter, async (req: Request, res: Response) => {
-  const { token, password } = req.body;
-  if (typeof token !== 'string' || !token.trim()) {
-    return res.status(400).json({ error: 'Reset token is required' }) as any;
-  }
+  const { token, email, otp, password } = req.body;
   if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
     return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }) as any;
   }
 
-  const userId = await userModel.consumePasswordResetToken(token);
+  let userId: string | null = null;
+  if (typeof token === 'string' && token.trim()) {
+    userId = await userModel.consumePasswordResetToken(token);
+  } else {
+    if (typeof email !== 'string' || !EMAIL_RE.test(email)) {
+      return res.status(400).json({ error: 'Valid email address required' }) as any;
+    }
+    if (typeof otp !== 'string' || !/^\d{6}$/.test(otp)) {
+      return res.status(400).json({ error: 'A valid 6-digit OTP is required' }) as any;
+    }
+    const user = await userModel.findByEmail(email);
+    if (!user) {
+      return res.status(400).json({ error: 'Reset code is invalid or expired' }) as any;
+    }
+    const validOtp = await userModel.consumePasswordResetOtp(user.id, otp);
+    userId = validOtp ? user.id : null;
+  }
+
   if (!userId) {
-    return res.status(400).json({ error: 'Reset token is invalid or expired' }) as any;
+    return res.status(400).json({ error: 'Reset code is invalid or expired' }) as any;
   }
 
   const passwordHash = await bcrypt.hash(password, 12);

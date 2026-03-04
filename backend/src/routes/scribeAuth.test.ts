@@ -6,6 +6,7 @@ import { initPool, closePool } from '../database/db.js';
 import { runMigrations } from '../database/migrations.js';
 import scribeAuthRouter from './scribeAuth.js';
 import { ScribeUserModel } from '../models/scribeUser.js';
+import { emailService } from '../services/email/emailService.js';
 
 const app = express();
 app.use(express.json());
@@ -14,6 +15,7 @@ app.use('/api/scribe/auth', scribeAuthRouter);
 
 describe('Scribe Auth Routes', () => {
   const userModel = new ScribeUserModel();
+  const otpSpy = jest.spyOn(emailService, 'sendPasswordResetOtpEmail').mockResolvedValue();
   beforeAll(async () => {
     process.env.NODE_ENV = 'test';
     process.env.JWT_SECRET = 'test-secret';
@@ -69,17 +71,18 @@ describe('Scribe Auth Routes', () => {
     const res = await request(app).post('/api/scribe/auth/forgot-password').send({ email: 'unknown@test.com' });
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
+    expect(otpSpy).not.toHaveBeenCalledWith('unknown@test.com', expect.any(String));
   });
 
-  it('POST /reset-password — updates password with valid token', async () => {
+  it('POST /reset-password — updates password with valid OTP', async () => {
     await request(app).post('/api/scribe/auth/register').send({ email: 'reset@test.com', password: 'oldpassword123' });
-    const user = await userModel.findByEmail('reset@test.com');
-    expect(user).toBeTruthy();
-    const token = await userModel.createPasswordResetToken(user!.id);
+    await request(app).post('/api/scribe/auth/forgot-password').send({ email: 'reset@test.com' });
+    expect(otpSpy).toHaveBeenCalled();
+    const [, otp] = otpSpy.mock.calls[otpSpy.mock.calls.length - 1];
 
     const resetRes = await request(app)
       .post('/api/scribe/auth/reset-password')
-      .send({ token, password: 'newpassword123' });
+      .send({ email: 'reset@test.com', otp, password: 'newpassword123' });
     expect(resetRes.status).toBe(200);
 
     const loginRes = await request(app)
@@ -88,10 +91,21 @@ describe('Scribe Auth Routes', () => {
     expect(loginRes.status).toBe(200);
   });
 
-  it('POST /reset-password — rejects invalid token', async () => {
+  it('POST /reset-password — rejects invalid OTP', async () => {
     const res = await request(app)
       .post('/api/scribe/auth/reset-password')
-      .send({ token: 'invalid-token', password: 'newpassword123' });
+      .send({ email: 'reset@test.com', otp: '000000', password: 'newpassword123' });
     expect(res.status).toBe(400);
+  });
+
+  it('POST /reset-password — still supports token based reset links', async () => {
+    await request(app).post('/api/scribe/auth/register').send({ email: 'legacy@test.com', password: 'oldpassword123' });
+    const user = await userModel.findByEmail('legacy@test.com');
+    const token = await userModel.createPasswordResetToken(user!.id);
+
+    const resetRes = await request(app)
+      .post('/api/scribe/auth/reset-password')
+      .send({ token, password: 'legacynewpassword123' });
+    expect(resetRes.status).toBe(200);
   });
 });

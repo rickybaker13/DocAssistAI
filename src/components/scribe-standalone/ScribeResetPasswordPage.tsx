@@ -6,8 +6,11 @@ import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 export const ScribeResetPasswordPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const token = useMemo(() => searchParams.get('token') || '', [searchParams]);
+  const emailFromQuery = useMemo(() => searchParams.get('email') || '', [searchParams]);
   const navigate = useNavigate();
   const { resetPassword, loading, error } = useScribeAuthStore();
+  const [email, setEmail] = useState(emailFromQuery);
+  const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -17,8 +20,14 @@ export const ScribeResetPasswordPage: React.FC = () => {
     e.preventDefault();
     setLocalError(null);
     if (!token) {
-      setLocalError('Reset link is invalid. Request a new password reset email.');
-      return;
+      if (!email) {
+        setLocalError('Email is required.');
+        return;
+      }
+      if (!/^\d{6}$/.test(otp)) {
+        setLocalError('Enter the 6-digit code sent to your email.');
+        return;
+      }
     }
     if (password.length < 8) {
       setLocalError('Password must be at least 8 characters.');
@@ -28,7 +37,7 @@ export const ScribeResetPasswordPage: React.FC = () => {
       setLocalError('Passwords do not match.');
       return;
     }
-    const ok = await resetPassword(token, password);
+    const ok = await resetPassword({ token, email, otp, password });
     if (ok) {
       setSubmitted(true);
       setTimeout(() => navigate('/scribe/login'), 1200);
@@ -43,7 +52,7 @@ export const ScribeResetPasswordPage: React.FC = () => {
             <Sparkles size={28} className="text-slate-900" />
           </div>
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">Set New Password</h1>
-          <p className="text-sm text-slate-400 mt-1">Use at least 8 characters.</p>
+          <p className="text-sm text-slate-400 mt-1">Enter your email + one-time code, then choose a new password.</p>
         </div>
 
         <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8">
@@ -51,6 +60,35 @@ export const ScribeResetPasswordPage: React.FC = () => {
             <p className="text-sm text-emerald-400">Password updated. Redirecting to sign in…</p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
+              {!token && (
+                <>
+                  <div>
+                    <label htmlFor="email" className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-colors"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="otp" className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Verification Code</label>
+                    <input
+                      id="otp"
+                      type="text"
+                      required
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      value={otp}
+                      onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      placeholder="123456"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-colors"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label htmlFor="password" className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">New Password</label>
                 <input

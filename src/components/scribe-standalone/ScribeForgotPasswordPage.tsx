@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 
 export const ScribeForgotPasswordPage: React.FC = () => {
+  const navigate = useNavigate();
   const { requestPasswordReset, loading, error } = useScribeAuthStore();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -11,7 +12,10 @@ export const ScribeForgotPasswordPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = await requestPasswordReset(email);
-    if (ok) setSubmitted(true);
+    if (ok) {
+      setSubmitted(true);
+      setTimeout(() => navigate(`/scribe/reset-password?email=${encodeURIComponent(email)}`), 900);
+    }
   };
 
   return (
@@ -22,13 +26,13 @@ export const ScribeForgotPasswordPage: React.FC = () => {
             <Sparkles size={28} className="text-slate-900" />
           </div>
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">Forgot Password</h1>
-          <p className="text-sm text-slate-400 mt-1">We'll email a secure reset link.</p>
+          <p className="text-sm text-slate-400 mt-1">We'll email a one-time verification code.</p>
         </div>
 
         <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8">
           {submitted ? (
             <div className="space-y-3">
-              <p className="text-sm text-slate-300">If an account exists for <span className="text-slate-100 font-medium">{email}</span>, a reset link has been sent.</p>
+              <p className="text-sm text-slate-300">If an account exists for <span className="text-slate-100 font-medium">{email}</span>, a verification code has been sent.</p>
               <p className="text-xs text-slate-400">Check spam/junk if you do not see it in a few minutes.</p>
             </div>
           ) : (
@@ -52,7 +56,7 @@ export const ScribeForgotPasswordPage: React.FC = () => {
                 aria-busy={loading}
                 className="w-full bg-teal-400 text-slate-900 rounded-lg py-2.5 text-sm font-semibold hover:bg-teal-300 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Sending link…' : 'Send reset link'}
+                {loading ? 'Sending code…' : 'Send verification code'}
               </button>
             </form>
           )}
