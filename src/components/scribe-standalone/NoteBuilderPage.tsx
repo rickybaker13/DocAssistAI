@@ -7,6 +7,8 @@ import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { useNoteTemplates, NoteTemplate } from '../../hooks/useNoteTemplates';
 import { useScribeNoteStore, generateNoteId } from '../../stores/scribeNoteStore';
+import { useTemplatePreferences } from '../../hooks/useTemplatePreferences';
+import { buildCanvasSectionsFromTemplate } from '../../utils/noteTemplateUtils';
 
 const NOTE_TYPES = [
   { value: 'progress_note', label: 'Progress Note' },
@@ -39,17 +41,13 @@ export const NoteBuilderPage: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const { systemTemplates, userTemplates, loading: templatesLoading, deleteTemplate, saveTemplate } = useNoteTemplates(noteType);
+  const { systemTemplates, userTemplates, loading: templatesLoading, saveTemplate } = useNoteTemplates(noteType);
+  const { frequentTemplateIds, maxFrequentTemplates } = useTemplatePreferences();
+
+  const frequentTemplates = userTemplates.filter(t => frequentTemplateIds.includes(t.id)).slice(0, maxFrequentTemplates);
 
   const handleSelectTemplate = (tmpl: NoteTemplate) => {
-    const sections = (JSON.parse(tmpl.sections) as Array<{ name: string; promptHint: string | null }>).map((s, i) => ({
-      canvasId: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
-      templateId: `tmpl-${tmpl.id}-${i}`,
-      name: s.name,
-      promptHint: s.promptHint,
-      isPrebuilt: tmpl.user_id === null,
-    }));
-    setSelectedTemplate(tmpl.id, sections);
+    setSelectedTemplate(tmpl.id, buildCanvasSectionsFromTemplate(tmpl));
     setVerbosity(tmpl.verbosity as Verbosity);
   };
 
@@ -116,24 +114,26 @@ export const NoteBuilderPage: React.FC = () => {
             </div>
           </div>
         )}
-        {userTemplates.length > 0 && (
+        {frequentTemplates.length > 0 && (
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">My Templates</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">My Templates (Frequent)</p>
+              <button onClick={() => navigate('/scribe/templates')} className="text-xs text-teal-400 hover:underline">Manage</button>
+            </div>
             <div className="flex flex-wrap gap-2">
-              {userTemplates.map(tmpl => (
-                <div key={tmpl.id} className="flex items-center gap-1">
-                  <button onClick={() => handleSelectTemplate(tmpl)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedTemplateId === tmpl.id ? 'bg-teal-950 border-teal-400 text-teal-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>
-                    {tmpl.name}
-                  </button>
-                  <button onClick={() => deleteTemplate(tmpl.id)} aria-label={`Delete ${tmpl.name}`}
-                    className="text-slate-600 hover:text-red-400 text-xs px-1">×</button>
-                </div>
+              {frequentTemplates.map(tmpl => (
+                <button key={tmpl.id} onClick={() => handleSelectTemplate(tmpl)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${selectedTemplateId === tmpl.id ? 'bg-teal-950 border-teal-400 text-teal-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:text-slate-300'}`}>
+                  {tmpl.name}
+                </button>
               ))}
             </div>
           </div>
         )}
         {templatesLoading && <p className="text-xs text-slate-400">Loading templates...</p>}
+        {!templatesLoading && userTemplates.length > 0 && frequentTemplates.length === 0 && (
+          <p className="text-xs text-slate-500">No frequent templates selected yet. Use Templates → Manage to choose up to 3.</p>
+        )}
       </div>
 
       {/* Section builder */}
