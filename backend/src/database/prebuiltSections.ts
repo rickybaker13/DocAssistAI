@@ -24,6 +24,7 @@ export const PREBUILT_SECTIONS: PrebuiltSection[] = [
   { name: 'Medications',         promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Allergies',           promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Review of Systems',   promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
+  { name: 'Vital Signs',         promptHint: 'Temperature, blood pressure, heart rate, respiratory rate, oxygen saturation, weight, pain score', category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Physical Exam',       promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Assessment',          promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Plan',                promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
