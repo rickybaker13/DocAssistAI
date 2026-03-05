@@ -89,8 +89,10 @@ export const ScribeAccountPage: React.FC = () => {
         if (latest?.phone) {
           setPhone(latest.phone);
         }
-        if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
-          setNetwork(latest.network);
+      } catch {
+        historyFailed = true;
+        hadFailure = true;
+          hadFailure = true;
         }
       } else {
         historyFailed = true;
