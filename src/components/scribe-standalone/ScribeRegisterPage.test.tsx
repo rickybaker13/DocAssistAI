@@ -27,6 +27,7 @@ describe('ScribeRegisterPage', () => {
   it('renders a free 7-day trial offer and billing fields', () => {
     renderPage();
 
+    expect(screen.getByAltText(/square/i)).toBeInTheDocument();
     expect(screen.getByText(/start your free 7-day trial/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/cardholder name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/card number/i)).toBeInTheDocument();

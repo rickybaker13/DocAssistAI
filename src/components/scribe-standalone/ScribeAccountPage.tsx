@@ -14,7 +14,7 @@ interface BillingHistoryEntry {
 }
 
 interface BillingMethod {
-  id: 'square_card' | 'square_bitcoin';
+  id: 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay' | 'square_bitcoin';
   label: string;
   type: string;
 }
@@ -31,6 +31,9 @@ const DEFAULT_BILLING_OPTIONS: BillingOptionsResponse = {
   subscription: { monthlyPriceUsd: 20, trialDays: 7 },
   methods: [
     { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
+    { id: 'square_ach', label: 'Bank account (ACH via Square)', type: 'bank' },
+    { id: 'square_apple_pay', label: 'Apple Pay (Square)', type: 'wallet' },
+    { id: 'square_google_pay', label: 'Google Pay (Square)', type: 'wallet' },
     { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
   ],
 };
@@ -39,9 +42,9 @@ const ACCOUNT_DETAILS_FALLBACK_ERROR = 'Could not load all account details right
 const BILLING_HISTORY_ERROR = 'Could not load billing history yet. You can still choose a payment method below.';
 
 const SquareBadge: React.FC = () => (
-  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
-    <img src="/square-wordmark.svg" alt="Square" className="h-4 w-auto" />
-    <span className="text-xs font-medium text-emerald-200">PCI-compliant checkout</span>
+  <div className="inline-flex items-center gap-3 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-4 py-2">
+    <img src="/square-wordmark.svg" alt="Square" className="h-6 w-auto" />
+    <span className="text-sm font-medium text-emerald-200">PCI-compliant checkout</span>
   </div>
 );
 
@@ -239,6 +242,7 @@ export const ScribeAccountPage: React.FC = () => {
               <p className="text-xs text-slate-400">
                 Enter your card details below. Card number, CVV, and expiration are collected in Square's encrypted iframe.
               </p>
+              <p className="text-xs text-emerald-300">Use this form to update the credit card on file.</p>
               <SquareCardForm
                 phone={phone}
                 onSuccess={(msg) => {
@@ -276,7 +280,9 @@ export const ScribeAccountPage: React.FC = () => {
 
           {paymentMethod !== 'square_card' && !checkoutUrl && !loadingBilling && (
             <p className="text-xs text-amber-300">
-              If checkout is unavailable, set <code className="text-amber-200">SQUARE_CHECKOUT_URL</code> and{' '}
+              If checkout is unavailable, set <code className="text-amber-200">SQUARE_ACH_CHECKOUT_URL</code>,{' '}
+              <code className="text-amber-200">SQUARE_APPLE_PAY_CHECKOUT_URL</code>,{' '}
+              <code className="text-amber-200">SQUARE_GOOGLE_PAY_CHECKOUT_URL</code>, and{' '}
               <code className="text-amber-200">SQUARE_BITCOIN_CHECKOUT_URL</code> on the backend.
             </p>
           )}

@@ -95,6 +95,9 @@ export const ScribeRegisterPage: React.FC = () => {
         {/* Card */}
         <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8">
           <div className="mb-5 rounded-xl border border-teal-400/30 bg-teal-400/10 p-4">
+            <div className="mb-3 inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+              <img src="/square-wordmark.svg" alt="Square" className="h-6 w-auto" />
+            </div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-300">Limited-time offer</p>
             <h2 className="mt-1 text-lg font-semibold text-slate-50">Start your free 7-day trial</h2>
             <p className="mt-1 text-sm text-slate-300">

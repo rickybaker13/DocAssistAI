@@ -18,6 +18,9 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
     },
     methods: [
       { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
+      { id: 'square_ach', label: 'Bank account (ACH via Square)', type: 'bank' },
+      { id: 'square_apple_pay', label: 'Apple Pay (Square)', type: 'wallet' },
+      { id: 'square_google_pay', label: 'Google Pay (Square)', type: 'wallet' },
       { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
     ],
   });
@@ -130,7 +133,7 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
     network?: string;
   };
 
-  if (!paymentMethod || !['square_card', 'square_bitcoin'].includes(paymentMethod)) {
+  if (!paymentMethod || !['square_card', 'square_ach', 'square_apple_pay', 'square_google_pay', 'square_bitcoin'].includes(paymentMethod)) {
     return res.status(400).json({ error: 'Unsupported payment method' });
   }
 
@@ -161,6 +164,9 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
 
   const checkoutTargets: Record<PaymentMethod, string | undefined> = {
     square_card: process.env.SQUARE_CHECKOUT_URL,
+    square_ach: process.env.SQUARE_ACH_CHECKOUT_URL,
+    square_apple_pay: process.env.SQUARE_APPLE_PAY_CHECKOUT_URL,
+    square_google_pay: process.env.SQUARE_GOOGLE_PAY_CHECKOUT_URL,
     square_bitcoin: process.env.SQUARE_BITCOIN_CHECKOUT_URL,
   };
 
