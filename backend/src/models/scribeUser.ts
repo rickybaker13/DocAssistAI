@@ -7,6 +7,10 @@ export interface ScribeUser {
   password_hash: string;
   name: string | null;
   specialty: string | null;
+  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  trial_ends_at: string | null;
+  period_ends_at: string | null;
+  cancelled_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -20,7 +24,8 @@ export class ScribeUserModel {
     const pool = getPool();
     const id = randomUUID();
     await pool.query(
-      'INSERT INTO scribe_users (id, email, password_hash, name, specialty) VALUES ($1, $2, $3, $4, $5)',
+      `INSERT INTO scribe_users (id, email, password_hash, name, specialty, subscription_status, trial_ends_at)
+       VALUES ($1, $2, $3, $4, $5, 'trialing', NOW() + INTERVAL '7 days')`,
       [id, input.email, input.passwordHash, input.name ?? null, input.specialty ?? null]
     );
     return (await this.findById(id))!;
@@ -109,5 +114,83 @@ export class ScribeUserModel {
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
     const pool = getPool();
     await pool.query('UPDATE scribe_users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, userId]);
+  }
+
+  async activateSubscription(userId: string): Promise<ScribeUser | null> {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE scribe_users
+       SET subscription_status = 'active',
+           period_ends_at = NOW() + INTERVAL '30 days',
+           cancelled_at = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId],
+    );
+    return this.findById(userId);
+  }
+
+  async cancelSubscription(userId: string): Promise<{ success: boolean; error?: string; user?: ScribeUser }> {
+    const pool = getPool();
+    const user = await this.findById(userId);
+    if (!user) return { success: false, error: 'User not found' };
+
+    if (user.subscription_status === 'cancelled') {
+      return { success: false, error: 'Subscription is already cancelled.' };
+    }
+
+    // Determine period_ends_at:
+    // - If they have a current period_ends_at, keep it (they paid, use that date)
+    // - If they have billing history, use latest payment + 30 days
+    // - Otherwise fall back to trial_ends_at
+    let periodEndsAt = user.period_ends_at;
+
+    if (!periodEndsAt) {
+      const billingResult = await pool.query(
+        `SELECT created_at FROM scribe_billing_preferences
+         WHERE user_id = $1
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId],
+      );
+
+      if (billingResult.rows[0]) {
+        // Last payment + 30 days
+        const lastPayment = new Date(billingResult.rows[0].created_at);
+        lastPayment.setDate(lastPayment.getDate() + 30);
+        periodEndsAt = lastPayment.toISOString();
+      } else {
+        // No payment ever made — fall back to trial end
+        periodEndsAt = user.trial_ends_at;
+      }
+    }
+
+    await pool.query(
+      `UPDATE scribe_users
+       SET subscription_status = 'cancelled',
+           cancelled_at = NOW(),
+           period_ends_at = COALESCE($1::timestamptz, period_ends_at, trial_ends_at),
+           updated_at = NOW()
+       WHERE id = $2`,
+      [periodEndsAt, userId],
+    );
+
+    const updated = await this.findById(userId);
+    return { success: true, user: updated ?? undefined };
+  }
+
+  async getSubscriptionStatus(userId: string): Promise<{
+    subscription_status: string;
+    trial_ends_at: string | null;
+    period_ends_at: string | null;
+    cancelled_at: string | null;
+  } | null> {
+    const user = await this.findById(userId);
+    if (!user) return null;
+    return {
+      subscription_status: user.subscription_status,
+      trial_ends_at: user.trial_ends_at,
+      period_ends_at: user.period_ends_at,
+      cancelled_at: user.cancelled_at,
+    };
   }
 }

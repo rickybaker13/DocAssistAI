@@ -6,13 +6,17 @@ import { getPool } from './db.js';
 
 const CREATE_TABLES_SQL = `
 CREATE TABLE IF NOT EXISTS scribe_users (
-  id            TEXT PRIMARY KEY,
-  email         TEXT UNIQUE NOT NULL,
-  password_hash TEXT NOT NULL,
-  name          TEXT,
-  specialty     TEXT,
-  created_at    TIMESTAMPTZ DEFAULT NOW(),
-  updated_at    TIMESTAMPTZ DEFAULT NOW()
+  id                    TEXT PRIMARY KEY,
+  email                 TEXT UNIQUE NOT NULL,
+  password_hash         TEXT NOT NULL,
+  name                  TEXT,
+  specialty             TEXT,
+  subscription_status   TEXT NOT NULL DEFAULT 'trialing',
+  trial_ends_at         TIMESTAMPTZ,
+  period_ends_at        TIMESTAMPTZ,
+  cancelled_at          TIMESTAMPTZ,
+  created_at            TIMESTAMPTZ DEFAULT NOW(),
+  updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS scribe_section_templates (
@@ -94,6 +98,27 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'disciplines',
     sql: `ALTER TABLE scribe_section_templates ADD COLUMN disciplines TEXT DEFAULT '[]'`,
   },
+  // Subscription lifecycle tracking
+  {
+    table: 'scribe_users',
+    column: 'subscription_status',
+    sql: `ALTER TABLE scribe_users ADD COLUMN subscription_status TEXT NOT NULL DEFAULT 'trialing'`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'trial_ends_at',
+    sql: `ALTER TABLE scribe_users ADD COLUMN trial_ends_at TIMESTAMPTZ`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'period_ends_at',
+    sql: `ALTER TABLE scribe_users ADD COLUMN period_ends_at TIMESTAMPTZ`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'cancelled_at',
+    sql: `ALTER TABLE scribe_users ADD COLUMN cancelled_at TIMESTAMPTZ`,
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -125,4 +150,9 @@ export async function runMigrations(): Promise<void> {
       await pool.query(migration.sql);
     }
   }
+
+  // 3. Backfill trial_ends_at for existing users that don't have it set
+  await pool.query(
+    `UPDATE scribe_users SET trial_ends_at = created_at + INTERVAL '7 days' WHERE trial_ends_at IS NULL`,
+  );
 }

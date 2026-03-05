@@ -1,9 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, CircleCheck, CreditCard, KeyRound, Mail, MessageSquare } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CircleCheck, Clock, CreditCard, KeyRound, Mail, MessageSquare, XCircle } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
 import { SquareCardForm } from './SquareCardForm';
+
+interface SubscriptionStatus {
+  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  trial_ends_at: string | null;
+  period_ends_at: string | null;
+  cancelled_at: string | null;
+}
 
 interface BillingHistoryEntry {
   id: string;
@@ -60,6 +67,10 @@ export const ScribeAccountPage: React.FC = () => {
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loadingBilling, setLoadingBilling] = useState(false);
+  const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -105,6 +116,12 @@ export const ScribeAccountPage: React.FC = () => {
       }
 
       setError(loadError);
+
+      // Fetch subscription status
+      const statusData = await fetchJsonOrNull<SubscriptionStatus>(`${getBackendUrl()}/api/scribe/billing/status`);
+      if (statusData) {
+        setSubStatus(statusData);
+      }
     };
 
     load();
@@ -112,6 +129,37 @@ export const ScribeAccountPage: React.FC = () => {
 
   const latestPreference = history[0];
 
+  const formatDate = (iso: string | null) => {
+    if (!iso) return 'N/A';
+    return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  };
+
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true);
+    setCancelMessage(null);
+    setError(null);
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/billing/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Could not cancel subscription.');
+        return;
+      }
+      setCancelMessage(data.message || 'Subscription cancelled.');
+      setShowCancelConfirm(false);
+      // Refresh subscription status
+      const statusData = await fetchJsonOrNull<SubscriptionStatus>(`${getBackendUrl()}/api/scribe/billing/status`);
+      if (statusData) setSubStatus(statusData);
+    } catch {
+      setError('Could not cancel subscription. Please try again.');
+    } finally {
+      setCancelLoading(false);
+    }
+  };
 
   const handleBillingUpdate = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -168,26 +216,127 @@ export const ScribeAccountPage: React.FC = () => {
             <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Billing information</h2>
             <SquareBadge />
           </div>
-          <div className="flex items-center gap-2 text-sm text-emerald-400">
-            <CircleCheck size={16} />
-            <span>Active plan</span>
-          </div>
+
+          {/* Subscription status badge */}
+          {subStatus?.subscription_status === 'active' && (
+            <div className="flex items-center gap-2 text-sm text-emerald-400">
+              <CircleCheck size={16} />
+              <span>Active plan</span>
+              {subStatus.period_ends_at && (
+                <span className="text-xs text-slate-400 ml-1">
+                  — renews {formatDate(subStatus.period_ends_at)}
+                </span>
+              )}
+            </div>
+          )}
+          {subStatus?.subscription_status === 'trialing' && (
+            <div className="flex items-center gap-2 text-sm text-blue-400">
+              <Clock size={16} />
+              <span>Free trial</span>
+              {subStatus.trial_ends_at && (
+                <span className="text-xs text-slate-400 ml-1">
+                  — ends {formatDate(subStatus.trial_ends_at)}
+                </span>
+              )}
+            </div>
+          )}
+          {subStatus?.subscription_status === 'cancelled' && (
+            <div className="flex items-center gap-2 text-sm text-amber-400">
+              <XCircle size={16} />
+              <span>Cancelled</span>
+              {subStatus.period_ends_at && (
+                <span className="text-xs text-slate-400 ml-1">
+                  — access until {formatDate(subStatus.period_ends_at)}
+                </span>
+              )}
+            </div>
+          )}
+          {subStatus?.subscription_status === 'expired' && (
+            <div className="flex items-center gap-2 text-sm text-red-400">
+              <XCircle size={16} />
+              <span>Expired</span>
+            </div>
+          )}
+          {!subStatus && (
+            <div className="flex items-center gap-2 text-sm text-emerald-400">
+              <CircleCheck size={16} />
+              <span>Active plan</span>
+            </div>
+          )}
+
           <p className="text-sm text-slate-300">
             {`$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial.`}
           </p>
           <p className="text-xs text-slate-500">
-            Need to cancel? You can cancel anytime and your plan remains active through the current billing cycle.
-          </p>
-          <p className="text-xs text-slate-500">
             Payments are processed through Square secure checkout (embedded card form or hosted checkout link).
           </p>
-          <a
-            href="mailto:support@docassistai.com?subject=Cancel%20my%20DocAssist%20Scribe%20subscription"
-            className="inline-flex items-center gap-2 text-sm text-red-300 hover:text-red-200"
-          >
-            <AlertTriangle size={14} />
-            Cancel subscription
-          </a>
+
+          {/* Cancel message */}
+          {cancelMessage && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="text-sm text-amber-200">{cancelMessage}</p>
+            </div>
+          )}
+
+          {/* Cancelled state — show access-until info */}
+          {subStatus?.subscription_status === 'cancelled' && !cancelMessage && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+              <p className="text-sm text-amber-200">
+                Your subscription has been cancelled. You have full access until{' '}
+                <strong>{formatDate(subStatus.period_ends_at)}</strong>.
+              </p>
+            </div>
+          )}
+
+          {/* Cancel button — only show for active or trialing */}
+          {(subStatus?.subscription_status === 'active' || subStatus?.subscription_status === 'trialing') && !showCancelConfirm && (
+            <button
+              type="button"
+              onClick={() => setShowCancelConfirm(true)}
+              className="inline-flex items-center gap-2 text-sm text-red-300 hover:text-red-200 transition-colors"
+            >
+              <AlertTriangle size={14} />
+              Cancel subscription
+            </button>
+          )}
+
+          {/* Cancel confirmation dialog */}
+          {showCancelConfirm && (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 space-y-3">
+              <p className="text-sm text-red-200 font-medium">Are you sure you want to cancel?</p>
+              <p className="text-xs text-slate-300">
+                {subStatus?.subscription_status === 'active' && subStatus.period_ends_at
+                  ? `You'll keep full access until ${formatDate(subStatus.period_ends_at)}. After that, your subscription will not renew.`
+                  : subStatus?.subscription_status === 'trialing' && subStatus.trial_ends_at
+                    ? `You'll keep access until your trial ends on ${formatDate(subStatus.trial_ends_at)}.`
+                    : 'Your subscription will be cancelled immediately.'}
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleCancelSubscription}
+                  disabled={cancelLoading}
+                  className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {cancelLoading ? 'Cancelling...' : 'Yes, cancel my subscription'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="rounded-lg border border-slate-600 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800"
+                >
+                  Keep my subscription
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* No cancel button needed — already cancelled or expired */}
+          {!subStatus && (
+            <p className="text-xs text-slate-500">
+              Need to cancel? You can cancel anytime and your plan remains active through the current billing cycle.
+            </p>
+          )}
         </article>
 
         <form onSubmit={handleBillingUpdate} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">

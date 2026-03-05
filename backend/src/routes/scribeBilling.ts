@@ -139,6 +139,9 @@ router.post('/square-card-payment', scribeAuthMiddleware, async (req: Request, r
     paymentMethod: 'square_card',
   });
 
+  // Activate subscription: set status to 'active' and extend period by 30 days
+  await userModel.activateSubscription(req.scribeUserId!);
+
   return res.status(201).json({
     success: true,
     paymentId: squareData?.payment?.id ?? null,
@@ -204,6 +207,29 @@ router.post('/checkout-request', scribeAuthMiddleware, handleCheckoutRequest);
 
 // Backward-compatible endpoint for older account-page clients.
 router.post('/webhosted-checkout-link', scribeAuthMiddleware, handleCheckoutRequest);
+
+router.get('/status', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const status = await userModel.getSubscriptionStatus(req.scribeUserId!);
+  if (!status) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+  return res.json(status);
+});
+
+router.post('/cancel', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const result = await userModel.cancelSubscription(req.scribeUserId!);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json({
+    success: true,
+    cancelled_at: result.user?.cancelled_at ?? null,
+    period_ends_at: result.user?.period_ends_at ?? null,
+    message: result.user?.period_ends_at
+      ? `Subscription cancelled. You have access until ${new Date(result.user.period_ends_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}.`
+      : 'Subscription cancelled.',
+  });
+});
 
 router.get('/history', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const entries = await billingModel.listForUser(req.scribeUserId!);
