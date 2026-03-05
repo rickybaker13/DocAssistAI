@@ -30,7 +30,15 @@ interface SquareConfigResponse {
 
 const SQUARE_SDK_SELECTOR = 'script[data-square-sdk="true"]';
 
-const ensureSquareSdkLoaded = async (): Promise<void> => {
+const getSquareSdkUrl = (environment: 'sandbox' | 'production'): string => (
+  environment === 'production'
+    ? 'https://web.squarecdn.com/v1/square.js'
+    : 'https://sandbox.web.squarecdn.com/v1/square.js'
+);
+
+const ensureSquareSdkLoaded = async (environment: 'sandbox' | 'production'): Promise<void> => {
+  const desiredSdkUrl = getSquareSdkUrl(environment);
+
   if (window.Square) {
     return;
   }
@@ -38,21 +46,25 @@ const ensureSquareSdkLoaded = async (): Promise<void> => {
   const existingScript = document.querySelector<HTMLScriptElement>(SQUARE_SDK_SELECTOR);
 
   if (existingScript) {
-    await new Promise<void>((resolve, reject) => {
-      if (window.Square) {
-        resolve();
-        return;
-      }
+    if (existingScript.src !== desiredSdkUrl) {
+      existingScript.remove();
+    } else {
+      await new Promise<void>((resolve, reject) => {
+        if (window.Square) {
+          resolve();
+          return;
+        }
 
-      existingScript.addEventListener('load', () => resolve(), { once: true });
-      existingScript.addEventListener('error', () => reject(new Error('Failed to load Square SDK.')), { once: true });
-    });
+        existingScript.addEventListener('load', () => resolve(), { once: true });
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Square SDK.')), { once: true });
+      });
 
-    return;
+      return;
+    }
   }
 
   const script = document.createElement('script');
-  script.src = 'https://web.squarecdn.com/v1/square.js';
+  script.src = desiredSdkUrl;
   script.async = true;
   script.dataset.squareSdk = 'true';
   document.body.appendChild(script);
@@ -84,7 +96,7 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
         setEnvironment(cfg.environment === 'production' ? 'production' : 'sandbox');
         setEnabled(true);
 
-        await ensureSquareSdkLoaded();
+        await ensureSquareSdkLoaded(cfg.environment === 'production' ? 'production' : 'sandbox');
 
         if (!window.Square) {
           throw new Error('Square SDK unavailable.');
