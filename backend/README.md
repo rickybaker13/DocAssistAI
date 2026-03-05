@@ -80,6 +80,8 @@ ENABLE_PHI_REDACTION=false  # Set true to redact PHI before sending to AI
 ```env
 # Hosted Square link fallback for card billing preference flow
 SQUARE_CHECKOUT_URL=https://square.link/u/your-card-checkout-link
+# Optional alias supported by older clients
+SQUARE_WEBHOSTED_CHECKOUT_URL=https://square.link/u/your-card-checkout-link
 
 # Hosted Square link fallback for Bitcoin option
 SQUARE_BITCOIN_CHECKOUT_URL=https://square.link/u/your-bitcoin-checkout-link
@@ -102,6 +104,10 @@ SQUARE_ENVIRONMENT=sandbox
 4. Copy your Square access token to `SQUARE_ACCESS_TOKEN`.
 5. Set `SQUARE_ENVIRONMENT=sandbox` for testing (or `production` for live processing).
 6. Restart backend and verify `/api/scribe/billing/square-config` returns `enabled: true`.
+
+Compatibility notes:
+- Card config endpoint accepts aliases `SQUARE_APPLICATION_ID` / `SQUARE_APP_ID` and `SQUARE_TOKEN` / `SQUARE_SECRET_ACCESS_TOKEN` if your deployment uses those variable names.
+- Hosted card checkout endpoint is available at both `/api/scribe/billing/checkout-request` and `/api/scribe/billing/webhosted-checkout-link`.
 
 ### Frontend env vars for billing
 
