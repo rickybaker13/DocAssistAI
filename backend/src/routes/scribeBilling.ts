@@ -10,6 +10,30 @@ const userModel = new ScribeUserModel();
 
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 
+const firstEnv = (...keys: string[]): string | undefined => {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value && value.trim()) {
+      return value;
+    }
+  }
+
+  return undefined;
+};
+
+const getSquareConfig = () => {
+  const appId = firstEnv('SQUARE_WEB_APP_ID', 'SQUARE_APPLICATION_ID', 'SQUARE_APP_ID');
+  const locationId = firstEnv('SQUARE_LOCATION_ID', 'SQUARE_DEFAULT_LOCATION_ID');
+  const accessToken = firstEnv('SQUARE_ACCESS_TOKEN', 'SQUARE_TOKEN', 'SQUARE_SECRET_ACCESS_TOKEN');
+
+  return {
+    appId,
+    locationId,
+    accessToken,
+    environment: process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox' as const,
+  };
+};
+
 router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
   return res.json({
     subscription: {
@@ -28,17 +52,14 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
 
 
 router.get('/square-config', scribeAuthMiddleware, (_req: Request, res: Response) => {
-  const appId = process.env.SQUARE_WEB_APP_ID;
-  const locationId = process.env.SQUARE_LOCATION_ID;
-  const accessTokenConfigured = Boolean(process.env.SQUARE_ACCESS_TOKEN);
-  const environment = process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
+  const { appId, locationId, accessToken, environment } = getSquareConfig();
 
   return res.json({
     appId: appId ?? null,
     locationId: locationId ?? null,
-    accessTokenConfigured,
+    accessTokenConfigured: Boolean(accessToken),
     environment,
-    enabled: Boolean(appId && locationId && accessTokenConfigured),
+    enabled: Boolean(appId && locationId && accessToken),
   });
 });
 
@@ -61,9 +82,7 @@ router.post('/square-card-payment', scribeAuthMiddleware, async (req: Request, r
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const squareAccessToken = process.env.SQUARE_ACCESS_TOKEN;
-  const squareLocationId = process.env.SQUARE_LOCATION_ID;
-  const squareEnvironment = process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
+  const { accessToken: squareAccessToken, locationId: squareLocationId, environment: squareEnvironment } = getSquareConfig();
 
   if (!squareAccessToken || !squareLocationId) {
     return res.status(503).json({
@@ -128,7 +147,7 @@ router.post('/square-card-payment', scribeAuthMiddleware, async (req: Request, r
   });
 });
 
-router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res: Response) => {
+const handleCheckoutRequest = async (req: Request, res: Response) => {
   const { paymentMethod, phone, network } = req.body as {
     paymentMethod?: PaymentMethod;
     phone?: string;
@@ -165,7 +184,7 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
   });
 
   const checkoutTargets: Record<PaymentMethod, string | undefined> = {
-    square_card: process.env.SQUARE_CHECKOUT_URL,
+    square_card: firstEnv('SQUARE_CHECKOUT_URL', 'SQUARE_WEBHOSTED_CHECKOUT_URL'),
     square_ach: process.env.SQUARE_ACH_CHECKOUT_URL,
     square_apple_pay: process.env.SQUARE_APPLE_PAY_CHECKOUT_URL,
     square_google_pay: process.env.SQUARE_GOOGLE_PAY_CHECKOUT_URL,
@@ -179,7 +198,12 @@ router.post('/checkout-request', scribeAuthMiddleware, async (req: Request, res:
       ? 'Checkout link created. Redirect the user to this provider URL.'
       : 'Preference captured. Add provider checkout URLs in backend env vars to enable live checkout.',
   });
-});
+};
+
+router.post('/checkout-request', scribeAuthMiddleware, handleCheckoutRequest);
+
+// Backward-compatible endpoint for older account-page clients.
+router.post('/webhosted-checkout-link', scribeAuthMiddleware, handleCheckoutRequest);
 
 router.get('/history', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const entries = await billingModel.listForUser(req.scribeUserId!);
