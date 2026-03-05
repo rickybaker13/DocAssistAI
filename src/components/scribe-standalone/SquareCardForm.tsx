@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Lock } from 'lucide-react';
 import { getBackendUrl } from '../../config/appConfig';
 
@@ -8,6 +8,7 @@ declare global {
       payments: (appId: string, locationId: string) => Promise<{
         card: () => Promise<{
           attach: (selector: string) => Promise<void>;
+          destroy: () => Promise<void>;
           tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }>;
         }>;
       }>;
@@ -81,23 +82,54 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
   const [ready, setReady] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox');
-  const cardRef = useRef<{ tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }> } | null>(null);
+  const cardRef = useRef<{ tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }>; destroy: () => Promise<void> } | null>(null);
+  const initAttempted = useRef(false);
+
+  const initializeCard = useCallback(async () => {
+    if (!window.Square) {
+      onError('Square payments SDK failed to load.');
+      return;
+    }
+
+    try {
+      const cfgRes = await fetch(`${getBackendUrl()}/api/scribe/billing/square-config`, { credentials: 'include' });
+      const cfg = (await cfgRes.json()) as SquareConfigResponse;
+      if (!cfgRes.ok || !cfg.enabled || !cfg.appId || !cfg.locationId) {
+        return;
+      }
+
+      setEnvironment(cfg.environment === 'production' ? 'production' : 'sandbox');
+      setEnabled(true);
+
+      const payments = await window.Square.payments(cfg.appId, cfg.locationId);
+      const card = await payments.card();
+      await card.attach('#square-card-container');
+      cardRef.current = card;
+      setReady(true);
+    } catch (error) {
+      onError(error instanceof Error ? error.message : 'Unable to initialize Square payments.');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
+    if (initAttempted.current) return;
+    initAttempted.current = true;
 
     const init = async () => {
       try {
+        // Fetch config first to determine environment for SDK URL
         const cfgRes = await fetch(`${getBackendUrl()}/api/scribe/billing/square-config`, { credentials: 'include' });
         const cfg = (await cfgRes.json()) as SquareConfigResponse;
         if (!cfgRes.ok || !cfg.enabled || !cfg.appId || !cfg.locationId) {
           return;
         }
 
-        setEnvironment(cfg.environment === 'production' ? 'production' : 'sandbox');
+        const env = cfg.environment === 'production' ? 'production' : 'sandbox';
+        setEnvironment(env);
         setEnabled(true);
 
-        await ensureSquareSdkLoaded(cfg.environment === 'production' ? 'production' : 'sandbox');
+        await ensureSquareSdkLoaded(env);
 
         if (!window.Square) {
           throw new Error('Square SDK unavailable.');
@@ -107,23 +139,22 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
         const card = await payments.card();
         await card.attach('#square-card-container');
         cardRef.current = card;
-
-        if (mounted) {
-          setReady(true);
-        }
+        setReady(true);
       } catch (error) {
-        if (mounted) {
-          onError(error instanceof Error ? error.message : 'Unable to initialize Square payments.');
-        }
+        onError(error instanceof Error ? error.message : 'Unable to initialize Square payments.');
       }
     };
 
     init();
 
     return () => {
-      mounted = false;
+      if (cardRef.current) {
+        cardRef.current.destroy().catch(() => {});
+        cardRef.current = null;
+      }
     };
-  }, [onError]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handlePay = async () => {
     if (!cardRef.current) {
