@@ -77,7 +77,7 @@ export const ScribeRegisterPage: React.FC = () => {
     }
     setBillingError(null);
     const ok = await register(form.email, form.password, form.name, form.specialty);
-    if (ok) navigate('/scribe/dashboard');
+    if (ok) navigate('/scribe/account');
   };
 
   return (

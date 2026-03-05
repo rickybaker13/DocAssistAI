@@ -27,6 +27,17 @@ interface BillingOptionsResponse {
   methods: BillingMethod[];
 }
 
+const DEFAULT_BILLING_OPTIONS: BillingOptionsResponse = {
+  subscription: { monthlyPriceUsd: 20, trialDays: 7 },
+  methods: [
+    { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
+    { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
+  ],
+};
+
+const ACCOUNT_DETAILS_FALLBACK_ERROR = 'Could not load all account details right now. Showing billing defaults while connection recovers.';
+const BILLING_HISTORY_ERROR = 'Could not load billing history yet. You can still choose a payment method below.';
+
 const SquareBadge: React.FC = () => (
   <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1">
     <img src="/square-wordmark.svg" alt="Square" className="h-4 w-auto" />
@@ -50,6 +61,8 @@ export const ScribeAccountPage: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       let hadFailure = false;
+      let historyFailed = false;
+      let loadError: string | null = null;
 
       try {
         const optionsRes = await fetch(`${getBackendUrl()}/api/scribe/billing/options`, { credentials: 'include' });
@@ -60,6 +73,14 @@ export const ScribeAccountPage: React.FC = () => {
             setPaymentMethod(optionsData.methods[0].id);
           }
         } else {
+          setOptions(DEFAULT_BILLING_OPTIONS);
+          hadFailure = true;
+          loadError = ACCOUNT_DETAILS_FALLBACK_ERROR;
+        }
+      } catch {
+        setOptions(DEFAULT_BILLING_OPTIONS);
+        hadFailure = true;
+        loadError = ACCOUNT_DETAILS_FALLBACK_ERROR;
           hadFailure = true;
         }
       } catch {
@@ -83,6 +104,12 @@ export const ScribeAccountPage: React.FC = () => {
             setNetwork(latest.network);
           }
         } else {
+          historyFailed = true;
+          hadFailure = true;
+        }
+      } catch {
+        historyFailed = true;
+        hadFailure = true;
           hadFailure = true;
         }
       } catch {
@@ -92,6 +119,14 @@ export const ScribeAccountPage: React.FC = () => {
       if (hadFailure) {
         setError('Could not load all account details right now.');
       }
+
+      if (historyFailed) {
+        loadError = BILLING_HISTORY_ERROR;
+      } else if (hadFailure) {
+        loadError = loadError ?? 'Could not load all account details right now.';
+      }
+
+      setError(loadError);
     };
 
     load();
