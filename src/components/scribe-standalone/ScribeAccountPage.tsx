@@ -64,60 +64,35 @@ export const ScribeAccountPage: React.FC = () => {
       let historyFailed = false;
       let loadError: string | null = null;
 
-      try {
-        const optionsRes = await fetch(`${getBackendUrl()}/api/scribe/billing/options`, { credentials: 'include' });
-        if (optionsRes.ok) {
-          const optionsData = (await optionsRes.json()) as BillingOptionsResponse;
-          setOptions(optionsData);
-          if (optionsData.methods.length > 0) {
-            setPaymentMethod(optionsData.methods[0].id);
-          }
-        } else {
-          setOptions(DEFAULT_BILLING_OPTIONS);
-          hadFailure = true;
-          loadError = ACCOUNT_DETAILS_FALLBACK_ERROR;
+      const optionsData = await fetchJsonOrNull<BillingOptionsResponse>(`${getBackendUrl()}/api/scribe/billing/options`);
+      if (optionsData) {
+        setOptions(optionsData);
+        if (optionsData.methods.length > 0) {
+          setPaymentMethod(optionsData.methods[0].id);
         }
-      } catch {
+      } else {
         setOptions(DEFAULT_BILLING_OPTIONS);
         hadFailure = true;
         loadError = ACCOUNT_DETAILS_FALLBACK_ERROR;
-          hadFailure = true;
-        }
-      } catch {
-        hadFailure = true;
       }
 
-      try {
-        const historyRes = await fetch(`${getBackendUrl()}/api/scribe/billing/history`, { credentials: 'include' });
-        if (historyRes.ok) {
-          const historyData = await historyRes.json();
-          const latest = historyData.entries?.[0] as BillingHistoryEntry | undefined;
+      const historyData = await fetchJsonOrNull<{ entries?: BillingHistoryEntry[] }>(`${getBackendUrl()}/api/scribe/billing/history`);
+      if (historyData) {
+        const latest = historyData.entries?.[0] as BillingHistoryEntry | undefined;
 
-          setHistory(historyData.entries || []);
-          if (latest?.paymentMethod) {
-            setPaymentMethod((latest.paymentMethod === 'bitcoin' ? 'square_bitcoin' : latest.paymentMethod) as BillingMethod['id']);
-          }
-          if (latest?.phone) {
-            setPhone(latest.phone);
-          }
-          if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
-            setNetwork(latest.network);
-          }
-        } else {
-          historyFailed = true;
-          hadFailure = true;
+        setHistory(historyData.entries || []);
+        if (latest?.paymentMethod) {
+          setPaymentMethod((latest.paymentMethod === 'bitcoin' ? 'square_bitcoin' : latest.paymentMethod) as BillingMethod['id']);
         }
-      } catch {
+        if (latest?.phone) {
+          setPhone(latest.phone);
+        }
+        if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
+          setNetwork(latest.network);
+        }
+      } else {
         historyFailed = true;
         hadFailure = true;
-          hadFailure = true;
-        }
-      } catch {
-        hadFailure = true;
-      }
-
-      if (hadFailure) {
-        setError('Could not load all account details right now.');
       }
 
       if (historyFailed) {
