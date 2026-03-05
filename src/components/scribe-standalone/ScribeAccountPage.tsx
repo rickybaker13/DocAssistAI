@@ -52,7 +52,7 @@ export const ScribeAccountPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useScribeAuthStore();
   const [history, setHistory] = useState<BillingHistoryEntry[]>([]);
-  const [options, setOptions] = useState<BillingOptionsResponse | null>(null);
+  const [options, setOptions] = useState<BillingOptionsResponse>(DEFAULT_BILLING_OPTIONS);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
   const [phone, setPhone] = useState('');
   const [network, setNetwork] = useState<'bitcoin' | 'lightning'>('bitcoin');
@@ -173,9 +173,7 @@ export const ScribeAccountPage: React.FC = () => {
             <span>Active plan</span>
           </div>
           <p className="text-sm text-slate-300">
-            {options
-              ? `$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial.`
-              : 'Loading subscription pricing...'}
+            {`$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial.`}
           </p>
           <p className="text-xs text-slate-500">
             Need to cancel? You can cancel anytime and your plan remains active through the current billing cycle.
@@ -199,10 +197,10 @@ export const ScribeAccountPage: React.FC = () => {
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value as BillingMethod['id'])}
-              disabled={!options || options.methods.length === 0}
+              disabled={options.methods.length === 0}
               className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
             >
-              {(options?.methods ?? []).map((method) => (
+              {options.methods.map((method) => (
                 <option key={method.id} value={method.id}>
                   {method.label}
                 </option>
@@ -237,7 +235,7 @@ export const ScribeAccountPage: React.FC = () => {
             />
           </div>
 
-          {paymentMethod === 'square_card' && options && options.methods.some((m) => m.id === 'square_card') && (
+          {paymentMethod === 'square_card' && options.methods.some((m) => m.id === 'square_card') && (
             <div className="space-y-2">
               <p className="text-xs text-slate-400">
                 Enter your card details below. Card number, CVV, and expiration are collected in Square's encrypted iframe.
@@ -289,7 +287,7 @@ export const ScribeAccountPage: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loadingBilling || !options}
+            disabled={loadingBilling}
             className="inline-flex items-center gap-2 bg-teal-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
           >
             <CreditCard size={14} />
@@ -320,4 +318,15 @@ export const ScribeAccountPage: React.FC = () => {
       </div>
     </section>
   );
+};
+
+
+const fetchJsonOrNull = async <T,>(url: string): Promise<T | null> => {
+  try {
+    const res = await fetch(url, { credentials: 'include' });
+    if (!res.ok) return null;
+    return (await res.json()) as T;
+  } catch {
+    return null;
+  }
 };
