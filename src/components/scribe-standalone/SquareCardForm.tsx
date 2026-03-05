@@ -5,12 +5,12 @@ import { getBackendUrl } from '../../config/appConfig';
 declare global {
   interface Window {
     Square?: {
-      payments: (appId: string, locationId: string) => {
+      payments: (appId: string, locationId: string) => Promise<{
         card: () => Promise<{
           attach: (selector: string) => Promise<void>;
           tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }>;
         }>;
-      };
+      }>;
     };
   }
 }
@@ -103,7 +103,7 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
           throw new Error('Square SDK unavailable.');
         }
 
-        const payments = window.Square.payments(cfg.appId, cfg.locationId);
+        const payments = await window.Square.payments(cfg.appId, cfg.locationId);
         const card = await payments.card();
         await card.attach('#square-card-container');
         cardRef.current = card;
