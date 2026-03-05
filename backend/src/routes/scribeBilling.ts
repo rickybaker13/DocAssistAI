@@ -30,13 +30,15 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
 router.get('/square-config', scribeAuthMiddleware, (_req: Request, res: Response) => {
   const appId = process.env.SQUARE_WEB_APP_ID;
   const locationId = process.env.SQUARE_LOCATION_ID;
+  const accessTokenConfigured = Boolean(process.env.SQUARE_ACCESS_TOKEN);
   const environment = process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
 
   return res.json({
     appId: appId ?? null,
     locationId: locationId ?? null,
+    accessTokenConfigured,
     environment,
-    enabled: Boolean(appId && locationId),
+    enabled: Boolean(appId && locationId && accessTokenConfigured),
   });
 });
 
