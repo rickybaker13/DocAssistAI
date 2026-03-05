@@ -49,22 +49,25 @@ export const ScribeAccountPage: React.FC = () => {
 
   useEffect(() => {
     const load = async () => {
-      try {
-        const [historyRes, optionsRes] = await Promise.all([
-          fetch(`${getBackendUrl()}/api/scribe/billing/history`, { credentials: 'include' }),
-          fetch(`${getBackendUrl()}/api/scribe/billing/options`, { credentials: 'include' }),
-        ]);
+      let hadFailure = false;
 
-        if (!historyRes.ok || !optionsRes.ok) {
-          throw new Error('Unable to load account details.');
+      const optionsRes = await fetch(`${getBackendUrl()}/api/scribe/billing/options`, { credentials: 'include' }).catch(() => null);
+      if (optionsRes?.ok) {
+        const optionsData = (await optionsRes.json()) as BillingOptionsResponse;
+        setOptions(optionsData);
+        if (optionsData.methods.length > 0) {
+          setPaymentMethod(optionsData.methods[0].id);
         }
+      } else {
+        hadFailure = true;
+      }
 
+      const historyRes = await fetch(`${getBackendUrl()}/api/scribe/billing/history`, { credentials: 'include' }).catch(() => null);
+      if (historyRes?.ok) {
         const historyData = await historyRes.json();
-        const optionsData = await optionsRes.json();
         const latest = historyData.entries?.[0] as BillingHistoryEntry | undefined;
 
         setHistory(historyData.entries || []);
-        setOptions(optionsData);
         if (latest?.paymentMethod) {
           setPaymentMethod((latest.paymentMethod === 'bitcoin' ? 'square_bitcoin' : latest.paymentMethod) as BillingMethod['id']);
         }
@@ -74,7 +77,11 @@ export const ScribeAccountPage: React.FC = () => {
         if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
           setNetwork(latest.network);
         }
-      } catch {
+      } else {
+        hadFailure = true;
+      }
+
+      if (hadFailure) {
         setError('Could not load all account details right now.');
       }
     };
@@ -171,6 +178,7 @@ export const ScribeAccountPage: React.FC = () => {
             <select
               value={paymentMethod}
               onChange={(e) => setPaymentMethod(e.target.value as BillingMethod['id'])}
+              disabled={!options || options.methods.length === 0}
               className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
             >
               {(options?.methods ?? []).map((method) => (
@@ -208,7 +216,7 @@ export const ScribeAccountPage: React.FC = () => {
             />
           </div>
 
-          {paymentMethod === 'square_card' && (
+          {paymentMethod === 'square_card' && options && options.methods.some((m) => m.id === 'square_card') && (
             <div className="space-y-2">
               <p className="text-xs text-slate-400">
                 Enter your card details below. Card number, CVV, and expiration are collected in Square's encrypted iframe.

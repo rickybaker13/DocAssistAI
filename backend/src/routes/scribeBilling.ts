@@ -27,10 +27,12 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
 router.get('/square-config', scribeAuthMiddleware, (_req: Request, res: Response) => {
   const appId = process.env.SQUARE_WEB_APP_ID;
   const locationId = process.env.SQUARE_LOCATION_ID;
+  const environment = process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox';
 
   return res.json({
     appId: appId ?? null,
     locationId: locationId ?? null,
+    environment,
     enabled: Boolean(appId && locationId),
   });
 });
@@ -91,7 +93,13 @@ router.post('/square-card-payment', scribeAuthMiddleware, async (req: Request, r
     body: JSON.stringify(paymentBody),
   });
 
-  const squareData = await squareRes.json();
+  const squareData = (await squareRes.json()) as {
+    errors?: unknown;
+    payment?: {
+      id?: string;
+      status?: string;
+    };
+  };
 
   if (!squareRes.ok) {
     return res.status(502).json({
