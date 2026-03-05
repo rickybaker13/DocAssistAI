@@ -14,10 +14,10 @@ interface SubscriptionStatus {
 
 interface BillingHistoryEntry {
   id: string;
-  paymentMethod: string;
+  payment_method: string;
   network?: string | null;
   phone?: string | null;
-  createdAt: string;
+  created_at: string;
 }
 
 interface BillingMethod {
@@ -95,8 +95,8 @@ export const ScribeAccountPage: React.FC = () => {
         const latest = historyData.entries?.[0] as BillingHistoryEntry | undefined;
 
         setHistory(historyData.entries || []);
-        if (latest?.paymentMethod) {
-          setPaymentMethod((latest.paymentMethod === 'bitcoin' ? 'square_bitcoin' : latest.paymentMethod) as BillingMethod['id']);
+        if (latest?.payment_method) {
+          setPaymentMethod((latest.payment_method === 'bitcoin' ? 'square_bitcoin' : latest.payment_method) as BillingMethod['id']);
         }
         if (latest?.phone) {
           setPhone(latest.phone);
@@ -406,7 +406,7 @@ export const ScribeAccountPage: React.FC = () => {
 
           <p className="text-sm text-slate-300">
             {latestPreference
-              ? `Current preference: ${latestPreference.paymentMethod.replace('_', ' ')}${latestPreference.network ? ` on ${latestPreference.network}` : ''}.`
+              ? `Current preference: ${latestPreference.payment_method.replace('_', ' ')}${latestPreference.network ? ` on ${latestPreference.network}` : ''}.`
               : 'No payment method selected yet.'}
           </p>
 
