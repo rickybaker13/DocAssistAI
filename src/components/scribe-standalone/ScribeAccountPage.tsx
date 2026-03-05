@@ -64,9 +64,8 @@ export const ScribeAccountPage: React.FC = () => {
       let historyFailed = false;
       let loadError: string | null = null;
 
-      const optionsRes = await fetch(`${getBackendUrl()}/api/scribe/billing/options`, { credentials: 'include' }).catch(() => null);
-      if (optionsRes?.ok) {
-        const optionsData = (await optionsRes.json()) as BillingOptionsResponse;
+      const optionsData = await fetchJsonOrNull<BillingOptionsResponse>(`${getBackendUrl()}/api/scribe/billing/options`);
+      if (optionsData) {
         setOptions(optionsData);
         if (optionsData.methods.length > 0) {
           setPaymentMethod(optionsData.methods[0].id);
@@ -77,9 +76,8 @@ export const ScribeAccountPage: React.FC = () => {
         loadError = ACCOUNT_DETAILS_FALLBACK_ERROR;
       }
 
-      const historyRes = await fetch(`${getBackendUrl()}/api/scribe/billing/history`, { credentials: 'include' }).catch(() => null);
-      if (historyRes?.ok) {
-        const historyData = await historyRes.json();
+      const historyData = await fetchJsonOrNull<{ entries?: BillingHistoryEntry[] }>(`${getBackendUrl()}/api/scribe/billing/history`);
+      if (historyData) {
         const latest = historyData.entries?.[0] as BillingHistoryEntry | undefined;
 
         setHistory(historyData.entries || []);
@@ -89,10 +87,8 @@ export const ScribeAccountPage: React.FC = () => {
         if (latest?.phone) {
           setPhone(latest.phone);
         }
-      } catch {
-        historyFailed = true;
-        hadFailure = true;
-          hadFailure = true;
+        if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
+          setNetwork(latest.network);
         }
       } else {
         historyFailed = true;
