@@ -24,6 +24,7 @@ interface Props {
 interface SquareConfigResponse {
   appId: string | null;
   locationId: string | null;
+  accessTokenConfigured?: boolean;
   environment?: 'sandbox' | 'production';
   enabled: boolean;
 }
@@ -163,7 +164,7 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
   if (!enabled) {
     return (
       <p className="text-xs text-amber-300">
-        Square card entry is not enabled yet. Configure <code className="text-amber-200">SQUARE_WEB_APP_ID</code>,{' '}
+        Square card entry is not enabled yet. Configure backend env vars <code className="text-amber-200">SQUARE_WEB_APP_ID</code>,{' '}
         <code className="text-amber-200">SQUARE_LOCATION_ID</code>, and <code className="text-amber-200">SQUARE_ACCESS_TOKEN</code>.
       </p>
     );
