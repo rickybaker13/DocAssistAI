@@ -45,7 +45,7 @@ const features = [
     icon: MessageSquare,
     title: 'AI Chat Assistant',
     description:
-      'Ask questions about your note, get clinical guidance, or request changes — all through a conversational interface.',
+      'Ask questions about your note or request changes — all through a conversational interface.',
   },
   {
     icon: Smartphone,

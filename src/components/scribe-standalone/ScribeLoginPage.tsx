@@ -27,7 +27,7 @@ export const ScribeLoginPage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-400 rounded-2xl mb-4">
             <Sparkles size={28} className="text-slate-900" />
           </div>
-          <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">DocAssist Scribe</h1>
+          <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">DocAssistAI</h1>
           <p className="text-sm text-slate-400 mt-1">Clinical documentation, simplified</p>
         </div>
 

@@ -41,7 +41,7 @@ export const ScribeLayout: React.FC = () => {
           <div className="w-8 h-8 bg-teal-400 rounded-lg flex items-center justify-center flex-shrink-0">
             <Sparkles size={18} className="text-slate-900" />
           </div>
-          <span className="font-semibold text-slate-50 text-sm tracking-tight">DocAssist Scribe</span>
+          <span className="font-semibold text-slate-50 text-sm tracking-tight">DocAssistAI</span>
         </div>
 
         {/* Nav items */}
@@ -95,7 +95,7 @@ export const ScribeLayout: React.FC = () => {
             <div className="w-7 h-7 bg-teal-400 rounded-md flex items-center justify-center">
               <Sparkles size={15} className="text-slate-900" />
             </div>
-            <span className="font-semibold text-slate-50 text-sm">DocAssist Scribe</span>
+            <span className="font-semibold text-slate-50 text-sm">DocAssistAI</span>
           </div>
           {user && (
             <button onClick={handleLogout} className="text-xs text-slate-500 hover:text-red-400 transition-colors">

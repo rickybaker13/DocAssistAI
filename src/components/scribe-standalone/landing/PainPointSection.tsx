@@ -23,7 +23,7 @@ export default function PainPointSection() {
         Documentation Shouldn&apos;t Be a Burden
       </h2>
       <p className="text-base text-slate-400 text-center max-w-2xl mx-auto mb-16">
-        See how DocAssist Scribe transforms the documentation process from a
+        See how DocAssistAI transforms the documentation process from a
         time-consuming chore into an effortless workflow.
       </p>
 
@@ -86,7 +86,7 @@ export default function PainPointSection() {
           </ul>
         </motion.div>
 
-        {/* Right card — With DocAssist Scribe */}
+        {/* Right card — With DocAssistAI */}
         <motion.div
           className="bg-slate-900 border border-teal-400/20 rounded-2xl p-8 space-y-6"
           initial={{ opacity: 0, x: 30 }}
@@ -98,7 +98,7 @@ export default function PainPointSection() {
           <div className="flex items-center gap-3">
             <Sparkles className="h-5 w-5 text-teal-400" />
             <span className="text-lg font-semibold text-slate-200">
-              With DocAssist Scribe
+              With DocAssistAI
             </span>
           </div>
 

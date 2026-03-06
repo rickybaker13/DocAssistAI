@@ -7,7 +7,7 @@ export default function LandingFooter() {
       {/* Logo */}
       <div className="flex items-center justify-center gap-2">
         <Sparkles className="h-6 w-6 text-teal-400" />
-        <span className="text-xl font-bold text-slate-50">DocAssist Scribe</span>
+        <span className="text-xl font-bold text-slate-50">DocAssistAI</span>
       </div>
 
       {/* Social media links */}

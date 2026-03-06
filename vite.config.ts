@@ -10,14 +10,14 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg', 'generated/icon-192.png', 'generated/icon-512.png', 'generated/apple-touch-icon.png'],
       manifest: {
-        name: 'DocAssist Scribe',
-        short_name: 'Scribe',
+        name: 'DocAssistAI',
+        short_name: 'DocAI',
         description: 'AI-powered clinical documentation assistant',
         theme_color: '#0f172a',
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/scribe/login',
+        start_url: '/',
         scope: '/',
         icons: [
           { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },

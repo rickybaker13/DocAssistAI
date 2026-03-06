@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ScribeLayout } from './ScribeLayout';
 
 describe('ScribeLayout', () => {
-  it('renders the DocAssist Scribe brand name', () => {
+  it('renders the DocAssistAI brand name', () => {
     render(
       <MemoryRouter initialEntries={['/scribe/dashboard']}>
         <Routes>
@@ -13,7 +13,7 @@ describe('ScribeLayout', () => {
         </Routes>
       </MemoryRouter>
     );
-    expect(screen.getAllByText(/DocAssist Scribe/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/DocAssistAI/i).length).toBeGreaterThanOrEqual(1);
   });
 
 

@@ -5,7 +5,6 @@ import HeroSection from './landing/HeroSection';
 import PainPointSection from './landing/PainPointSection';
 import HowItWorksSection from './landing/HowItWorksSection';
 import FeaturesGrid from './landing/FeaturesGrid';
-import DemoSlot from './landing/DemoSlot';
 import PricingCTA from './landing/PricingCTA';
 import LandingFooter from './landing/LandingFooter';
 
@@ -41,7 +40,7 @@ export default function ScribeLandingPage() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-400">
               <Sparkles size={18} className="text-slate-900" />
             </div>
-            <span className="text-lg font-bold text-slate-50">DocAssist Scribe</span>
+            <span className="text-lg font-bold text-slate-50">DocAssistAI</span>
           </Link>
 
           {/* Desktop links */}
@@ -120,7 +119,6 @@ export default function ScribeLandingPage() {
         <PainPointSection />
         <HowItWorksSection />
         <FeaturesGrid />
-        <DemoSlot />
         <PricingCTA />
       </main>
 

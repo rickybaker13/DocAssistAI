@@ -45,7 +45,7 @@ export const InstallMobileAppCard: React.FC = () => {
           <div className="space-y-1">
             <h2 className="text-base font-semibold text-slate-50">Install on mobile</h2>
             <p className="text-sm text-slate-400">
-              Add DocAssist Scribe to your phone home screen for an app-like experience.
+              Add DocAssistAI to your phone home screen for an app-like experience.
             </p>
           </div>
         </div>
@@ -92,7 +92,7 @@ export const InstallMobileAppCard: React.FC = () => {
                 Choose <span className="font-medium text-slate-100">Add to Home Screen</span>.
               </li>
               <li>
-                Confirm, then launch DocAssist Scribe from your home screen like a native app.
+                Confirm, then launch DocAssistAI from your home screen like a native app.
               </li>
             </ol>
 

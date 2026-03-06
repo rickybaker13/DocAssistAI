@@ -32,7 +32,7 @@ export const SquareApplePayButton: React.FC<Props> = ({ phone, onSuccess, onErro
         const paymentRequest = {
           countryCode: 'US',
           currencyCode: 'USD',
-          total: { amount: '20.00', label: 'DocAssist Scribe' },
+          total: { amount: '20.00', label: 'DocAssistAI' },
         };
 
         try {
