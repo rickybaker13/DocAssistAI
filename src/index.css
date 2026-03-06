@@ -36,3 +36,19 @@ body {
 
 /* JetBrains Mono for clinical IDs */
 .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+/* Landing page waveform animation */
+@keyframes waveform {
+  0%, 100% { transform: scaleY(var(--min-scale, 0.3)); }
+  50% { transform: scaleY(var(--max-scale, 1)); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes skeleton-fill {
+  from { width: 0%; }
+  to { width: var(--target-width, 80%); }
+}

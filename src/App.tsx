@@ -12,11 +12,13 @@ import { ScribeDashboardPage } from './components/scribe-standalone/ScribeDashbo
 import { ScribeSettingsPage } from './components/scribe-standalone/ScribeSettingsPage';
 import { ScribeAccountPage } from './components/scribe-standalone/ScribeAccountPage';
 import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
+import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<ScribeLandingPage />} />
         <Route path="/scribe/login" element={<ScribeLoginPage />} />
         <Route path="/scribe/register" element={<ScribeRegisterPage />} />
         <Route path="/scribe/forgot-password" element={<ScribeForgotPasswordPage />} />
