@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 
 export const ScribeAuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, fetchMe, loading } = useScribeAuthStore();
+  const { user, fetchMe, loading, subscriptionStatus, fetchSubscriptionStatus } = useScribeAuthStore();
   const [checked, setChecked] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) {
@@ -13,6 +15,23 @@ export const ScribeAuthGuard: React.FC<{ children: React.ReactNode }> = ({ child
       setChecked(true);
     }
   }, []);
+
+  // Fetch subscription status after auth resolves
+  useEffect(() => {
+    if (checked && user) {
+      fetchSubscriptionStatus();
+    }
+  }, [checked, user]);
+
+  // Redirect expired users to account page (except if already there)
+  useEffect(() => {
+    if (
+      subscriptionStatus?.subscription_status === 'expired' &&
+      location.pathname !== '/scribe/account'
+    ) {
+      navigate('/scribe/account?expired=true', { replace: true });
+    }
+  }, [subscriptionStatus, location.pathname]);
 
   if (!checked || loading) {
     return (

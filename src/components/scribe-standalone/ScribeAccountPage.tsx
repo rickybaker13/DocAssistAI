@@ -60,6 +60,8 @@ const SquareBadge: React.FC = () => (
 export const ScribeAccountPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useScribeAuthStore();
+  const searchParams = new URLSearchParams(window.location.search);
+  const expiredParam = searchParams.get('expired') === 'true';
   const [history, setHistory] = useState<BillingHistoryEntry[]>([]);
   const [options, setOptions] = useState<BillingOptionsResponse>(DEFAULT_BILLING_OPTIONS);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
@@ -206,6 +208,18 @@ export const ScribeAccountPage: React.FC = () => {
           Manage billing, payment method, password, and your contact information from one place.
         </p>
       </header>
+
+      {(expiredParam || subStatus?.subscription_status === 'expired') && (
+        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 space-y-2">
+          <div className="flex items-center gap-2 text-red-300">
+            <AlertTriangle size={20} />
+            <h2 className="text-lg font-semibold">Your subscription has expired</h2>
+          </div>
+          <p className="text-sm text-slate-300">
+            Add a payment method below to restore access to DocAssistAI. Your notes and settings are safe.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4">
         <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
