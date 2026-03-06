@@ -7,6 +7,7 @@ export interface ScribeUser {
   email: string;
   name: string | null;
   specialty: string | null;
+  is_admin: boolean;
 }
 
 export interface SubscriptionStatus {
