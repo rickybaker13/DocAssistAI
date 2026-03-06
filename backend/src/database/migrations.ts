@@ -82,6 +82,16 @@ CREATE TABLE IF NOT EXISTS scribe_payment_history (
   failure_reason   TEXT,
   created_at       TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS scribe_feedback (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  category   TEXT NOT NULL,
+  message    TEXT NOT NULL,
+  status     TEXT NOT NULL DEFAULT 'new',
+  admin_note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 // ---------------------------------------------------------------------------
@@ -138,6 +148,11 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     table: 'scribe_users',
     column: 'square_card_id',
     sql: `ALTER TABLE scribe_users ADD COLUMN square_card_id TEXT`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'is_admin',
+    sql: `ALTER TABLE scribe_users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE`,
   },
 ];
 
