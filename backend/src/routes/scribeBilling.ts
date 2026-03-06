@@ -33,7 +33,7 @@ const getSquareConfig = () => {
     appId,
     locationId,
     accessToken,
-    environment: process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox' as const,
+    environment: (process.env.SQUARE_ENVIRONMENT === 'production' ? 'production' : 'sandbox') as 'production' | 'sandbox',
   };
 };
 

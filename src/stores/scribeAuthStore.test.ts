@@ -17,6 +17,7 @@ describe('useScribeAuthStore', () => {
     expect(result.current.user).toBeNull();
     expect(useScribeNoteStore.getState().encounters).toEqual([]);
     expect(result.current.loading).toBe(false);
+    expect(result.current.subscriptionStatus).toBeNull();
   });
 
   it('login — sets user on success', async () => {
@@ -100,6 +101,26 @@ describe('useScribeAuthStore', () => {
     });
     await act(async () => { await result.current.logout(); });
     expect(result.current.user).toBeNull();
+    expect(result.current.subscriptionStatus).toBeNull();
     expect(useScribeNoteStore.getState().encounters).toEqual([]);
+  });
+
+  it('reset — clears subscriptionStatus', () => {
+    useScribeAuthStore.setState({
+      user: { id: '1', email: 'a@b.com', name: 'Test', specialty: null },
+      subscriptionStatus: {
+        subscription_status: 'active',
+        trial_ends_at: null,
+        period_ends_at: null,
+        cancelled_at: null,
+        has_payment_method: true,
+      },
+    });
+    const { result } = renderHook(() => useScribeAuthStore());
+    act(() => { result.current.reset(); });
+    expect(result.current.user).toBeNull();
+    expect(result.current.subscriptionStatus).toBeNull();
+    expect(result.current.loading).toBe(false);
+    expect(result.current.error).toBeNull();
   });
 });
