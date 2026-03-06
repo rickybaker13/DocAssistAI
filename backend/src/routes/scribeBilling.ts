@@ -45,7 +45,6 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
       { id: 'square_ach', label: 'Bank account (ACH via Square)', type: 'bank' },
       { id: 'square_apple_pay', label: 'Apple Pay (Square)', type: 'wallet' },
       { id: 'square_google_pay', label: 'Google Pay (Square)', type: 'wallet' },
-      { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
     ],
   });
 });
@@ -63,7 +62,7 @@ router.get('/square-config', scribeAuthMiddleware, (_req: Request, res: Response
   });
 });
 
-router.post('/square-card-payment', scribeAuthMiddleware, async (req: Request, res: Response) => {
+const handleSquarePayment = async (req: Request, res: Response) => {
   const { sourceId, phone } = req.body as {
     sourceId?: string;
     phone?: string;
@@ -148,29 +147,23 @@ router.post('/square-card-payment', scribeAuthMiddleware, async (req: Request, r
     status: squareData?.payment?.status ?? null,
     message: 'Payment processed securely with Square.',
   });
-});
+};
+
+router.post('/square-card-payment', scribeAuthMiddleware, handleSquarePayment);
+router.post('/square-payment', scribeAuthMiddleware, handleSquarePayment);
 
 const handleCheckoutRequest = async (req: Request, res: Response) => {
-  const { paymentMethod, phone, network } = req.body as {
+  const { paymentMethod, phone } = req.body as {
     paymentMethod?: PaymentMethod;
     phone?: string;
-    network?: string;
   };
 
-  if (!paymentMethod || !['square_card', 'square_ach', 'square_apple_pay', 'square_google_pay', 'square_bitcoin'].includes(paymentMethod)) {
+  if (!paymentMethod || !['square_card', 'square_ach', 'square_apple_pay', 'square_google_pay'].includes(paymentMethod)) {
     return res.status(400).json({ error: 'Unsupported payment method' });
   }
 
   if (phone && !PHONE_RE.test(phone)) {
     return res.status(400).json({ error: 'Phone number must be in E.164 format (example: +14155551234)' });
-  }
-
-  if (network && !['bitcoin', 'lightning'].includes(network)) {
-    return res.status(400).json({ error: 'Network must be either bitcoin or lightning' });
-  }
-
-  if (paymentMethod !== 'square_bitcoin' && network) {
-    return res.status(400).json({ error: 'Network is only supported for Bitcoin payments' });
   }
 
   const user = await userModel.findById(req.scribeUserId!);
@@ -183,7 +176,6 @@ const handleCheckoutRequest = async (req: Request, res: Response) => {
     email: user.email,
     phone,
     paymentMethod,
-    network: paymentMethod === 'square_bitcoin' ? network ?? 'bitcoin' : undefined,
   });
 
   const checkoutTargets: Record<PaymentMethod, string | undefined> = {
@@ -191,7 +183,6 @@ const handleCheckoutRequest = async (req: Request, res: Response) => {
     square_ach: process.env.SQUARE_ACH_CHECKOUT_URL,
     square_apple_pay: process.env.SQUARE_APPLE_PAY_CHECKOUT_URL,
     square_google_pay: process.env.SQUARE_GOOGLE_PAY_CHECKOUT_URL,
-    square_bitcoin: process.env.SQUARE_BITCOIN_CHECKOUT_URL,
   };
 
   return res.status(201).json({

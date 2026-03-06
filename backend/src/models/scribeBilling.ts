@@ -1,7 +1,7 @@
 import { randomUUID } from 'crypto';
 import { getPool } from '../database/db.js';
 
-export type PaymentMethod = 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay' | 'square_bitcoin';
+export type PaymentMethod = 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay';
 
 export interface ScribeBillingPreference {
   id: string;
