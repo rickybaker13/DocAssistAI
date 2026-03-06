@@ -24,15 +24,16 @@ describe('ScribeRegisterPage', () => {
     });
   });
 
-  it('renders a free 7-day trial offer and billing fields', () => {
+  it('renders a free 7-day trial offer and payment method badges', () => {
     renderPage();
 
     expect(screen.getByAltText(/square/i)).toBeInTheDocument();
     expect(screen.getByText(/start your free 7-day trial/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/cardholder name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/card number/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/expiry/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/cvc/i)).toBeInTheDocument();
+    expect(screen.getByText('Credit Card')).toBeInTheDocument();
+    expect(screen.getByText('ACH Bank')).toBeInTheDocument();
+    expect(screen.getByText('Apple Pay')).toBeInTheDocument();
+    expect(screen.getByText('Google Pay')).toBeInTheDocument();
+    expect(screen.getByText(/set up your payment method on the Account page/i)).toBeInTheDocument();
   });
 
   it('requires agreeing to auto-renewal before submitting', async () => {
@@ -40,10 +41,6 @@ describe('ScribeRegisterPage', () => {
 
     fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'trial@docassist.ai' } });
     fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'password123' } });
-    fireEvent.change(screen.getByLabelText(/cardholder name/i), { target: { value: 'Dr Test User' } });
-    fireEvent.change(screen.getByLabelText(/card number/i), { target: { value: '4242 4242 4242 4242' } });
-    fireEvent.change(screen.getByLabelText(/expiry/i), { target: { value: '08/29' } });
-    fireEvent.change(screen.getByLabelText(/cvc/i), { target: { value: '123' } });
 
     fireEvent.click(screen.getByRole('button', { name: /start free trial/i }));
 

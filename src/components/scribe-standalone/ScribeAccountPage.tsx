@@ -431,22 +431,16 @@ export const ScribeAccountPage: React.FC = () => {
             </div>
           )}
 
-          {paymentMethod !== 'square_card' && !checkoutUrl && !loadingBilling && (
-            <p className="text-xs text-amber-300">
-              If checkout is unavailable, set <code className="text-amber-200">SQUARE_ACH_CHECKOUT_URL</code>,{' '}
-              <code className="text-amber-200">SQUARE_APPLE_PAY_CHECKOUT_URL</code>,{' '}
-              <code className="text-amber-200">SQUARE_GOOGLE_PAY_CHECKOUT_URL</code> on the backend.
-            </p>
+          {paymentMethod === 'square_card' && (
+            <button
+              type="submit"
+              disabled={loadingBilling}
+              className="inline-flex items-center gap-2 bg-teal-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
+            >
+              <CreditCard size={14} />
+              {loadingBilling ? 'Saving...' : 'Get hosted checkout link'}
+            </button>
           )}
-
-          <button
-            type="submit"
-            disabled={loadingBilling}
-            className="inline-flex items-center gap-2 bg-teal-400 text-slate-900 px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50"
-          >
-            <CreditCard size={14} />
-            {loadingBilling ? 'Saving...' : paymentMethod === 'square_card' ? 'Get hosted checkout link' : 'Save billing method'}
-          </button>
         </form>
 
         <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
