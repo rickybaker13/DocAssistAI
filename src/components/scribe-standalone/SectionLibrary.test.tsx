@@ -6,7 +6,7 @@ import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 
 // Mock auth store — no specialty set by default (shows "All Sections" tab)
 vi.mock('../../stores/scribeAuthStore', () => ({
-  useScribeAuthStore: () => ({ user: { id: '1', email: 'test@test.com', name: 'Test', specialty: null } }),
+  useScribeAuthStore: () => ({ user: { id: '1', email: 'test@test.com', name: 'Test', specialty: null, is_admin: false } }),
 }));
 
 const mockTemplates = [
