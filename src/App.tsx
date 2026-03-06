@@ -13,6 +13,10 @@ import { ScribeSettingsPage } from './components/scribe-standalone/ScribeSetting
 import { ScribeAccountPage } from './components/scribe-standalone/ScribeAccountPage';
 import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
+import { install402Interceptor } from './utils/fetchInterceptor';
+
+// Install once at app startup
+install402Interceptor();
 
 function App() {
   return (
