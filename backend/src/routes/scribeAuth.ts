@@ -45,7 +45,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   const user = await userModel.create({ email, passwordHash, name, specialty });
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '7d' });
   res.cookie(COOKIE, token, COOKIE_OPTS);
-  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
+  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
 });
 
 router.post('/login', authLimiter, async (req: Request, res: Response) => {
@@ -58,7 +58,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: rememberMe ? '30d' : '7d' });
   const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : COOKIE_OPTS.maxAge;
   res.cookie(COOKIE, token, { ...COOKIE_OPTS, maxAge });
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
 });
 
 router.post('/forgot-password', authLimiter, async (req: Request, res: Response) => {
@@ -113,14 +113,14 @@ router.post('/reset-password', authLimiter, async (req: Request, res: Response) 
 router.get('/me', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const user = await userModel.findById(req.scribeUserId!);
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
 });
 
 router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const { name, specialty } = req.body;
   const user = await userModel.update(req.scribeUserId!, { name, specialty });
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
 });
 
 router.post('/logout', (_req: Request, res: Response) => {
