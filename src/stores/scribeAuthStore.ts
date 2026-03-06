@@ -9,6 +9,14 @@ export interface ScribeUser {
   specialty: string | null;
 }
 
+export interface SubscriptionStatus {
+  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  trial_ends_at: string | null;
+  period_ends_at: string | null;
+  cancelled_at: string | null;
+  has_payment_method: boolean;
+}
+
 interface ScribeAuthState {
   user: ScribeUser | null;
   loading: boolean;
@@ -20,6 +28,8 @@ interface ScribeAuthState {
   logout: () => Promise<void>;
   fetchMe: () => Promise<void>;
   reset: () => void;
+  subscriptionStatus: SubscriptionStatus | null;
+  fetchSubscriptionStatus: () => Promise<void>;
 }
 
 function clearNotesOnUserChange(nextUserId: string | null, prevUserId: string | null): void {
@@ -31,6 +41,21 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
   user: null,
   loading: false,
   error: null,
+  subscriptionStatus: null,
+
+  fetchSubscriptionStatus: async () => {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/billing/status`, { credentials: 'include' });
+      if (!res.ok) {
+        set({ subscriptionStatus: null });
+        return;
+      }
+      const data = await res.json();
+      set({ subscriptionStatus: data });
+    } catch {
+      set({ subscriptionStatus: null });
+    }
+  },
 
   login: async (email, password, rememberMe = false) => {
     set({ loading: true, error: null });
@@ -117,7 +142,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
   logout: async () => {
     await fetch(`${getBackendUrl()}/api/scribe/auth/logout`, { method: 'POST', credentials: 'include' });
     clearNotesOnUserChange(null, get().user?.id ?? null);
-    set({ user: null, error: null });
+    set({ user: null, error: null, subscriptionStatus: null });
   },
 
   fetchMe: async () => {
@@ -138,5 +163,5 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
     }
   },
 
-  reset: () => set({ user: null, loading: false, error: null }),
+  reset: () => set({ user: null, loading: false, error: null, subscriptionStatus: null }),
 }));
