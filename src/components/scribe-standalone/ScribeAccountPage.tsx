@@ -4,6 +4,9 @@ import { ArrowLeft, AlertTriangle, CircleCheck, Clock, CreditCard, KeyRound, Mai
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
 import { SquareCardForm } from './SquareCardForm';
+import { SquareAchButton } from './SquareAchButton';
+import { SquareApplePayButton } from './SquareApplePayButton';
+import { SquareGooglePayButton } from './SquareGooglePayButton';
 
 interface SubscriptionStatus {
   subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
@@ -21,7 +24,7 @@ interface BillingHistoryEntry {
 }
 
 interface BillingMethod {
-  id: 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay' | 'square_bitcoin';
+  id: 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay';
   label: string;
   type: string;
 }
@@ -41,7 +44,6 @@ const DEFAULT_BILLING_OPTIONS: BillingOptionsResponse = {
     { id: 'square_ach', label: 'Bank account (ACH via Square)', type: 'bank' },
     { id: 'square_apple_pay', label: 'Apple Pay (Square)', type: 'wallet' },
     { id: 'square_google_pay', label: 'Google Pay (Square)', type: 'wallet' },
-    { id: 'square_bitcoin', label: 'Bitcoin via Square (On-chain or Lightning)', type: 'crypto' },
   ],
 };
 
@@ -62,7 +64,6 @@ export const ScribeAccountPage: React.FC = () => {
   const [options, setOptions] = useState<BillingOptionsResponse>(DEFAULT_BILLING_OPTIONS);
   const [paymentMethod, setPaymentMethod] = useState<BillingMethod['id']>('square_card');
   const [phone, setPhone] = useState('');
-  const [network, setNetwork] = useState<'bitcoin' | 'lightning'>('bitcoin');
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -96,13 +97,10 @@ export const ScribeAccountPage: React.FC = () => {
 
         setHistory(historyData.entries || []);
         if (latest?.payment_method) {
-          setPaymentMethod((latest.payment_method === 'bitcoin' ? 'square_bitcoin' : latest.payment_method) as BillingMethod['id']);
+          setPaymentMethod(latest.payment_method as BillingMethod['id']);
         }
         if (latest?.phone) {
           setPhone(latest.phone);
-        }
-        if (latest?.network === 'bitcoin' || latest?.network === 'lightning') {
-          setNetwork(latest.network);
         }
       } else {
         historyFailed = true;
@@ -176,7 +174,6 @@ export const ScribeAccountPage: React.FC = () => {
         body: JSON.stringify({
           paymentMethod,
           phone: phone || undefined,
-          network: paymentMethod === 'square_bitcoin' ? network : undefined,
         }),
       });
       const data = await res.json();
@@ -358,21 +355,6 @@ export const ScribeAccountPage: React.FC = () => {
           </div>
 
 
-          {paymentMethod === 'square_bitcoin' && (
-            <div>
-              <label className="text-xs uppercase tracking-wide text-slate-400">Bitcoin network</label>
-              <select
-                value={network}
-                onChange={(e) => setNetwork(e.target.value as 'bitcoin' | 'lightning')}
-                className="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100"
-              >
-                <option value="bitcoin">Bitcoin (on-chain)</option>
-                <option value="lightning">Lightning</option>
-              </select>
-            </div>
-          )}
-
-
           <div>
             <label className="text-xs uppercase tracking-wide text-slate-400">SMS phone number</label>
             <input
@@ -404,9 +386,33 @@ export const ScribeAccountPage: React.FC = () => {
             </div>
           )}
 
+          {paymentMethod === 'square_ach' && (
+            <SquareAchButton
+              phone={phone}
+              onSuccess={(msg) => { setBillingMessage(msg); setError(null); }}
+              onError={(msg) => { setError(msg); setBillingMessage(null); }}
+            />
+          )}
+
+          {paymentMethod === 'square_apple_pay' && (
+            <SquareApplePayButton
+              phone={phone}
+              onSuccess={(msg) => { setBillingMessage(msg); setError(null); }}
+              onError={(msg) => { setError(msg); setBillingMessage(null); }}
+            />
+          )}
+
+          {paymentMethod === 'square_google_pay' && (
+            <SquareGooglePayButton
+              phone={phone}
+              onSuccess={(msg) => { setBillingMessage(msg); setError(null); }}
+              onError={(msg) => { setError(msg); setBillingMessage(null); }}
+            />
+          )}
+
           <p className="text-sm text-slate-300">
             {latestPreference
-              ? `Current preference: ${latestPreference.payment_method.replace('_', ' ')}${latestPreference.network ? ` on ${latestPreference.network}` : ''}.`
+              ? `Current preference: ${latestPreference.payment_method.replace('_', ' ')}.`
               : 'No payment method selected yet.'}
           </p>
 
@@ -429,8 +435,7 @@ export const ScribeAccountPage: React.FC = () => {
             <p className="text-xs text-amber-300">
               If checkout is unavailable, set <code className="text-amber-200">SQUARE_ACH_CHECKOUT_URL</code>,{' '}
               <code className="text-amber-200">SQUARE_APPLE_PAY_CHECKOUT_URL</code>,{' '}
-              <code className="text-amber-200">SQUARE_GOOGLE_PAY_CHECKOUT_URL</code>, and{' '}
-              <code className="text-amber-200">SQUARE_BITCOIN_CHECKOUT_URL</code> on the backend.
+              <code className="text-amber-200">SQUARE_GOOGLE_PAY_CHECKOUT_URL</code> on the backend.
             </p>
           )}
 
