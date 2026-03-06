@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useScribeStore } from '../../stores/scribeStore';
 import { getBackendUrl } from '../../config/appConfig';
+import { BackgroundKeepAlive } from '../../utils/backgroundKeepAlive';
 
 interface Props {
   onTranscript: (transcript: string) => void;
@@ -23,6 +24,7 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Fix 1: Hold a ref to the active stream for cleanup on unmount
   const streamRef = useRef<MediaStream | null>(null);
+  const keepAliveRef = useRef<BackgroundKeepAlive | null>(null);
 
   // Fix 1: Cleanup on unmount — stop recorder, clear timer, stop stream tracks
   useEffect(() => {
@@ -36,6 +38,8 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
+      keepAliveRef.current?.stop();
+      keepAliveRef.current = null;
     };
   }, []);
 
@@ -56,6 +60,13 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       ) ?? '';
 
       const recorderOptions = mimeType ? { mimeType } : undefined;
+
+      // Activate iOS background keep-alive (silent audio + wake lock).
+      // Must be called within user-gesture call stack so iOS allows audio.play().
+      const keepAlive = new BackgroundKeepAlive();
+      keepAliveRef.current = keepAlive;
+      await keepAlive.start();
+
       const recorder = new MediaRecorder(stream, recorderOptions);
 
       chunksRef.current = [];
@@ -69,6 +80,10 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       setRecording(true);
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
     } catch (err) {
+      // Clean up keep-alive if recording setup fails after it was started
+      keepAliveRef.current?.stop();
+      keepAliveRef.current = null;
+
       let message = err instanceof Error ? err.message : 'Microphone access failed';
       if (err instanceof DOMException) {
         if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
@@ -92,6 +107,8 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
     // Fix 5: Use store setter
     setRecording(false);
     setDuration(0);
+    keepAliveRef.current?.stop();
+    keepAliveRef.current = null;
   };
 
   const handleRecordingStop = async (stream: MediaStream) => {

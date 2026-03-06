@@ -1,7 +1,16 @@
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { vi, beforeEach, describe, it, expect } from 'vitest';
 import { AudioRecorder } from './AudioRecorder';
 import { useScribeStore } from '../../stores/scribeStore';
+
+// Mock the background keep-alive utility (iOS-specific, not testable in jsdom).
+// Must use a class (not arrow fn) so `new BackgroundKeepAlive()` works.
+vi.mock('../../utils/backgroundKeepAlive', () => ({
+  BackgroundKeepAlive: class {
+    start = vi.fn().mockResolvedValue(undefined);
+    stop = vi.fn();
+  },
+}));
 
 // Proper MediaRecorder mock using a class so vitest doesn't warn
 class MockMediaRecorder {
@@ -45,12 +54,14 @@ describe('AudioRecorder', () => {
   it('shows Stop button while recording', async () => {
     render(<AudioRecorder onTranscript={() => {}} />);
 
-    // Wrap click in act so the async getUserMedia promise + state update flush
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /record/i }));
-    });
+    // startRecording() is async and fire-and-forget from React's onClick,
+    // so act() alone can't track when the chain completes. Use waitFor to
+    // poll until getUserMedia → keepAlive.start() → setRecording(true) finish.
+    fireEvent.click(screen.getByRole('button', { name: /record/i }));
 
-    expect(await screen.findByRole('button', { name: /stop/i })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
+    });
   });
 
   // Fix 6: getUserMedia rejection calls onError
