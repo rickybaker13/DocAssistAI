@@ -1,60 +1,14 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Lock } from 'lucide-react';
 import { getBackendUrl } from '../../config/appConfig';
-import type { SquareCard, SquareConfigResponse } from './square-types';
+import type { SquareCard } from './square-types';
+import { ensureSquareSdkLoaded, fetchSquareConfig } from './square-helpers';
 
 interface Props {
   phone: string;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }
-
-const SQUARE_SDK_SELECTOR = 'script[data-square-sdk="true"]';
-
-const getSquareSdkUrl = (environment: 'sandbox' | 'production'): string => (
-  environment === 'production'
-    ? 'https://web.squarecdn.com/v1/square.js'
-    : 'https://sandbox.web.squarecdn.com/v1/square.js'
-);
-
-const ensureSquareSdkLoaded = async (environment: 'sandbox' | 'production'): Promise<void> => {
-  const desiredSdkUrl = getSquareSdkUrl(environment);
-
-  if (window.Square) {
-    return;
-  }
-
-  const existingScript = document.querySelector<HTMLScriptElement>(SQUARE_SDK_SELECTOR);
-
-  if (existingScript) {
-    if (existingScript.src !== desiredSdkUrl) {
-      existingScript.remove();
-    } else {
-      await new Promise<void>((resolve, reject) => {
-        if (window.Square) {
-          resolve();
-          return;
-        }
-
-        existingScript.addEventListener('load', () => resolve(), { once: true });
-        existingScript.addEventListener('error', () => reject(new Error('Failed to load Square SDK.')), { once: true });
-      });
-
-      return;
-    }
-  }
-
-  const script = document.createElement('script');
-  script.src = desiredSdkUrl;
-  script.async = true;
-  script.dataset.squareSdk = 'true';
-  document.body.appendChild(script);
-
-  await new Promise<void>((resolve, reject) => {
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load Square SDK.'));
-  });
-};
 
 export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
@@ -71,9 +25,8 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
     }
 
     try {
-      const cfgRes = await fetch(`${getBackendUrl()}/api/scribe/billing/square-config`, { credentials: 'include' });
-      const cfg = (await cfgRes.json()) as SquareConfigResponse;
-      if (!cfgRes.ok || !cfg.enabled || !cfg.appId || !cfg.locationId) {
+      const cfg = await fetchSquareConfig();
+      if (!cfg?.enabled || !cfg.appId || !cfg.locationId) {
         return;
       }
 
@@ -97,10 +50,8 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
 
     const init = async () => {
       try {
-        // Fetch config first to determine environment for SDK URL
-        const cfgRes = await fetch(`${getBackendUrl()}/api/scribe/billing/square-config`, { credentials: 'include' });
-        const cfg = (await cfgRes.json()) as SquareConfigResponse;
-        if (!cfgRes.ok || !cfg.enabled || !cfg.appId || !cfg.locationId) {
+        const cfg = await fetchSquareConfig();
+        if (!cfg?.enabled || !cfg.appId || !cfg.locationId) {
           return;
         }
 
