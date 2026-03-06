@@ -95,9 +95,13 @@ export const SquareGooglePayButton: React.FC<Props> = ({ phone, onSuccess, onErr
 
   if (!supported) {
     return (
-      <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-xs text-amber-300">
-          Google Pay is not available in this browser. Try using Chrome, or select a different payment method.
+      <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 space-y-2">
+        <p className="text-sm text-slate-300">
+          Google Pay is not available right now.
+        </p>
+        <p className="text-xs text-slate-500">
+          Google Pay requires Chrome with a Google account that has a payment method saved. In sandbox mode it may be unavailable.
+          You can select a different payment method above.
         </p>
       </div>
     );

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Lock } from 'lucide-react';
 import { getBackendUrl } from '../../config/appConfig';
 import type { SquareCard } from './square-types';
@@ -13,36 +13,10 @@ interface Props {
 export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
-  const [enabled, setEnabled] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
   const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox');
   const cardRef = useRef<SquareCard | null>(null);
   const initAttempted = useRef(false);
-
-  const initializeCard = useCallback(async () => {
-    if (!window.Square) {
-      onError('Square payments SDK failed to load.');
-      return;
-    }
-
-    try {
-      const cfg = await fetchSquareConfig();
-      if (!cfg?.enabled || !cfg.appId || !cfg.locationId) {
-        return;
-      }
-
-      setEnvironment(cfg.environment === 'production' ? 'production' : 'sandbox');
-      setEnabled(true);
-
-      const payments = await window.Square.payments(cfg.appId, cfg.locationId);
-      const card = await payments.card();
-      await card.attach('#square-card-container');
-      cardRef.current = card;
-      setReady(true);
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Unable to initialize Square payments.');
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   useEffect(() => {
     if (initAttempted.current) return;
@@ -52,12 +26,14 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
       try {
         const cfg = await fetchSquareConfig();
         if (!cfg?.enabled || !cfg.appId || !cfg.locationId) {
+          setConfigError(
+            'Square card entry is not enabled yet. Configure backend env vars SQUARE_WEB_APP_ID, SQUARE_LOCATION_ID, and SQUARE_ACCESS_TOKEN.',
+          );
           return;
         }
 
         const env = cfg.environment === 'production' ? 'production' : 'sandbox';
         setEnvironment(env);
-        setEnabled(true);
 
         await ensureSquareSdkLoaded(env);
 
@@ -122,15 +98,19 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
     }
   };
 
-  if (!enabled) {
+  // Show config error only AFTER async init has failed (not as initial state).
+  // This prevents the race condition where #square-card-container isn't in the
+  // DOM when card.attach() runs, because the early return removed it.
+  if (configError) {
     return (
       <p className="text-xs text-amber-300">
-        Square card entry is not enabled yet. Configure backend env vars <code className="text-amber-200">SQUARE_WEB_APP_ID</code>,{' '}
-        <code className="text-amber-200">SQUARE_LOCATION_ID</code>, and <code className="text-amber-200">SQUARE_ACCESS_TOKEN</code>.
+        {configError}
       </p>
     );
   }
 
+  // Always render the container div so #square-card-container exists in the DOM
+  // when the async useEffect calls card.attach(). Button stays disabled until ready.
   return (
     <div className="space-y-3 rounded-xl border border-slate-700 bg-slate-950 p-4">
       <div className="flex items-center justify-between gap-2 text-xs text-slate-400">

@@ -96,9 +96,12 @@ export const SquareApplePayButton: React.FC<Props> = ({ phone, onSuccess, onErro
 
   if (!supported) {
     return (
-      <div className="rounded-xl border border-slate-700 bg-slate-950 p-4">
-        <p className="text-xs text-amber-300">
-          Apple Pay is not available on this device or browser. Try using Safari on an Apple device, or select a different payment method.
+      <div className="rounded-xl border border-slate-700 bg-slate-950 p-4 space-y-2">
+        <p className="text-sm text-slate-300">
+          Apple Pay requires Safari on a Mac or an Apple device (iPhone, iPad).
+        </p>
+        <p className="text-xs text-slate-500">
+          You can select a different payment method above, or open this page in Safari to use Apple Pay.
         </p>
       </div>
     );
