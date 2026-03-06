@@ -4,9 +4,7 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
-  "redirects": [
-    { "source": "/", "destination": "/scribe/login", "permanent": false }
-  ],
+  "redirects": [],
   "headers": [
     {
       "source": "/sw.js",
