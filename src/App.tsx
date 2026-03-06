@@ -12,6 +12,8 @@ import { ScribeDashboardPage } from './components/scribe-standalone/ScribeDashbo
 import { ScribeSettingsPage } from './components/scribe-standalone/ScribeSettingsPage';
 import { ScribeAccountPage } from './components/scribe-standalone/ScribeAccountPage';
 import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
+import { ScribeFeedbackPage } from './components/scribe-standalone/ScribeFeedbackPage';
+import { ScribeAdminFeedbackPage } from './components/scribe-standalone/ScribeAdminFeedbackPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
 import { install402Interceptor } from './utils/fetchInterceptor';
 
@@ -40,6 +42,8 @@ function App() {
           <Route path="templates" element={<TemplatesPage />} />
           <Route path="billing" element={<Navigate to="/scribe/account" replace />} />
           <Route path="account" element={<ScribeAccountPage />} />
+          <Route path="feedback" element={<ScribeFeedbackPage />} />
+          <Route path="admin/feedback" element={<ScribeAdminFeedbackPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
           <Route path="note/:id/record" element={<ScribeRecordPage />} />
           <Route path="note/:id" element={<ScribeNotePage />} />

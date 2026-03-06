@@ -9,20 +9,25 @@ import {
   LogOut,
   Sparkles,
   Settings,
+  MessageSquare,
+  Shield,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
+const getNavItems = (isAdmin: boolean) => [
   { to: '/scribe/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/scribe/note/new',  icon: Plus,            label: 'New Note'  },
   { to: '/scribe/templates', icon: FileText,         label: 'Templates' },
   { to: '/scribe/settings',  icon: Settings,         label: 'Settings'  },
+  { to: '/scribe/feedback',  icon: MessageSquare,    label: 'Feedback'  },
   { to: '/scribe/account',   icon: User,             label: 'Account'   },
+  ...(isAdmin ? [{ to: '/scribe/admin/feedback', icon: Shield, label: 'Admin' }] : []),
 ];
 
 export const ScribeLayout: React.FC = () => {
   const { user, logout } = useScribeAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const navItems = getNavItems(user?.is_admin ?? false);
 
   const handleLogout = async () => {
     await logout();
@@ -46,7 +51,7 @@ export const ScribeLayout: React.FC = () => {
 
         {/* Nav items */}
         <nav className="flex-1 px-3 py-4 space-y-1">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon: Icon, label }) => (
             <Link
               key={to}
               to={to}
@@ -111,7 +116,7 @@ export const ScribeLayout: React.FC = () => {
 
         {/* Mobile bottom tab bar (< md) */}
         <nav className="md:hidden fixed bottom-0 inset-x-0 z-20 bg-slate-900/95 backdrop-blur border-t border-slate-800 flex">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          {navItems.map(({ to, icon: Icon, label }) => (
             <Link
               key={to}
               to={to}
