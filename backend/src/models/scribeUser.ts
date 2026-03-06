@@ -195,4 +195,12 @@ export class ScribeUserModel {
       cancelled_at: user.cancelled_at,
     };
   }
+
+  async markExpired(userId: string): Promise<void> {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE scribe_users SET subscription_status = 'expired', updated_at = NOW() WHERE id = $1`,
+      [userId],
+    );
+  }
 }
