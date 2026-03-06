@@ -10,11 +10,11 @@
 #   CRON_SECRET    — shared secret matching the backend's CRON_SECRET
 #
 # Usage:
-#   # Run directly
-#   BACKEND_URL=http://localhost:3000 CRON_SECRET=my-secret ./cron-billing.sh
+#   # Run directly (use public URL since backend is internal to Docker network)
+#   BACKEND_URL=https://api.docassistai.app CRON_SECRET=my-secret ./cron-billing.sh
 #
 #   # Crontab (runs daily at 6 AM UTC):
-#   0 6 * * * BACKEND_URL=http://localhost:3000 CRON_SECRET=my-secret /path/to/cron-billing.sh >> /var/log/docassistai-cron.log 2>&1
+#   0 6 * * * BACKEND_URL=https://api.docassistai.app CRON_SECRET=my-secret /opt/docassistai/backend/scripts/cron-billing.sh >> /var/log/docassistai-cron.log 2>&1
 
 set -euo pipefail
 
