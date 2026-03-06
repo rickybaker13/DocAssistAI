@@ -115,6 +115,28 @@ export class BackgroundKeepAlive {
     }
   }
 
+  /**
+   * Restart the keep-alive after iOS suspended it (e.g. returning from
+   * another app).  Tries to resume the existing audio element — iOS
+   * allows play() on previously-playing elements from visibilitychange.
+   * Re-acquires wake lock.  Safe to call even if currently stopped.
+   */
+  async restart(): Promise<void> {
+    // Try to resume existing audio element (avoids user-gesture requirement)
+    if (this.audioEl) {
+      try {
+        await this.audioEl.play();
+      } catch {
+        // If resume fails, the audio element was fully destroyed by iOS.
+        // We can't create a new one without a user gesture.
+        this.audioEl = null;
+      }
+    }
+
+    // Re-acquire wake lock (always works on visibility change to 'visible')
+    await this.requestWakeLock();
+  }
+
   private async requestWakeLock(): Promise<void> {
     if (!('wakeLock' in navigator)) return;
     try {

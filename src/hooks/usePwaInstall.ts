@@ -1,11 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
+import { isIosDevice } from '../utils/isIosDevice';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
-
-const IOS_USER_AGENT_REGEX = /iphone|ipad|ipod/i;
 
 const isStandaloneMode = () => {
   const isDisplayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -14,8 +13,6 @@ const isStandaloneMode = () => {
 
   return isDisplayModeStandalone || isNavigatorStandalone;
 };
-
-const isIosDevice = () => IOS_USER_AGENT_REGEX.test(navigator.userAgent);
 
 const isSafari = () => {
   const agent = navigator.userAgent.toLowerCase();

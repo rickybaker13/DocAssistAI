@@ -115,4 +115,17 @@ describe('BackgroundKeepAlive', () => {
     keepAlive.stop();
     keepAlive.stop(); // Should not throw
   });
+
+  it('restart() resumes audio and re-acquires wake lock', async () => {
+    const keepAlive = new BackgroundKeepAlive();
+    await keepAlive.start();
+
+    // Restart without stopping (simulates iOS returning from background)
+    await keepAlive.restart();
+
+    // play() called twice: once on start, once on restart
+    expect(mockPlay).toHaveBeenCalledTimes(2);
+    // wakeLock requested on start + restart
+    expect((navigator.wakeLock as any).request).toHaveBeenCalledTimes(2);
+  });
 });

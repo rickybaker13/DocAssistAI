@@ -26,6 +26,14 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
   const streamRef = useRef<MediaStream | null>(null);
   const keepAliveRef = useRef<BackgroundKeepAlive | null>(null);
 
+  // iOS interruption tracking
+  const [interruptions, setInterruptions] = useState<{ gapSeconds: number }[]>([]);
+  const [interruptionDismissed, setInterruptionDismissed] = useState(false);
+  const hiddenAtRef = useRef<number | null>(null);
+  const isResumingRef = useRef(false);
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+
   // Fix 1: Cleanup on unmount — stop recorder, clear timer, stop stream tracks
   useEffect(() => {
     return () => {
@@ -42,6 +50,93 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       keepAliveRef.current = null;
     };
   }, []);
+
+  // --- iOS background interruption handling ---
+  // When the page goes hidden (user switches apps), pause the timer.
+  // When it comes back visible, check if MediaRecorder survived. If not,
+  // auto-resume with a fresh stream and show an interruption warning.
+  useEffect(() => {
+    if (!isRecording) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now();
+        // Pause duration timer while backgrounded
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      } else if (document.visibilityState === 'visible') {
+        // Calculate how long we were hidden
+        const gapMs = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0;
+        const gapSeconds = Math.round(gapMs / 1000);
+        hiddenAtRef.current = null;
+
+        // Resume duration timer
+        if (!timerRef.current) {
+          timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+        }
+
+        const recorder = mediaRecorderRef.current;
+        if (recorder && recorder.state === 'recording') {
+          // MediaRecorder survived (e.g. lock screen). Just restart keep-alive.
+          await keepAliveRef.current?.restart();
+          return;
+        }
+
+        // --- MediaRecorder was killed by iOS (app-switch case) ---
+        if (isResumingRef.current) return;
+        isResumingRef.current = true;
+
+        try {
+          // Record the interruption for the UI warning
+          if (gapSeconds > 0) {
+            setInterruptions((prev) => [...prev, { gapSeconds }]);
+            setInterruptionDismissed(false);
+          }
+
+          // Get a fresh mic stream
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          streamRef.current?.getTracks().forEach((t) => t.stop());
+          streamRef.current = stream;
+
+          // Determine supported mimeType (same logic as startRecording)
+          const preferredTypes = ['audio/webm', 'audio/ogg', ''];
+          const mimeType =
+            preferredTypes.find(
+              (t) =>
+                t === '' ||
+                (typeof MediaRecorder.isTypeSupported === 'function' &&
+                  MediaRecorder.isTypeSupported(t))
+            ) ?? '';
+          const recorderOptions = mimeType ? { mimeType } : undefined;
+
+          // Create new recorder — DO NOT clear chunksRef (preserve previous audio)
+          const newRecorder = new MediaRecorder(stream, recorderOptions);
+          newRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+          };
+          newRecorder.onstop = () => handleRecordingStop(stream);
+          newRecorder.start(1000);
+          mediaRecorderRef.current = newRecorder;
+
+          // Restart background keep-alive
+          await keepAliveRef.current?.restart();
+        } catch (err) {
+          // getUserMedia failed on resume (permission revoked, etc.)
+          const message = err instanceof Error ? err.message : 'Failed to resume recording';
+          onErrorRef.current?.(`Recording interrupted: ${message}. Your previous audio is preserved.`);
+        } finally {
+          isResumingRef.current = false;
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRecording = async () => {
     // Fix 2: Guard against double-click / re-entrant calls
@@ -70,6 +165,8 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       const recorder = new MediaRecorder(stream, recorderOptions);
 
       chunksRef.current = [];
+      setInterruptions([]);
+      setInterruptionDismissed(false);
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
       };
@@ -107,6 +204,7 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
     // Fix 5: Use store setter
     setRecording(false);
     setDuration(0);
+    hiddenAtRef.current = null;
     keepAliveRef.current?.stop();
     keepAliveRef.current = null;
   };
@@ -161,8 +259,32 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
   // Fix 2 & 3: Button is disabled while starting or transcribing
   const buttonDisabled = isStarting || isTranscribing;
 
+  const totalGapSeconds = interruptions.reduce((sum, i) => sum + i.gapSeconds, 0);
+
   return (
     <div className="flex flex-col items-center gap-3">
+      {/* Interruption warning banner */}
+      {isRecording && interruptions.length > 0 && !interruptionDismissed && (
+        <div className="flex items-start gap-2 text-amber-400 bg-amber-950/50 border border-amber-400/20 rounded-lg p-2.5 text-xs max-w-xs">
+          <span className="shrink-0 mt-0.5">&#9888;</span>
+          <div className="flex-1">
+            <p className="font-medium">Recording interrupted</p>
+            <p className="text-amber-400/80 mt-0.5">
+              {interruptions.length === 1
+                ? `Paused for ~${interruptions[0].gapSeconds}s while app was in background. Audio during that time was not captured.`
+                : `${interruptions.length} interruptions totaling ~${totalGapSeconds}s. Audio during those gaps was not captured.`}
+            </p>
+          </div>
+          <button
+            onClick={() => setInterruptionDismissed(true)}
+            className="shrink-0 text-amber-400/60 hover:text-amber-400"
+            aria-label="Dismiss interruption warning"
+          >
+            &#x2715;
+          </button>
+        </div>
+      )}
+
       {isRecording && (
         <div className="flex items-center gap-2 text-red-500 font-mono text-sm">
           <span className="animate-pulse h-2 w-2 rounded-full bg-red-500" />

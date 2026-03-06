@@ -9,13 +9,19 @@ vi.mock('../../utils/backgroundKeepAlive', () => ({
   BackgroundKeepAlive: class {
     start = vi.fn().mockResolvedValue(undefined);
     stop = vi.fn();
+    restart = vi.fn().mockResolvedValue(undefined);
   },
 }));
 
 // Proper MediaRecorder mock using a class so vitest doesn't warn
 class MockMediaRecorder {
-  start = vi.fn();
-  stop = vi.fn();
+  state = 'inactive';
+  start = vi.fn().mockImplementation(function (this: MockMediaRecorder) {
+    this.state = 'recording';
+  });
+  stop = vi.fn().mockImplementation(function (this: MockMediaRecorder) {
+    this.state = 'inactive';
+  });
   ondataavailable: ((e: Event) => void) | null = null;
   onstop: (() => void) | null = null;
 
@@ -64,7 +70,6 @@ describe('AudioRecorder', () => {
     });
   });
 
-  // Fix 6: getUserMedia rejection calls onError
   it('calls onError when getUserMedia is rejected', async () => {
     const micError = new Error('Permission denied');
     Object.defineProperty(navigator, 'mediaDevices', {
@@ -83,7 +88,17 @@ describe('AudioRecorder', () => {
     });
 
     expect(onError).toHaveBeenCalledWith('Permission denied');
-    // Button should return to Record state after the failure
     expect(screen.getByRole('button', { name: /record/i })).toBeInTheDocument();
+  });
+
+  it('does not show interruption banner initially', async () => {
+    render(<AudioRecorder onTranscript={() => {}} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /record/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /stop/i })).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/recording interrupted/i)).not.toBeInTheDocument();
   });
 });

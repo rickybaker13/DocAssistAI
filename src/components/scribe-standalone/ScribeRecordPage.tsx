@@ -4,6 +4,7 @@ import { AudioRecorder } from '../scribe/AudioRecorder';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
+import { isIosDevice } from '../../utils/isIosDevice';
 
 type Phase = 'record' | 'error';
 
@@ -71,6 +72,11 @@ export const ScribeRecordPage: React.FC = () => {
           <p className="text-sm text-slate-400 text-center max-w-xs">
             Speak your patient encounter. The AI will generate all {canvasSections.length} section{canvasSections.length !== 1 ? 's' : ''} automatically.
           </p>
+          {isIosDevice() && (
+            <p className="text-xs text-amber-400/70 text-center max-w-xs">
+              Tip: For uninterrupted recording on iPhone, avoid switching apps. Locking the screen is OK.
+            </p>
+          )}
           <AudioRecorder onTranscript={handleTranscript} onError={handleError} />
         </>
       )}
