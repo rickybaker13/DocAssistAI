@@ -11,6 +11,8 @@ export interface ScribeUser {
   trial_ends_at: string | null;
   period_ends_at: string | null;
   cancelled_at: string | null;
+  square_customer_id: string | null;
+  square_card_id: string | null;
   created_at: string;
   updated_at: string;
 }

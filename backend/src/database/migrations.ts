@@ -72,6 +72,16 @@ CREATE TABLE IF NOT EXISTS scribe_password_reset_otps (
   used_at    TIMESTAMPTZ,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS scribe_payment_history (
+  id               TEXT PRIMARY KEY,
+  user_id          TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  square_payment_id TEXT,
+  amount_cents     INTEGER NOT NULL,
+  status           TEXT NOT NULL DEFAULT 'completed',
+  failure_reason   TEXT,
+  created_at       TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 // ---------------------------------------------------------------------------
@@ -118,6 +128,16 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     table: 'scribe_users',
     column: 'cancelled_at',
     sql: `ALTER TABLE scribe_users ADD COLUMN cancelled_at TIMESTAMPTZ`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'square_customer_id',
+    sql: `ALTER TABLE scribe_users ADD COLUMN square_customer_id TEXT`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'square_card_id',
+    sql: `ALTER TABLE scribe_users ADD COLUMN square_card_id TEXT`,
   },
 ];
 
