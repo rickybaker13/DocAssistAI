@@ -5,7 +5,7 @@ import { Sparkles } from 'lucide-react';
 import { DISCIPLINE_OPTIONS } from '../../lib/disciplines';
 import { SocialMediaLinks } from './SocialMediaLinks';
 
-type PaymentMethod = 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay' | 'square_bitcoin';
+type PaymentMethod = 'square_card' | 'square_ach' | 'square_apple_pay' | 'square_google_pay';
 
 export const ScribeRegisterPage: React.FC = () => {
   const { register, loading, error, user } = useScribeAuthStore();
@@ -21,7 +21,6 @@ export const ScribeRegisterPage: React.FC = () => {
     cardExpiry: '',
     cardCvc: '',
     phone: '',
-    network: 'bitcoin' as 'bitcoin' | 'lightning',
     agreedToAutoRenewal: false,
   });
   const [billingError, setBillingError] = useState<string | null>(null);
@@ -163,7 +162,6 @@ export const ScribeRegisterPage: React.FC = () => {
                   <option value="square_ach">Bank account (ACH via Square)</option>
                   <option value="square_apple_pay">Apple Pay (Square)</option>
                   <option value="square_google_pay">Google Pay (Square)</option>
-                  <option value="square_bitcoin">Bitcoin via Square</option>
                 </select>
               </div>
 
@@ -218,20 +216,6 @@ export const ScribeRegisterPage: React.FC = () => {
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-50 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-colors"
                     />
                   </div>
-                  {form.paymentMethod === 'square_bitcoin' && (
-                    <div>
-                      <label htmlFor="bitcoin-network" className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-1.5">Bitcoin network</label>
-                      <select
-                        id="bitcoin-network"
-                        value={form.network}
-                        onChange={setField('network')}
-                        className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-50 focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-colors"
-                      >
-                        <option value="bitcoin">Bitcoin (on-chain)</option>
-                        <option value="lightning">Lightning</option>
-                      </select>
-                    </div>
-                  )}
                 </>
               )}
             </div>
