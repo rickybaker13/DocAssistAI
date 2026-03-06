@@ -13,6 +13,7 @@ export interface ScribeUser {
   cancelled_at: string | null;
   square_customer_id: string | null;
   square_card_id: string | null;
+  is_admin: boolean;
   created_at: string;
   updated_at: string;
 }
