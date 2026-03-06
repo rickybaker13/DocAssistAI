@@ -1,33 +1,12 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Lock } from 'lucide-react';
 import { getBackendUrl } from '../../config/appConfig';
-
-declare global {
-  interface Window {
-    Square?: {
-      payments: (appId: string, locationId: string) => Promise<{
-        card: () => Promise<{
-          attach: (selector: string) => Promise<void>;
-          destroy: () => Promise<void>;
-          tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }>;
-        }>;
-      }>;
-    };
-  }
-}
+import type { SquareCard, SquareConfigResponse } from './square-types';
 
 interface Props {
   phone: string;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
-}
-
-interface SquareConfigResponse {
-  appId: string | null;
-  locationId: string | null;
-  accessTokenConfigured?: boolean;
-  environment?: 'sandbox' | 'production';
-  enabled: boolean;
 }
 
 const SQUARE_SDK_SELECTOR = 'script[data-square-sdk="true"]';
@@ -82,7 +61,7 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
   const [ready, setReady] = useState(false);
   const [enabled, setEnabled] = useState(false);
   const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox');
-  const cardRef = useRef<{ tokenize: () => Promise<{ status: string; token?: string; errors?: Array<{ message?: string }> }>; destroy: () => Promise<void> } | null>(null);
+  const cardRef = useRef<SquareCard | null>(null);
   const initAttempted = useRef(false);
 
   const initializeCard = useCallback(async () => {
