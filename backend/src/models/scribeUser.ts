@@ -203,4 +203,14 @@ export class ScribeUserModel {
       [userId],
     );
   }
+
+  async updateSquareIds(userId: string, squareCustomerId: string, squareCardId: string): Promise<void> {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE scribe_users
+       SET square_customer_id = $1, square_card_id = $2, updated_at = NOW()
+       WHERE id = $3`,
+      [squareCustomerId, squareCardId, userId],
+    );
+  }
 }

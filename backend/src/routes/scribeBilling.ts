@@ -3,10 +3,13 @@ import { Router, Request, Response } from 'express';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
 import { ScribeBillingModel, PaymentMethod } from '../models/scribeBilling.js';
 import { ScribeUserModel } from '../models/scribeUser.js';
+import { createSquareCustomer, storeCardOnFile } from '../services/billing/squareCustomer.js';
+import { ScribePaymentHistoryModel } from '../models/scribePaymentHistory.js';
 
 const router = Router();
 const billingModel = new ScribeBillingModel();
 const userModel = new ScribeUserModel();
+const paymentHistoryModel = new ScribePaymentHistoryModel();
 
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 
@@ -98,7 +101,7 @@ const handleSquarePayment = async (req: Request, res: Response) => {
       amount: 2000,
       currency: 'USD',
     },
-    note: `DocAssistAI Scribe subscription for ${user.email}`,
+    note: `DocAssistAI subscription for ${user.email}`,
     buyer_email_address: user.email,
   };
 
@@ -136,6 +139,48 @@ const handleSquarePayment = async (req: Request, res: Response) => {
     email: user.email,
     phone,
     paymentMethod: 'square_card',
+  });
+
+  // --- Square Customer + Card on File ---
+  let squareCustomerId = user.square_customer_id;
+  let squareCardId = user.square_card_id;
+
+  const squareConfig = {
+    accessToken: squareAccessToken,
+    environment: squareEnvironment,
+  };
+
+  try {
+    // Create Square Customer if we don't have one
+    if (!squareCustomerId) {
+      const customer = await createSquareCustomer(squareConfig, {
+        email: user.email,
+        idempotencyKey: `cust-${user.id}`,
+      });
+      squareCustomerId = customer.customerId;
+    }
+
+    // Store the card on file (replace existing if any)
+    const card = await storeCardOnFile(squareConfig, {
+      sourceId: sourceId,
+      customerId: squareCustomerId,
+      idempotencyKey: randomUUID(),
+    });
+    squareCardId = card.cardId;
+
+    // Persist IDs to user record
+    await userModel.updateSquareIds(user.id, squareCustomerId, squareCardId);
+  } catch (err) {
+    // Card-on-file is best-effort — payment already succeeded
+    console.error('[billing] Failed to store card on file:', err);
+  }
+
+  // Log the payment
+  await paymentHistoryModel.create({
+    userId: req.scribeUserId!,
+    squarePaymentId: squareData?.payment?.id ?? undefined,
+    amountCents: 2000,
+    status: 'completed',
   });
 
   // Activate subscription: set status to 'active' and extend period by 30 days
@@ -200,11 +245,17 @@ router.post('/checkout-request', scribeAuthMiddleware, handleCheckoutRequest);
 router.post('/webhosted-checkout-link', scribeAuthMiddleware, handleCheckoutRequest);
 
 router.get('/status', scribeAuthMiddleware, async (req: Request, res: Response) => {
-  const status = await userModel.getSubscriptionStatus(req.scribeUserId!);
-  if (!status) {
+  const user = await userModel.findById(req.scribeUserId!);
+  if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
-  return res.json(status);
+  return res.json({
+    subscription_status: user.subscription_status,
+    trial_ends_at: user.trial_ends_at,
+    period_ends_at: user.period_ends_at,
+    cancelled_at: user.cancelled_at,
+    has_payment_method: Boolean(user.square_card_id),
+  });
 });
 
 router.post('/cancel', scribeAuthMiddleware, async (req: Request, res: Response) => {
@@ -225,6 +276,11 @@ router.post('/cancel', scribeAuthMiddleware, async (req: Request, res: Response)
 router.get('/history', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const entries = await billingModel.listForUser(req.scribeUserId!);
   return res.json({ entries });
+});
+
+router.get('/payments', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const payments = await paymentHistoryModel.listForUser(req.scribeUserId!);
+  return res.json({ payments });
 });
 
 export default router;
