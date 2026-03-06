@@ -16,7 +16,8 @@ async function send(to: string, subject: string, html: string): Promise<void> {
     return;
   }
   try {
-    await resend.emails.send({ from: FROM_ADDRESS, to, subject, html });
+    const result = await resend.emails.send({ from: FROM_ADDRESS, to, subject, html });
+    console.log(`[email] Sent to ${to} | Subject: ${subject} | id: ${result.data?.id ?? 'unknown'}`);
   } catch (err) {
     console.error(`[email] Failed to send to ${to}:`, err);
   }
