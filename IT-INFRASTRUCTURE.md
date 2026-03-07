@@ -29,9 +29,9 @@ Comprehensive reference for the production hosting, networking, security, and op
 
 | Layer | Provider | URL / Host | Notes |
 |-------|----------|------------|-------|
-| **Frontend** | Vercel | `https://www.docassistai.app` | Vercel redirects `docassistai.app` → `www` |
-| **Backend API** | Railway | `https://docassistai-production.up.railway.app` | Docker container, Node.js 20 |
-| **Presidio + Whisper** | DigitalOcean Droplet | `http://<DROPLET_IP>:5001/5002/9000` | Docker Compose; setup via `infra/droplet-setup.sh` |
+| **Frontend** | Vercel | `https://www.docassistai.app` | Auto-deploys on `git push`; no env vars needed |
+| **Backend + All Services** | DigitalOcean Droplet | `https://api.docassistai.app` | All containers on one host behind Caddy reverse proxy |
+| **Droplet IP** | DigitalOcean | `159.203.87.97` | Project path: `/opt/docassistai` |
 
 ### Local Development
 
@@ -45,15 +45,28 @@ Comprehensive reference for the production hosting, networking, security, and op
 
 ## 2. Ports & Services
 
-| Service | Port | Protocol | Environment |
-|---------|------|----------|-------------|
-| Frontend (Vite dev) | 8080 | HTTP | Development |
-| Backend API | 3000 | HTTP | Dev / Railway internal |
-| Presidio Analyzer | 5002 → 3000 (container) | HTTP | Docker / Droplet |
-| Presidio Anonymizer | 5001 → 3000 (container) | HTTP | Docker / Droplet |
-| Whisper ASR | 9000 | HTTP | Docker / Droplet |
-| Frontend (Vercel) | 443 | HTTPS | Production |
-| Backend (Railway) | 443 | HTTPS | Production |
+### Production (DO Droplet)
+
+Only Caddy is exposed externally. All other services communicate over Docker's internal network.
+
+| Service | External Port | Internal Port | Notes |
+|---------|--------------|---------------|-------|
+| Caddy (reverse proxy) | **80, 443** | — | Only externally-exposed ports; auto-TLS via Let's Encrypt |
+| Backend (Express) | — | 3000 | Caddy proxies to `backend:3000` |
+| PostgreSQL | — | 5432 | Internal only |
+| Presidio Analyzer | — | 3000 | Internal only |
+| Presidio Anonymizer | — | 3000 | Internal only |
+| Whisper ASR (fallback) | — | 9000 | Internal only; used when Groq API unavailable |
+
+### Development (Local)
+
+| Service | Port | Notes |
+|---------|------|-------|
+| Frontend (Vite) | 8080 | `npm run dev` |
+| Backend (Express) | 3000 | `cd backend && npm run dev` |
+| Presidio Analyzer | 5002 → 3000 | Docker Compose |
+| Presidio Anonymizer | 5001 → 3000 | Docker Compose |
+| Whisper ASR | 9000 | Docker Compose (optional if using Groq) |
 
 ---
 
@@ -61,146 +74,114 @@ Comprehensive reference for the production hosting, networking, security, and op
 
 | Property | Value |
 |----------|-------|
-| Engine | PostgreSQL |
+| Engine | PostgreSQL 16 (Alpine) |
 | Driver | `pg` (node-postgres) pool — `backend/src/database/db.ts` |
-| Production | Railway-managed PostgreSQL; `DATABASE_URL` auto-injected |
+| Production | Docker container on DO droplet; `DATABASE_URL` set in `.env` |
 | Development | Local PostgreSQL or `DATABASE_URL` env var |
 | Testing | `pg-mem` in-memory (auto-selected when `NODE_ENV=test`) |
-| SSL | Enabled in production (`rejectUnauthorized: false`) |
-| Migrations | `backend/src/database/migrations.ts` — `COLUMN_MIGRATIONS` pattern with `pragma_table_info` guard |
+| SSL | Disabled in production (containers on same Docker network; `DATABASE_SSL=false`) |
+| Migrations | `backend/src/database/migrations.ts` — `COLUMN_MIGRATIONS` pattern with idempotent guards |
+| Data volume | `pgdata` Docker volume (persisted across container restarts) |
 
 ---
 
 ## 4. Docker Services
 
-Defined in `docker-compose.yml` at the project root.
+Defined in `infra/docker-compose.prod.yml`. A symlink at the project root (`docker-compose.prod.yml → infra/docker-compose.prod.yml`) allows running from `/opt/docassistai`.
 
-```yaml
-services:
-  presidio-analyzer:
-    image: mcr.microsoft.com/presidio-analyzer:latest
-    ports: ["5002:3000"]
-    volumes:
-      - ./backend/presidio-config:/usr/bin/presidio/conf
-    environment:
-      - RECOGNIZER_REGISTRY_CONF_FILE=/usr/bin/presidio/conf/recognizers.yaml
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 10s
-      retries: 5
-      start_period: 30s
+### Production containers (DO Droplet)
 
-  presidio-anonymizer:
-    image: mcr.microsoft.com/presidio-anonymizer:latest
-    ports: ["5001:3000"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 10s
-      retries: 3
-      start_period: 20s
+| Container | Image | Purpose |
+|-----------|-------|---------|
+| `caddy` | `caddy:2-alpine` | Reverse proxy + auto-TLS for `api.docassistai.app` |
+| `backend` | Custom (multi-stage Node 20 Alpine) | Express API server |
+| `postgres` | `postgres:16-alpine` | Database |
+| `presidio-analyzer` | `mcr.microsoft.com/presidio-analyzer:latest` | PII detection |
+| `presidio-anonymizer` | `mcr.microsoft.com/presidio-anonymizer:latest` | PII replacement |
+| `whisper` | `onerahmet/openai-whisper-asr-webservice:latest` | Fallback speech-to-text |
 
-  whisper:
-    image: onerahmet/openai-whisper-asr-webservice:latest
-    ports: ["9000:9000"]
-    environment:
-      - ASR_MODEL=base
-      - ASR_ENGINE=faster_whisper
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
-      interval: 15s
-      retries: 5
-      start_period: 60s
-```
-
-**Start locally:**
+### Key commands
 
 ```bash
-docker-compose up presidio-analyzer presidio-anonymizer whisper
+# Deploy / rebuild
+cd /opt/docassistai
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Rebuild backend only
+docker compose -f docker-compose.prod.yml up -d --build backend
+
+# View logs
+docker compose -f docker-compose.prod.yml logs backend --tail 30
+docker compose -f docker-compose.prod.yml logs caddy --tail 30
+
+# Check container health
+docker compose -f docker-compose.prod.yml ps
 ```
 
 ---
 
 ## 5. Environment Variables
 
-### Frontend (`.env`)
+### Frontend
+
+**No environment variables needed in production.** The Vite build uses hardcoded defaults in `src/config/appConfig.ts`:
+- Backend URL defaults to `https://api.docassistai.app` in production builds
+- No secrets or API keys in the frontend
+
+For local development, create a `.env` file with `VITE_BACKEND_URL=http://localhost:3000`.
+
+### Backend (`.env` on DO Droplet at `/opt/docassistai/.env`)
+
+See `infra/.env.example` for the full template.
 
 | Variable | Example | Purpose |
 |----------|---------|---------|
-| `VITE_TENANT_ID` | `<sandbox_tenant_id>` | Oracle Health / Cerner tenant |
-| `VITE_FHIR_BASE_URL` | `https://fhir-ehr-code.cerner.com/r4/...` | FHIR endpoint |
-| `VITE_AUTH_BASE_URL` | `https://authorization.cerner.com` | OAuth 2.0 authorization |
-| `VITE_CLIENT_ID` | `<client_id>` | SMART on FHIR client |
-| `VITE_REDIRECT_URI` | `http://localhost:8080/redirect` | OAuth redirect |
-| `VITE_AI_PROVIDER` | `openrouter` / `openai` | Client-side AI provider |
-| `VITE_AI_API_KEY` | `<key>` | AI provider key |
-| `VITE_OPENAI_API_KEY` | `<key>` | OpenAI key (if using OpenAI) |
-| `VITE_OPENAI_MODEL` | `gpt-4` | OpenAI model |
-| `VITE_OPENROUTER_API_KEY` | `<key>` | OpenRouter key |
-| `VITE_OPENROUTER_MODEL` | `openai/gpt-4-turbo-preview` | OpenRouter model |
-| `VITE_APP_NAME` | `DocAssistAI` | Application display name |
-| `VITE_APP_ID` | `<id>` | Application ID |
-| `VITE_USE_MOCK_DATA` | `false` | Set `true` for local testing without EHR |
-| `VITE_BACKEND_URL` | `http://localhost:3000` | Dev backend; empty string (`''`) in production (uses Vercel proxy) |
-
-### Backend (`.env`)
-
-| Variable | Example | Purpose |
-|----------|---------|---------|
-| `DATABASE_URL` | `postgresql://user:pass@host:5432/db` | PostgreSQL connection string |
+| **Database** | | |
+| `POSTGRES_PASSWORD` | `<random>` | PostgreSQL password |
+| `POSTGRES_USER` | `docassistai` | PostgreSQL user |
+| `POSTGRES_DB` | `docassistai` | PostgreSQL database name |
+| **Auth** | | |
 | `JWT_SECRET` | `<64-char hex>` | JWT signing key |
-| `COOKIE_SECRET` | `<64-char hex>` | Cookie signing key |
-| `EXTERNAL_AI_TYPE` | `bedrock` / `anthropic` / `openai` / `openrouter` | AI provider selection |
-| `ANTHROPIC_API_KEY` | `sk-ant-...` | Direct Anthropic API key |
-| `ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Anthropic model ID |
-| `AWS_REGION` | `us-east-1` | AWS region for Bedrock |
-| `AWS_ACCESS_KEY_ID` | `AKIA...` | AWS credentials |
-| `AWS_SECRET_ACCESS_KEY` | `...` | AWS credentials |
-| `BEDROCK_MODEL` | `us.anthropic.claude-sonnet-4-6-20250514-v1:0` | Bedrock model ARN |
-| `PRESIDIO_ANALYZER_URL` | `http://<DROPLET_IP>:5002` | PII analyzer endpoint |
-| `PRESIDIO_ANONYMIZER_URL` | `http://<DROPLET_IP>:5001` | PII anonymizer endpoint |
-| `PRESIDIO_MIN_SCORE` | `0.7` | Confidence threshold |
-| `PRESIDIO_TIMEOUT_MS` | `5000` | Per-request timeout |
-| `WHISPER_API_URL` | `http://<DROPLET_IP>:9000` | Self-hosted Whisper; falls back to OpenAI cloud if unset |
-| `WHISPER_TIMEOUT_MS` | `120000` | Whisper timeout |
-| `PORT` | `3000` | Server listen port |
-| `NODE_ENV` | `production` | Environment mode |
+| **AI (Anthropic)** | | |
+| `EXTERNAL_AI_TYPE` | `anthropic` | AI provider selection |
+| `ANTHROPIC_API_KEY` | `sk-ant-...` | Anthropic API key |
+| `SCRIBE_GENERATE_MODEL` | `claude-haiku-4-5-20251001` | Model for note generation (optional; defaults to Sonnet) |
+| **Transcription (Groq)** | | |
+| `GROQ_API_KEY` | `gsk_...` | Groq Whisper API key (if unset, falls back to self-hosted Whisper) |
+| **Payments (Square)** | | |
+| `SQUARE_WEB_APP_ID` | `sq0idp-xxxx` | Square Web Payments SDK app ID |
+| `SQUARE_LOCATION_ID` | `L1234567890` | Square location |
+| `SQUARE_ACCESS_TOKEN` | `EAAAxxxx` | Square access token |
+| `SQUARE_ENVIRONMENT` | `production` | Square environment |
+| **Email (Resend)** | | |
+| `RESEND_API_KEY` | `re_xxxx` | Resend API key |
+| `EMAIL_FROM` | `DocAssistAI <noreply@docassistai.app>` | Sender address |
+| **Cron** | | |
+| `CRON_SECRET` | `<32-char hex>` | Billing cron auth secret |
+| **Infra (set in docker-compose.prod.yml)** | | |
+| `PRESIDIO_ANALYZER_URL` | `http://presidio-analyzer:3000` | Internal Docker hostname |
+| `PRESIDIO_ANONYMIZER_URL` | `http://presidio-anonymizer:3000` | Internal Docker hostname |
+| `WHISPER_API_URL` | `http://whisper:9000` | Internal Docker hostname |
 | `FRONTEND_URL` | `https://www.docassistai.app` | CORS allowed origin |
-| `RATE_LIMIT_WINDOW_MS` | `900000` | Rate-limit window (15 min) |
-| `RATE_LIMIT_MAX_REQUESTS` | `100` | Max requests per window |
 
 ---
 
 ## 6. Domain & DNS / Vercel Configuration
 
-### Vercel Routing (`vercel.json`)
-
-```jsonc
-{
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "rewrites": [
-    // API proxy to Railway — MUST come before the SPA catch-all
-    { "source": "/api/:path*", "destination": "https://docassistai-production.up.railway.app/api/:path*" },
-    // SPA fallback
-    { "source": "/(.*)", "destination": "/index.html" }
-  ],
-  "redirects": [
-    { "source": "/", "destination": "/scribe/login", "permanent": false }
-  ],
-  "headers": [
-    { "source": "/sw.js", "headers": [{ "key": "Cache-Control", "value": "no-cache" }] }
-  ]
-}
-```
-
 ### Domain Summary
 
-| Domain | Purpose |
-|--------|---------|
-| `docassistai.app` | Redirects to `www` (Vercel) |
-| `www.docassistai.app` | Primary frontend |
-| `docassistai-production.up.railway.app` | Backend API |
-| `/api/*` on Vercel | Server-to-server proxy to Railway (no browser CORS needed) |
+| Domain | Points To | Purpose |
+|--------|-----------|---------|
+| `docassistai.app` | Vercel | Redirects to `www` |
+| `www.docassistai.app` | Vercel | Primary frontend (PWA) |
+| `api.docassistai.app` | `159.203.87.97` (A record) | Backend API (Caddy → Express) |
+
+### Vercel Configuration
+
+- **No environment variables** needed (frontend has no secrets)
+- Auto-deploys on `git push` to `main`
+- SPA routing with redirect: `/` → `/scribe/login`
+- The frontend calls `api.docassistai.app` directly (cross-origin with `credentials: 'include'`)
 
 ---
 
@@ -243,14 +224,15 @@ docker-compose up presidio-analyzer presidio-anonymizer whisper
 
 | Service | Endpoint | Provider | Purpose |
 |---------|----------|----------|---------|
-| Presidio Analyzer | `http://<DROPLET_IP>:5002` | Microsoft | PII detection |
-| Presidio Anonymizer | `http://<DROPLET_IP>:5001` | Microsoft | PII replacement with typed tokens |
-| Whisper ASR | `http://<DROPLET_IP>:9000` | Self-hosted (OpenAI model) | Speech-to-text |
-| OpenAI API (fallback) | `https://api.openai.com` | OpenAI | Whisper cloud fallback |
-| AWS Bedrock | `https://bedrock-runtime.*.amazonaws.com` | AWS | LLM inference (Claude Sonnet) |
-| Anthropic API | `https://api.anthropic.com` | Anthropic | LLM (alternative provider) |
-| Cerner FHIR Server | `https://fhir-ehr-code.cerner.com` | Oracle Health | Patient records |
-| Cerner Auth | `https://authorization.cerner.com` | Oracle Health | OAuth 2.0 (SMART on FHIR) |
+| **Anthropic API** | `https://api.anthropic.com` | Anthropic | LLM inference (Haiku 4.5 for notes, Sonnet 4.6 for analysis) |
+| **Groq Whisper API** | `https://api.groq.com/openai/v1/audio/transcriptions` | Groq | Fast speech-to-text (~5s for 5-min audio) |
+| **Resend** | `https://api.resend.com` | Resend | Transactional email (password reset, notifications) |
+| **Square** | `https://connect.squareup.com` | Square | Payment processing |
+| Presidio Analyzer | `http://presidio-analyzer:3000` (internal) | Microsoft | PII detection |
+| Presidio Anonymizer | `http://presidio-anonymizer:3000` (internal) | Microsoft | PII replacement |
+| Whisper ASR | `http://whisper:9000` (internal) | Self-hosted | Fallback speech-to-text (if Groq unavailable) |
+| Cerner FHIR Server | `https://fhir-ehr-code.cerner.com` | Oracle Health | Patient records (EHR mode) |
+| Cerner Auth | `https://authorization.cerner.com` | Oracle Health | OAuth 2.0 / SMART on FHIR (EHR mode) |
 
 ---
 
@@ -270,8 +252,8 @@ docker-compose up presidio-analyzer presidio-anonymizer whisper
 | Component | TLS Provider | Notes |
 |-----------|-------------|-------|
 | Frontend | Vercel (automatic) | HTTPS on `www.docassistai.app` |
-| Backend | Railway (automatic) | HTTPS on Railway domain |
-| Database | Railway PostgreSQL | SSL enabled (`rejectUnauthorized: false`) |
+| Backend | Caddy (automatic via Let's Encrypt) | HTTPS on `api.docassistai.app` |
+| Database | N/A | Internal Docker network, no TLS needed |
 | Cookies | `Secure: true` | Production only |
 
 ---
@@ -363,13 +345,20 @@ CMD ["node", "dist/server.js"]
 
 ## 13. CI/CD & Deployment Flow
 
-No explicit CI/CD pipeline configuration; deployments are triggered by Git push:
-
 | Component | Flow | Build Command | Artifact |
 |-----------|------|---------------|----------|
-| Frontend | `git push` → Vercel auto-deploy | `npm run build` | `dist/` |
-| Backend | `git push` → Railway auto-deploy | Docker multi-stage build | `dist/server.js` |
-| Droplet | Manual setup via `infra/droplet-setup.sh` | `docker-compose up` | Running containers |
+| Frontend | `git push` → Vercel auto-deploy | `npm run build` | `dist/` served by Vercel CDN |
+| Backend | Manual: `git pull` on droplet → `docker compose up -d --build` | Docker multi-stage build | Running container |
+
+### Deploying Backend Changes
+
+```bash
+ssh root@159.203.87.97
+cd /opt/docassistai
+git pull
+docker compose -f docker-compose.prod.yml up -d --build backend
+docker compose -f docker-compose.prod.yml logs backend --tail 20
+```
 
 ### Useful Commands
 
@@ -400,16 +389,26 @@ npm run lint
 | `GET /api/health` (backend) | HTTP | `{ presidio, analyzer, anonymizer, whisper }` |
 | Presidio Analyzer `/health` | HTTP (port 3000 inside container) | Service status |
 | Presidio Anonymizer `/health` | HTTP (port 3000 inside container) | Service status |
-| Whisper `/` | HTTP (port 9000) | Service status |
+| Whisper `/` | HTTP (port 9000 inside container) | Service status |
 
 **Production quick-check:**
 
 ```bash
-curl https://docassistai-production.up.railway.app/api/health
+curl https://api.docassistai.app/api/health
 # → { "presidio": true, "analyzer": true, "anonymizer": true, "whisper": true }
 ```
 
 Any `false` value means the backend is partially degraded.
+
+### Performance Metrics (Audio → Note Pipeline)
+
+| Step | Time | Service |
+|------|------|---------|
+| Audio upload | ~2-3s | iPhone → Caddy → Express |
+| Transcription | ~5s | Groq Whisper API (`whisper-large-v3-turbo`) |
+| PII scrubbing | ~1-2s | Presidio (local Docker) |
+| Note generation | ~5-6s | Claude Haiku 4.5 (Anthropic API) |
+| **Total** | **~15s** | End-to-end for ~5 min recording |
 
 ---
 
@@ -434,11 +433,14 @@ The `infra/droplet-setup.sh` script provisions a fresh DigitalOcean droplet:
 
 | Issue | Detail |
 |-------|--------|
-| **`trust proxy` on Railway** | Must be the **first line** after `const app = express()` — before any middleware. Without it, `express-rate-limit` throws `ERR_ERL_UNEXPECTED_X_FORWARDED_FOR` and crashes the container. |
-| **Railway crash-restart loop** | Container keeps restarting with the last successful build. Fix the crash in a new commit; Railway will build fresh. Check Railway → Deployments → View Logs. |
-| **Cross-domain cookies** | `SameSite=None` (production) requires `Secure: true`. `SameSite=Lax` (dev) blocks cookies on cross-site `fetch` with `credentials: 'include'`. |
+| **Docker Compose path resolution** | Docker Compose resolves `env_file`, `build.context`, and volume paths from the **project directory** (where the symlink lives), not the compose file's actual location in `infra/`. Use `./backend` not `../backend`. |
+| **`trust proxy`** | Must be the **first line** after `const app = express()` — before any middleware. Required for Caddy reverse proxy to pass correct client IPs. |
+| **Cross-domain cookies** | `SameSite=None` (production) requires `Secure: true`. Frontend at `www.docassistai.app` sets cookies from `api.docassistai.app`. |
+| **Caddy port conflicts** | If recreating the stack, ensure no old containers hold ports 80/443. Check with `ss -tlnp \| grep -E ':80\|:443'` and `docker port <container>`. |
+| **Docker container name prefixes** | Running `docker compose` from different directories creates different name prefixes (`infra-*` vs `docassistai-*`). Old containers on a separate Docker network can't communicate with new ones. |
 | **ESM `.js` extensions** | Node.js 20 ESM requires explicit `.js` on all relative imports in compiled output. `tsx watch` auto-resolves in dev; compiled ESM does not. |
 | **ESM + Jest** | `jest` is not auto-injected in `--experimental-vm-modules` mode. Test files must `import { jest } from '@jest/globals'`. |
-| **Vercel rewrite order** | API proxy rule **must precede** the SPA `/(.*)`  catch-all in `vercel.json`. |
 | **`ANTHROPIC_API_KEY=` (empty)** | An empty-string value in the environment blocks `dotenv` from loading the real key. Start backend with `env -u ANTHROPIC_API_KEY npm run dev`. |
 | **Presidio timeout** | Default 5 s; increase `PRESIDIO_TIMEOUT_MS` for large documents. |
+| **Groq Whisper model deprecation** | Check Groq docs periodically; `whisper-large-v3-turbo` may be superseded. Override via `GROQ_WHISPER_MODEL` env var. |
+| **Anthropic model deprecation** | Claude models have ~6-month lifespans. `SCRIBE_GENERATE_MODEL` env var allows updating without code changes. Check [model deprecations](https://platform.claude.com/docs/en/about-claude/model-deprecations). |

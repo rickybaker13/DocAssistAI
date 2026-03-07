@@ -7,35 +7,37 @@ DocAssistAI is built with a **backend-frontend architecture** designed for HIPAA
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    User's Browser                       │
-│  ┌──────────────────────────────────────────────────┐  │
-│  │         Frontend (React + TypeScript)            │  │
-│  │  - Patient Dashboard                             │  │
-│  │  - Chat Interface                                │  │
-│  │  - FHIR Data Fetching                            │  │
-│  └──────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                    │                    │
-                    │                    │
-        ┌───────────┘                    └───────────┐
-        │                                           │
-        ▼                                           ▼
-┌───────────────────┐                    ┌──────────────────┐
-│  Oracle Health    │                    │  Backend API     │
-│  EHR Server       │                    │  (Express)       │
-│  - FHIR API       │                    │  - AI Service    │
-│  - SMART Auth     │                    │  - Audit Logging │
-└───────────────────┘                    │  - PHI Protection│
-                                         └──────────────────┘
-                                                    │
-                                                    ▼
-                                         ┌──────────────────┐
-                                         │  AI Providers    │
-                                         │  - OpenAI        │
-                                         │  - OpenRouter    │
-                                         │  - Self-Hosted   │
-                                         └──────────────────┘
+  ┌──────────────────────────────────────────────────────────────┐
+  │              User's iPhone / Browser (PWA)                   │
+  │  ┌────────────────────────────────────────────────────────┐  │
+  │  │          Frontend (React + TypeScript + Vite)          │  │
+  │  │  - Scribe: Audio Recording → Structured Clinical Notes │  │
+  │  │  - Patient Dashboard + Chat (EHR mode)                 │  │
+  │  │  - Hosted on Vercel (www.docassistai.app)              │  │
+  │  └────────────────────────────────────────────────────────┘  │
+  └──────────────────────────────────────────────────────────────┘
+                       │
+                       ▼ HTTPS
+  ┌──────────────────────────────────────────────────────────────┐
+  │           DigitalOcean Droplet (159.203.87.97)               │
+  │  ┌────────────────────────────────────────────────────────┐  │
+  │  │  Caddy (reverse proxy + auto-TLS)                      │  │
+  │  │  api.docassistai.app :80/:443                          │  │
+  │  └──────────────────────┬─────────────────────────────────┘  │
+  │                         │ :3000                              │
+  │  ┌──────────────────────▼─────────────────────────────────┐  │
+  │  │  Express Backend                                       │  │
+  │  │  - Scribe AI (note generation, focused analysis)       │  │
+  │  │  - PII scrubbing (Presidio) before every LLM call      │  │
+  │  │  - Audio transcription (Groq Whisper API)              │  │
+  │  │  - Auth (JWT cookies), billing, audit logging          │  │
+  │  └───┬──────────┬──────────┬──────────┬───────────────────┘  │
+  │      │          │          │          │                      │
+  │      ▼          ▼          ▼          ▼                      │
+  │  Presidio   PostgreSQL   Whisper   Groq / Anthropic          │
+  │  Analyzer   (data)       (fallback) (cloud APIs)             │
+  │  & Anon.                                                     │
+  └──────────────────────────────────────────────────────────────┘
 ```
 
 ## Components
@@ -69,7 +71,7 @@ DocAssistAI is built with a **backend-frontend architecture** designed for HIPAA
 - Winston (audit logging)
 
 **Key Features**:
-- **Flexible AI Providers**: External (OpenAI/OpenRouter) or self-hosted (Ollama/vLLM)
+- **AI Provider**: Anthropic Claude (Haiku 4.5 for note gen, Sonnet 4.6 for analysis)
 - **HIPAA Compliance**: Audit logging, PHI protection
 - **Security**: Rate limiting, CORS, Helmet
 - **Provider Abstraction**: Easy switching via configuration
@@ -160,29 +162,25 @@ interface AIProvider {
 }
 ```
 
-### Supported Providers
+### Current Provider: Anthropic (Direct API)
 
-**External**:
-- OpenAI (GPT-4, GPT-3.5)
-- OpenRouter (Multiple models)
+- **Note generation** (`/api/ai/scribe/generate`): Claude Haiku 4.5 — fast, cost-effective
+- **All other AI endpoints** (focused analysis, ghost-write, chat): Claude Sonnet 4.6 — higher reasoning quality
+- Model override via `SCRIBE_GENERATE_MODEL` env var
 
-**Self-Hosted**:
-- Ollama (Local LLM)
-- vLLM (OpenAI-compatible)
-- Custom (Any OpenAI-compatible endpoint)
+### Transcription: Groq Whisper API
+
+- **Primary**: Groq cloud API (`whisper-large-v3-turbo`) — ~5s for 5-minute recordings
+- **Fallback**: Self-hosted Whisper container (if `GROQ_API_KEY` is unset) — ~15-25s
+- Configured via `GROQ_API_KEY` env var
 
 ### Configuration
 
-Switching providers is done via environment variables:
-
 ```env
-# External API
-AI_PROVIDER=external
-EXTERNAL_AI_TYPE=openrouter
-
-# Self-Hosted
-AI_PROVIDER=self-hosted
-SELF_HOSTED_LLM_TYPE=ollama
+EXTERNAL_AI_TYPE=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+SCRIBE_GENERATE_MODEL=claude-haiku-4-5-20251001   # optional override
+GROQ_API_KEY=gsk_...                               # enables fast transcription
 ```
 
 ## Deployment Architecture
@@ -190,18 +188,22 @@ SELF_HOSTED_LLM_TYPE=ollama
 ### Development
 
 ```
-Frontend: localhost:8080
-Backend:  localhost:3000
-EHR:      Oracle Health Sandbox
+Frontend:  localhost:8080 (Vite)
+Backend:   localhost:3000 (Express)
+Presidio:  Docker Compose (localhost:5001/5002)
+Whisper:   Groq API (or Docker Compose localhost:9000)
 ```
 
 ### Production
 
 ```
-Frontend: Hospital web server or CDN
-Backend:  Hospital secure server
-EHR:      Production Oracle Health EHR
-AI:       Configured provider (external or self-hosted)
+Frontend:  Vercel (www.docassistai.app) — auto-deploy on git push
+Backend:   DigitalOcean Droplet (api.docassistai.app) — Docker Compose
+Caddy:     Reverse proxy + auto-TLS (only ports 80/443 exposed)
+Presidio:  Docker containers on same droplet (internal network)
+Whisper:   Groq cloud API (self-hosted container as fallback)
+PostgreSQL: Docker container on same droplet (internal network)
+AI:        Anthropic API (direct, not via AWS Bedrock)
 ```
 
 ## Key Design Decisions
@@ -277,7 +279,20 @@ Scribe is a standalone AI-powered clinical documentation module within DocAssist
 - `ScribeChatDrawer` — floating chat with ghost-write insert
 - `NoteBuilderPage` — template selection + verbosity preference
 
-**DB** (`backend/data/scribe.db`): SQLite via better-sqlite3. Schema in `backend/src/database/migrations.ts`. New columns added via `COLUMN_MIGRATIONS` array, not `CREATE TABLE IF NOT EXISTS`.
+**DB**: PostgreSQL (Docker container on DO droplet). Schema managed by `backend/src/database/migrations.ts` — `COLUMN_MIGRATIONS` pattern with idempotent guards.
+
+### Audio → Structured Note Pipeline (Scribe)
+
+```
+Record audio (iPhone PWA) → Upload webm blob (~2-3s)
+  → Groq Whisper API transcription (~5s)
+  → Presidio PII scrubbing (~1-2s)
+  → Claude Haiku 4.5 note generation (~5-6s)
+  → PII re-injection (<0.1s)
+  → Structured clinical note displayed
+
+Total: ~15 seconds (down from ~50-100s before optimization)
+```
 
 ## References
 
