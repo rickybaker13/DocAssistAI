@@ -7,7 +7,11 @@ export class WhisperService {
     // Prefer Groq cloud API if configured (much faster than self-hosted)
     const groqKey = (process.env.GROQ_API_KEY || '').trim();
     if (groqKey) {
-      return this.callGroq(audioBuffer, mimeType, groqKey);
+      const start = Date.now();
+      console.log('[Whisper] Using Groq cloud API');
+      const text = await this.callGroq(audioBuffer, mimeType, groqKey);
+      console.log(`[Whisper] Groq transcription completed in ${Date.now() - start}ms`);
+      return text;
     }
 
     // Fall back to self-hosted Whisper
@@ -16,7 +20,11 @@ export class WhisperService {
       throw new Error('WHISPER_API_URL is required — self-hosted Whisper must be configured');
     }
 
-    return this.callSelfHosted(audioBuffer, mimeType, baseUrl);
+    const start = Date.now();
+    console.log('[Whisper] Using self-hosted Whisper at', baseUrl);
+    const text = await this.callSelfHosted(audioBuffer, mimeType, baseUrl);
+    console.log(`[Whisper] Self-hosted transcription completed in ${Date.now() - start}ms`);
+    return text;
   }
 
   /**
