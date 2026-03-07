@@ -95,7 +95,10 @@ Confidence is 0.0–1.0: 1.0 = fully supported by transcript, 0.0 = not in trans
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        options: { temperature: 0.3 },
+        options: {
+          temperature: 0.3,
+          model: process.env.SCRIBE_GENERATE_MODEL || undefined,
+        },
       },
       { userId: req.scribeUserId }
     );

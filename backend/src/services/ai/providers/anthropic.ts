@@ -18,6 +18,7 @@ export class AnthropicProvider extends BaseAIProvider {
   async chat(messages: AIMessage[], options?: {
     temperature?: number;
     maxTokens?: number;
+    model?: string;
   }): Promise<AIResponse> {
     try {
       // Anthropic separates system messages from the messages array
@@ -27,7 +28,7 @@ export class AnthropicProvider extends BaseAIProvider {
       const system = systemMessages.map(m => m.content).join('\n') || undefined;
 
       const response = await this.client.messages.create({
-        model: this.model,
+        model: options?.model || this.model,
         max_tokens: options?.maxTokens ?? 4096,
         temperature: options?.temperature ?? 0.7,
         ...(system ? { system } : {}),

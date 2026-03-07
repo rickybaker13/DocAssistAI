@@ -12,6 +12,7 @@ export interface AIProvider {
   chat(messages: AIMessage[], options?: {
     temperature?: number;
     maxTokens?: number;
+    model?: string;
   }): Promise<AIResponse>;
 
   /**
@@ -37,6 +38,7 @@ export abstract class BaseAIProvider implements AIProvider {
   abstract chat(messages: AIMessage[], options?: {
     temperature?: number;
     maxTokens?: number;
+    model?: string;
   }): Promise<AIResponse>;
 
   getName(): string {

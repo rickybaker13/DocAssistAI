@@ -43,6 +43,8 @@ services:
       - PRESIDIO_ANALYZER_URL=http://presidio-analyzer:3000
       - PRESIDIO_ANONYMIZER_URL=http://presidio-anonymizer:3000
       - WHISPER_API_URL=http://whisper:9000
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - SCRIBE_GENERATE_MODEL=${SCRIBE_GENERATE_MODEL:-}
       - FRONTEND_URL=https://www.docassistai.app
     depends_on:
       postgres:

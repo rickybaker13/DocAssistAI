@@ -4,6 +4,13 @@ export class WhisperService {
       throw new Error('Empty audio buffer');
     }
 
+    // Prefer Groq cloud API if configured (much faster than self-hosted)
+    const groqKey = (process.env.GROQ_API_KEY || '').trim();
+    if (groqKey) {
+      return this.callGroq(audioBuffer, mimeType, groqKey);
+    }
+
+    // Fall back to self-hosted Whisper
     const baseUrl = (process.env.WHISPER_API_URL || '').trim().replace(/\/+$/, '');
     if (!baseUrl) {
       throw new Error('WHISPER_API_URL is required — self-hosted Whisper must be configured');
@@ -39,6 +46,43 @@ export class WhisperService {
       if (!response.ok) {
         const body = await response.text().catch(() => '');
         throw new Error(`Whisper ASR returned ${response.status}: ${body}`);
+      }
+
+      const result = (await response.json()) as { text: string };
+      return result.text;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /**
+   * Call Groq's OpenAI-compatible Whisper API.
+   * Much faster than self-hosted (~2-3s vs ~15-25s for typical recordings).
+   */
+  private async callGroq(audioBuffer: Buffer, mimeType: string, apiKey: string): Promise<string> {
+    const model = process.env.GROQ_WHISPER_MODEL || 'whisper-large-v3-turbo';
+    const ext = mimeType.includes('webm') ? 'webm' : mimeType.includes('mp4') ? 'mp4' : 'wav';
+
+    const form = new FormData();
+    form.append('file', new Blob([audioBuffer], { type: mimeType }), `recording.${ext}`);
+    form.append('model', model);
+    form.append('language', 'en');
+    form.append('response_format', 'json');
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60000);
+
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        throw new Error(`Groq Whisper returned ${response.status}: ${body}`);
       }
 
       const result = (await response.json()) as { text: string };

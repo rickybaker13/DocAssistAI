@@ -131,6 +131,52 @@ describe('Scribe AI Routes', () => {
       expect(sys).toMatch(/ICD-10|icd-10/i);
       expect(sys).toMatch(/essential.*hypertension|preferred terminology/i);
     });
+
+    it('passes SCRIBE_GENERATE_MODEL as model override when env var is set', async () => {
+      const origModel = process.env.SCRIBE_GENERATE_MODEL;
+      process.env.SCRIBE_GENERATE_MODEL = 'claude-3-5-haiku-20241022';
+
+      mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
+        sections: [{ name: 'HPI', content: 'Patient presents.', confidence: 0.9 }],
+      }) } as any);
+
+      await request(app)
+        .post('/api/ai/scribe/generate')
+        .set('Cookie', authCookie)
+        .send({ transcript: 'Patient presents.', sections: [{ name: 'HPI' }], noteType: 'progress_note' });
+
+      const callArgs = mockAiChat.mock.calls[0][0] as any;
+      expect(callArgs.options.model).toBe('claude-3-5-haiku-20241022');
+
+      // Restore env
+      if (origModel === undefined) {
+        delete process.env.SCRIBE_GENERATE_MODEL;
+      } else {
+        process.env.SCRIBE_GENERATE_MODEL = origModel;
+      }
+    });
+
+    it('does not pass model override when SCRIBE_GENERATE_MODEL is not set', async () => {
+      const origModel = process.env.SCRIBE_GENERATE_MODEL;
+      delete process.env.SCRIBE_GENERATE_MODEL;
+
+      mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
+        sections: [{ name: 'HPI', content: 'Patient presents.', confidence: 0.9 }],
+      }) } as any);
+
+      await request(app)
+        .post('/api/ai/scribe/generate')
+        .set('Cookie', authCookie)
+        .send({ transcript: 'Patient presents.', sections: [{ name: 'HPI' }], noteType: 'progress_note' });
+
+      const callArgs = mockAiChat.mock.calls[0][0] as any;
+      expect(callArgs.options.model).toBeUndefined();
+
+      // Restore env
+      if (origModel !== undefined) {
+        process.env.SCRIBE_GENERATE_MODEL = origModel;
+      }
+    });
   });
 
   describe('POST /focused', () => {

@@ -24,6 +24,7 @@ export interface ChatRequest {
   options?: {
     temperature?: number;
     maxTokens?: number;
+    model?: string;
   };
 }
 
