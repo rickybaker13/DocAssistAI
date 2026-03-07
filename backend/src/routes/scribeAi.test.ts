@@ -134,7 +134,7 @@ describe('Scribe AI Routes', () => {
 
     it('passes SCRIBE_GENERATE_MODEL as model override when env var is set', async () => {
       const origModel = process.env.SCRIBE_GENERATE_MODEL;
-      process.env.SCRIBE_GENERATE_MODEL = 'claude-3-5-haiku-20241022';
+      process.env.SCRIBE_GENERATE_MODEL = 'claude-haiku-4-5-20251001';
 
       mockAiChat.mockResolvedValueOnce({ content: JSON.stringify({
         sections: [{ name: 'HPI', content: 'Patient presents.', confidence: 0.9 }],
@@ -146,7 +146,7 @@ describe('Scribe AI Routes', () => {
         .send({ transcript: 'Patient presents.', sections: [{ name: 'HPI' }], noteType: 'progress_note' });
 
       const callArgs = mockAiChat.mock.calls[0][0] as any;
-      expect(callArgs.options.model).toBe('claude-3-5-haiku-20241022');
+      expect(callArgs.options.model).toBe('claude-haiku-4-5-20251001');
 
       // Restore env
       if (origModel === undefined) {
