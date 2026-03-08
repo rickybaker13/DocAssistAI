@@ -25,7 +25,14 @@ export class AnthropicProvider extends BaseAIProvider {
       const systemMessages = messages.filter(m => m.role === 'system');
       const userMessages = messages.filter(m => m.role !== 'system');
 
-      const system = systemMessages.map(m => m.content).join('\n') || undefined;
+      const systemText = systemMessages.map(m => m.content).join('\n') || undefined;
+
+      // Use structured system content with cache_control for prompt caching.
+      // Anthropic caches system prompts marked with { type: 'ephemeral' },
+      // giving 90% savings on cached input tokens for repeated system prompts.
+      const system = systemText
+        ? [{ type: 'text' as const, text: systemText, cache_control: { type: 'ephemeral' as const } }]
+        : undefined;
 
       const response = await this.client.messages.create({
         model: options?.model || this.model,
@@ -41,6 +48,12 @@ export class AnthropicProvider extends BaseAIProvider {
       const textBlock = response.content.find(b => b.type === 'text');
       if (!textBlock || textBlock.type !== 'text') {
         throw new Error('No text content in Anthropic response');
+      }
+
+      // Log cache performance when prompt caching is active
+      const cacheUsage = (response.usage as any);
+      if (cacheUsage.cache_read_input_tokens || cacheUsage.cache_creation_input_tokens) {
+        console.log(`[Anthropic] Cache: ${cacheUsage.cache_read_input_tokens ?? 0} read, ${cacheUsage.cache_creation_input_tokens ?? 0} created, ${response.usage.input_tokens} input`);
       }
 
       return {

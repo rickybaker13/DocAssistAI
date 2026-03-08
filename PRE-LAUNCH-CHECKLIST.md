@@ -57,16 +57,14 @@ The core product is **functionally complete and deployed**:
 ## Phase 2: Infrastructure & Operations (BEFORE testers)
 
 ### 2.1 Vercel Pro Plan
-- [ ] Verify Vercel Pro plan is active (required for commercial use — Hobby plan is personal-only)
-- [ ] If not active: upgrade at https://vercel.com/dashboard (cost: $20/month)
+- [x] Vercel Pro plan upgraded (2026-03-08) — $20/month, required for commercial use
 
 ### 2.2 Prompt Caching (Cost Optimization)
-- [ ] Research Anthropic prompt caching for system prompts
-  - System prompts for note generation and focused analysis are repeated on every call
-  - Anthropic prompt caching offers 90% savings on cached input tokens
-  - Implementation: add `cache_control` to system message in `anthropic.ts` provider
-- [ ] Estimate savings: with 300 encounters/user/month, system prompt tokens dominate input cost
-- [ ] Implement if straightforward (likely a 5-line change in `anthropic.ts`)
+- [x] Implemented Anthropic prompt caching in `anthropic.ts` provider
+  - System prompts sent with `cache_control: { type: 'ephemeral' }` for 90% savings on cached input tokens
+  - Cache performance logged: `[Anthropic] Cache: X read, Y created, Z input`
+  - All 4 system prompts (generate, focused analysis, ghost-write, chat) benefit automatically
+  - Estimated savings: ~$0.50-1.00/user/month on system prompt tokens at 300 encounters/month
 
 ### 2.3 Monitoring & Alerting
 - [ ] Set up basic uptime monitoring for `api.docassistai.app/api/health`
