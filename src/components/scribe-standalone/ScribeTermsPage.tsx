@@ -212,7 +212,7 @@ export const ScribeTermsPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-slate-100 mt-8 mb-3">22. Contact</h2>
               <p>For legal notices and terms questions:</p>
               <ul className="list-disc pl-6 mt-2 space-y-1">
-                <li>Email: <a href="mailto:legal@docassistai.com" className="text-teal-400 hover:text-teal-300">legal@docassistai.com</a></li>
+                <li>Email: <a href="mailto:admin@docassistai.app" className="text-teal-400 hover:text-teal-300">admin@docassistai.app</a></li>
               </ul>
             </div>
           </section>

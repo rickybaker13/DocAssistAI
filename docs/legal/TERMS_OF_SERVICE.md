@@ -187,7 +187,7 @@ Unless otherwise set in an executed order form, these Terms are governed by the 
 
 For legal notices and terms questions:
 
-- Email: legal@docassistai.com
+- Email: admin@docassistai.app
 - Address: [Insert legal entity address]
 
 ---

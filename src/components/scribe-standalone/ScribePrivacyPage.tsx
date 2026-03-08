@@ -169,7 +169,7 @@ export const ScribePrivacyPage: React.FC = () => {
               <h2 className="text-xl font-semibold text-slate-100 mt-8 mb-3">15. Contact Us</h2>
               <p>For privacy questions or rights requests:</p>
               <ul className="list-disc pl-6 mt-2 space-y-1">
-                <li>Email: <a href="mailto:privacy@docassistai.com" className="text-teal-400 hover:text-teal-300">privacy@docassistai.com</a></li>
+                <li>Email: <a href="mailto:admin@docassistai.app" className="text-teal-400 hover:text-teal-300">admin@docassistai.app</a></li>
               </ul>
               <p className="mt-2">For HIPAA/privacy incidents, follow your contractual incident reporting path in addition to this contact.</p>
             </div>

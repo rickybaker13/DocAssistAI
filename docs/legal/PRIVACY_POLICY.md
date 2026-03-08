@@ -146,7 +146,7 @@ We may update this Privacy Policy periodically. We will post the revised version
 
 For privacy questions or rights requests:
 
-- Email: privacy@docassistai.com
+- Email: admin@docassistai.app
 - Address: [Insert legal entity address]
 
 For HIPAA/privacy incidents, follow your contractual incident reporting path in addition to this contact.
