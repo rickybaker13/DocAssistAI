@@ -67,16 +67,20 @@ The core product is **functionally complete and deployed**:
   - Estimated savings: ~$0.50-1.00/user/month on system prompt tokens at 300 encounters/month
 
 ### 2.3 Monitoring & Alerting
-- [ ] Set up basic uptime monitoring for `api.docassistai.app/api/health`
-  - Options: UptimeRobot (free tier), BetterStack, or DigitalOcean monitoring
-- [ ] Configure email alerts for downtime
+- [x] UptimeRobot (free tier) configured (2026-03-08) — SSO via Google account
+  - Monitors: `https://api.docassistai.app/health`, `https://api.docassistai.app/api/health`, `https://www.docassistai.app`
+  - 5-minute check intervals, email alerts on downtime
 - [ ] Review backend error logging — ensure Winston audit logs capture failures
 
 ### 2.4 Database Backups
-- [ ] Verify PostgreSQL backup strategy on DO droplet
-  - Option A: `pg_dump` cron job to DigitalOcean Spaces (automated)
-  - Option B: DigitalOcean managed backups (droplet snapshots)
+- [x] PostgreSQL backup script deployed (2026-03-08): `/opt/docassistai/scripts/pg_backup.sh`
+  - `pg_dump` custom format via `docker exec docassistai-postgres-1`
+  - Cron: daily at 2 AM UTC → `/opt/docassistai/backups/daily/`
+  - Retention: 7 daily + 4 weekly (Sunday copies)
+  - Logs: `/var/log/docassistai-backup.log`
+  - Test backup verified: 23K dump file created successfully
 - [ ] Test backup restore procedure at least once
+- [ ] Consider offsite backup (DigitalOcean Spaces) once user volume grows
 
 ---
 
