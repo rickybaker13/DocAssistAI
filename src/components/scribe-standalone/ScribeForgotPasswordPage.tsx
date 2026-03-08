@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
+import { DocAssistLogo } from './DocAssistLogo';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 
 export const ScribeForgotPasswordPage: React.FC = () => {
@@ -22,9 +22,7 @@ export const ScribeForgotPasswordPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-400 rounded-2xl mb-4">
-            <Sparkles size={28} className="text-slate-900" />
-          </div>
+          <DocAssistLogo className="inline-block w-14 h-14 rounded-2xl mb-4" />
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">Forgot Password</h1>
           <p className="text-sm text-slate-400 mt-1">We'll email a one-time verification code.</p>
         </div>

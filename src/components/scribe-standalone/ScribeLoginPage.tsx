@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
-import { Sparkles } from 'lucide-react';
+import { DocAssistLogo } from './DocAssistLogo';
 import { SocialMediaLinks } from './SocialMediaLinks';
 
 export const ScribeLoginPage: React.FC = () => {
@@ -24,9 +24,7 @@ export const ScribeLoginPage: React.FC = () => {
       <div className="w-full max-w-sm">
         {/* Logo mark */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 bg-teal-400 rounded-2xl mb-4">
-            <Sparkles size={28} className="text-slate-900" />
-          </div>
+          <DocAssistLogo className="inline-block w-14 h-14 rounded-2xl mb-4" />
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">DocAssistAI</h1>
           <p className="text-sm text-slate-400 mt-1">Clinical documentation, simplified</p>
         </div>

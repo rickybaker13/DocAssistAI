@@ -7,11 +7,11 @@ import {
   FileText,
   User,
   LogOut,
-  Sparkles,
   Settings,
   MessageSquare,
   Shield,
 } from 'lucide-react';
+import { DocAssistLogo } from './DocAssistLogo';
 
 const getNavItems = (isAdmin: boolean) => [
   { to: '/scribe/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -43,9 +43,7 @@ export const ScribeLayout: React.FC = () => {
       <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-60 bg-slate-900 border-r border-slate-800 z-20">
         {/* Logo */}
         <div className="px-5 py-5 flex items-center gap-2.5 border-b border-slate-800">
-          <div className="w-8 h-8 bg-teal-400 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Sparkles size={18} className="text-slate-900" />
-          </div>
+          <DocAssistLogo className="w-8 h-8 rounded-lg flex-shrink-0" />
           <span className="font-semibold text-slate-50 text-sm tracking-tight">DocAssistAI</span>
         </div>
 
@@ -97,9 +95,7 @@ export const ScribeLayout: React.FC = () => {
           className="md:hidden sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-teal-400 rounded-md flex items-center justify-center">
-              <Sparkles size={15} className="text-slate-900" />
-            </div>
+            <DocAssistLogo className="w-7 h-7 rounded-md" />
             <span className="font-semibold text-slate-50 text-sm">DocAssistAI</span>
           </div>
           {user && (

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Sparkles, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
+import { DocAssistLogo } from './DocAssistLogo';
 import HeroSection from './landing/HeroSection';
 import PainPointSection from './landing/PainPointSection';
 import HowItWorksSection from './landing/HowItWorksSection';
@@ -37,9 +38,7 @@ export default function ScribeLandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-teal-400">
-              <Sparkles size={18} className="text-slate-900" />
-            </div>
+            <DocAssistLogo className="h-8 w-8 rounded-lg" />
             <span className="text-lg font-bold text-slate-50">DocAssistAI</span>
           </Link>
 

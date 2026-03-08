@@ -114,6 +114,7 @@ describe('useScribeAuthStore', () => {
         period_ends_at: null,
         cancelled_at: null,
         has_payment_method: true,
+        billing_cycle: 'monthly',
       },
     });
     const { result } = renderHook(() => useScribeAuthStore());

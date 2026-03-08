@@ -1,13 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Sparkles } from 'lucide-react';
 import { SocialMediaLinks } from '../SocialMediaLinks';
+import { DocAssistLogo } from '../DocAssistLogo';
 
 export default function LandingFooter() {
   return (
     <footer className="border-t border-slate-800 py-12 px-4 text-center">
       {/* Logo */}
       <div className="flex items-center justify-center gap-2">
-        <Sparkles className="h-6 w-6 text-teal-400" />
+        <DocAssistLogo className="h-6 w-6 rounded" />
         <span className="text-xl font-bold text-slate-50">DocAssistAI</span>
       </div>
 
