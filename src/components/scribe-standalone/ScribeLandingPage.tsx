@@ -38,7 +38,7 @@ export default function ScribeLandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <DocAssistLogo className="h-8 w-8 rounded-lg" />
+            <DocAssistLogo className="h-12 w-12 rounded-xl" />
             <span className="text-lg font-bold text-slate-50">DocAssistAI</span>
           </Link>
 

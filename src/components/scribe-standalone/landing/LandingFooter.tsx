@@ -7,7 +7,7 @@ export default function LandingFooter() {
     <footer className="border-t border-slate-800 py-12 px-4 text-center">
       {/* Logo */}
       <div className="flex items-center justify-center gap-2">
-        <DocAssistLogo className="h-6 w-6 rounded" />
+        <DocAssistLogo className="h-10 w-10 rounded-lg" />
         <span className="text-xl font-bold text-slate-50">DocAssistAI</span>
       </div>
 

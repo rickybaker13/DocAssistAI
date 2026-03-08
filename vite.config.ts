@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['icon.svg', 'generated/icon-192.png', 'generated/icon-512.png', 'generated/apple-touch-icon.png'],
+      includeAssets: ['icon.svg', 'icon-brand.svg', 'generated/icon-192.png', 'generated/icon-512.png', 'generated/apple-touch-icon.png'],
       manifest: {
         name: 'DocAssistAI',
         short_name: 'DocAI',

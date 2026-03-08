@@ -48,7 +48,7 @@ export const ScribeResetPasswordPage: React.FC = () => {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <DocAssistLogo className="inline-block w-14 h-14 rounded-2xl mb-4" />
+          <DocAssistLogo className="inline-block w-24 h-24 rounded-3xl mb-4" />
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">Set New Password</h1>
           <p className="text-sm text-slate-400 mt-1">Enter your email + one-time code, then choose a new password.</p>
         </div>

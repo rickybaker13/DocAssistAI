@@ -43,7 +43,7 @@ export const ScribeLayout: React.FC = () => {
       <aside className="hidden md:flex flex-col fixed inset-y-0 left-0 w-60 bg-slate-900 border-r border-slate-800 z-20">
         {/* Logo */}
         <div className="px-5 py-5 flex items-center gap-2.5 border-b border-slate-800">
-          <DocAssistLogo className="w-8 h-8 rounded-lg flex-shrink-0" />
+          <DocAssistLogo className="w-12 h-12 rounded-xl flex-shrink-0" />
           <span className="font-semibold text-slate-50 text-sm tracking-tight">DocAssistAI</span>
         </div>
 
@@ -95,7 +95,7 @@ export const ScribeLayout: React.FC = () => {
           className="md:hidden sticky top-0 z-10 bg-slate-900 border-b border-slate-800 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <DocAssistLogo className="w-7 h-7 rounded-md" />
+            <DocAssistLogo className="w-11 h-11 rounded-lg" />
             <span className="font-semibold text-slate-50 text-sm">DocAssistAI</span>
           </div>
           {user && (
