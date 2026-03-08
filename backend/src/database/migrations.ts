@@ -176,6 +176,12 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'billing_cycle',
     sql: `ALTER TABLE scribe_users ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'`,
   },
+  // Billing code suggestions opt-in
+  {
+    table: 'scribe_users',
+    column: 'billing_codes_enabled',
+    sql: `ALTER TABLE scribe_users ADD COLUMN billing_codes_enabled BOOLEAN DEFAULT FALSE`,
+  },
 ];
 
 // ---------------------------------------------------------------------------

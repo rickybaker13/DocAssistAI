@@ -15,6 +15,7 @@ export interface ScribeUser {
   square_card_id: string | null;
   is_admin: boolean;
   billing_cycle: 'monthly' | 'annual';
+  billing_codes_enabled: boolean;
   tos_accepted_at: string | null;
   privacy_accepted_at: string | null;
   tos_version: string | null;
@@ -50,11 +51,16 @@ export class ScribeUserModel {
     return result.rows[0] ?? null;
   }
 
-  async update(id: string, fields: { name?: string | null; specialty?: string | null }): Promise<ScribeUser | null> {
+  async update(id: string, fields: { name?: string | null; specialty?: string | null; billing_codes_enabled?: boolean }): Promise<ScribeUser | null> {
     const pool = getPool();
     await pool.query(
-      'UPDATE scribe_users SET name = COALESCE($1, name), specialty = COALESCE($2, specialty), updated_at = NOW() WHERE id = $3',
-      [fields.name ?? null, fields.specialty ?? null, id]
+      `UPDATE scribe_users
+       SET name = COALESCE($1, name),
+           specialty = COALESCE($2, specialty),
+           billing_codes_enabled = COALESCE($3, billing_codes_enabled),
+           updated_at = NOW()
+       WHERE id = $4`,
+      [fields.name ?? null, fields.specialty ?? null, fields.billing_codes_enabled ?? null, id]
     );
     return this.findById(id);
   }

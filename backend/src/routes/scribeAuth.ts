@@ -113,14 +113,14 @@ router.post('/reset-password', authLimiter, async (req: Request, res: Response) 
 router.get('/me', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const user = await userModel.findById(req.scribeUserId!);
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin, billing_codes_enabled: user.billing_codes_enabled } });
 });
 
 router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Response) => {
-  const { name, specialty } = req.body;
-  const user = await userModel.update(req.scribeUserId!, { name, specialty });
+  const { name, specialty, billing_codes_enabled } = req.body;
+  const user = await userModel.update(req.scribeUserId!, { name, specialty, billing_codes_enabled });
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
+  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin, billing_codes_enabled: user.billing_codes_enabled } });
 });
 
 router.get('/consent-status', scribeAuthMiddleware, async (req: Request, res: Response) => {
