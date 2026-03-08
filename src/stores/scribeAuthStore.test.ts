@@ -23,13 +23,13 @@ describe('useScribeAuthStore', () => {
   it('login — sets user on success', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ user: { id: '1', email: 'a@b.com', name: 'Test', is_admin: false } }),
+      json: async () => ({ user: { id: '1', email: 'a@b.com', name: 'Test', is_admin: false, billing_codes_enabled: false } }),
     });
     const { result } = renderHook(() => useScribeAuthStore());
     await act(async () => {
       await result.current.login('a@b.com', 'password');
     });
-    expect(result.current.user).toEqual({ id: '1', email: 'a@b.com', name: 'Test', is_admin: false });
+    expect(result.current.user).toEqual({ id: '1', email: 'a@b.com', name: 'Test', is_admin: false, billing_codes_enabled: false });
     expect(result.current.error).toBeNull();
   });
 
@@ -64,11 +64,11 @@ describe('useScribeAuthStore', () => {
       }],
     });
 
-    useScribeAuthStore.setState({ user: { id: 'old-user', email: 'old@test.com', name: null, specialty: null, is_admin: false } });
+    useScribeAuthStore.setState({ user: { id: 'old-user', email: 'old@test.com', name: null, specialty: null, is_admin: false, billing_codes_enabled: false } });
 
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ user: { id: 'new-user', email: 'new@test.com', name: 'New', is_admin: false } }),
+      json: async () => ({ user: { id: 'new-user', email: 'new@test.com', name: 'New', is_admin: false, billing_codes_enabled: false } }),
     });
 
     const { result } = renderHook(() => useScribeAuthStore());
@@ -97,7 +97,7 @@ describe('useScribeAuthStore', () => {
           updatedAt: new Date().toISOString(),
         }],
       });
-      useScribeAuthStore.setState({ user: { id: '1', email: 'a@b.com', name: null, specialty: null, is_admin: false } });
+      useScribeAuthStore.setState({ user: { id: '1', email: 'a@b.com', name: null, specialty: null, is_admin: false, billing_codes_enabled: false } });
     });
     await act(async () => { await result.current.logout(); });
     expect(result.current.user).toBeNull();
@@ -107,7 +107,7 @@ describe('useScribeAuthStore', () => {
 
   it('reset — clears subscriptionStatus', () => {
     useScribeAuthStore.setState({
-      user: { id: '1', email: 'a@b.com', name: 'Test', specialty: null, is_admin: false },
+      user: { id: '1', email: 'a@b.com', name: 'Test', specialty: null, is_admin: false, billing_codes_enabled: false },
       subscriptionStatus: {
         subscription_status: 'active',
         trial_ends_at: null,
