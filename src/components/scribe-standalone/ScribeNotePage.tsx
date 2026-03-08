@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
+import { BillingCodesPanel } from './BillingCodesPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
 import { useScribeNoteStore, type NoteSection } from '../../stores/scribeNoteStore';
+import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
 
 interface SectionData {
@@ -85,6 +87,9 @@ export const ScribeNotePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [focusedSection, setFocusedSection] = useState<SectionData | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
+  const [activeTab, setActiveTab] = useState<'note' | 'billing'>('note');
+  const { user } = useScribeAuthStore();
+  const billingCodesEnabled = user?.billing_codes_enabled ?? false;
 
   // Initialise local editing state from the Zustand store
   useEffect(() => {
@@ -147,10 +152,46 @@ export const ScribeNotePage: React.FC = () => {
     navigator.clipboard.writeText(fullNote);
   };
 
+  const fetchBillingCodes = async () => {
+    storeNote.setBillingCodesLoading(true);
+    storeNote.setBillingCodesError(null);
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/ai/scribe/billing-codes`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sections: sections.map(s => ({
+            name: s.section_name,
+            content: edits[s.id] ?? s.content ?? '',
+          })),
+          transcript: storeNote.transcript,
+          noteType: storeNote.noteType,
+          specialty: user?.specialty ?? 'Medicine',
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      storeNote.setBillingCodes(data);
+    } catch (err: any) {
+      storeNote.setBillingCodesError(err.message || 'Failed to extract billing codes');
+    } finally {
+      storeNote.setBillingCodesLoading(false);
+    }
+  };
+
   const handleFinalize = () => {
     // Client-side only — no server call
     storeNote.setStatus('finalized');
-    navigate('/scribe/dashboard');
+    if (billingCodesEnabled) {
+      fetchBillingCodes();
+      setActiveTab('billing');
+    } else {
+      navigate('/scribe/dashboard');
+    }
   };
 
   if (loading) return (
@@ -201,6 +242,42 @@ export const ScribeNotePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Tab bar — shown after finalization when billing codes enabled */}
+      {storeNote.status === 'finalized' && billingCodesEnabled && (
+        <div className="flex gap-1 bg-slate-900 rounded-xl p-1 border border-slate-800">
+          <button
+            onClick={() => setActiveTab('note')}
+            className={`flex-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors ${
+              activeTab === 'note'
+                ? 'bg-slate-800 text-slate-50'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Note
+          </button>
+          <button
+            onClick={() => setActiveTab('billing')}
+            className={`flex-1 text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+              activeTab === 'billing'
+                ? 'bg-slate-800 text-slate-50'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Billing Codes
+            {storeNote.billingCodes && (
+              <span className="bg-teal-400 text-slate-900 text-xs font-bold px-1.5 py-0.5 rounded-full">
+                {storeNote.billingCodes.icd10_codes.length + storeNote.billingCodes.cpt_codes.length}
+              </span>
+            )}
+            {storeNote.billingCodesLoading && (
+              <div className="animate-spin h-3.5 w-3.5 border-2 border-teal-400 border-t-transparent rounded-full" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'note' ? (
+      <>
       {sections.map(section => (
         <NoteSectionEditor
           key={section.id}
@@ -268,6 +345,15 @@ export const ScribeNotePage: React.FC = () => {
             />
           </div>
         </div>
+      )}
+      </>
+      ) : (
+        <BillingCodesPanel
+          result={storeNote.billingCodes}
+          loading={storeNote.billingCodesLoading}
+          error={storeNote.billingCodesError}
+          onRetry={fetchBillingCodes}
+        />
       )}
     </div>
   );
