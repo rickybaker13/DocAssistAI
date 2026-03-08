@@ -15,6 +15,8 @@ import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
 import { ScribeFeedbackPage } from './components/scribe-standalone/ScribeFeedbackPage';
 import { ScribeAdminFeedbackPage } from './components/scribe-standalone/ScribeAdminFeedbackPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
+import { ScribeTermsPage } from './components/scribe-standalone/ScribeTermsPage';
+import { ScribePrivacyPage } from './components/scribe-standalone/ScribePrivacyPage';
 import { install402Interceptor } from './utils/fetchInterceptor';
 
 // Install once at app startup
@@ -29,6 +31,8 @@ function App() {
         <Route path="/scribe/register" element={<ScribeRegisterPage />} />
         <Route path="/scribe/forgot-password" element={<ScribeForgotPasswordPage />} />
         <Route path="/scribe/reset-password" element={<ScribeResetPasswordPage />} />
+        <Route path="/terms" element={<ScribeTermsPage />} />
+        <Route path="/privacy" element={<ScribePrivacyPage />} />
         <Route
           path="/scribe/*"
           element={

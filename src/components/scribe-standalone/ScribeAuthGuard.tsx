@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
+import { ConsentAttestationModal } from './ConsentAttestationModal';
 
 export const ScribeAuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, fetchMe, loading, subscriptionStatus, fetchSubscriptionStatus } = useScribeAuthStore();
+  const {
+    user, fetchMe, loading,
+    subscriptionStatus, fetchSubscriptionStatus,
+    tosAccepted, checkConsent, acceptTerms,
+  } = useScribeAuthStore();
   const [checked, setChecked] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -16,10 +21,11 @@ export const ScribeAuthGuard: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Fetch subscription status after auth resolves
+  // Fetch subscription status and consent status after auth resolves
   useEffect(() => {
     if (checked && user) {
       fetchSubscriptionStatus();
+      checkConsent();
     }
   }, [checked, user]);
 
@@ -43,6 +49,11 @@ export const ScribeAuthGuard: React.FC<{ children: React.ReactNode }> = ({ child
 
   if (!user) {
     return <Navigate to="/scribe/login" replace />;
+  }
+
+  // Show consent attestation modal if user hasn't accepted TOS yet
+  if (tosAccepted === false) {
+    return <ConsentAttestationModal onAccept={acceptTerms} />;
   }
 
   return <>{children}</>;

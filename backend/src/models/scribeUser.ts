@@ -14,6 +14,9 @@ export interface ScribeUser {
   square_customer_id: string | null;
   square_card_id: string | null;
   is_admin: boolean;
+  tos_accepted_at: string | null;
+  privacy_accepted_at: string | null;
+  tos_version: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -203,6 +206,33 @@ export class ScribeUserModel {
       `UPDATE scribe_users SET subscription_status = 'expired', updated_at = NOW() WHERE id = $1`,
       [userId],
     );
+  }
+
+  async acceptTerms(userId: string, tosVersion: string): Promise<void> {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE scribe_users
+       SET tos_accepted_at = NOW(),
+           privacy_accepted_at = NOW(),
+           tos_version = $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [tosVersion, userId],
+    );
+  }
+
+  async getConsentStatus(userId: string): Promise<{
+    tosAccepted: boolean;
+    tosVersion: string | null;
+    tosAcceptedAt: string | null;
+  } | null> {
+    const user = await this.findById(userId);
+    if (!user) return null;
+    return {
+      tosAccepted: user.tos_accepted_at !== null,
+      tosVersion: user.tos_version,
+      tosAcceptedAt: user.tos_accepted_at,
+    };
   }
 
   async updateSquareIds(userId: string, squareCustomerId: string, squareCardId: string): Promise<void> {

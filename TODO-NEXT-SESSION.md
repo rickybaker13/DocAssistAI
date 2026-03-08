@@ -1,7 +1,10 @@
 # DocAssistAI - Next Session TODO
 
 > Created: March 5, 2026
+> Updated: March 7, 2026
 > Context: Follow-up items after completing Square payment integration and subscription cancellation
+>
+> **See also: [PRE-LAUNCH-CHECKLIST.md](./PRE-LAUNCH-CHECKLIST.md)** for the full pre-launch plan (legal, testing, marketing, launch)
 
 ---
 

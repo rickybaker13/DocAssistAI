@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { SocialMediaLinks } from '../SocialMediaLinks';
 
@@ -20,11 +21,11 @@ export default function LandingFooter() {
 
       {/* Legal links */}
       <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
-        <span className="hover:text-slate-300 transition-colors cursor-pointer">Privacy Policy</span>
+        <Link to="/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link>
         <span aria-hidden="true">&middot;</span>
-        <span className="hover:text-slate-300 transition-colors cursor-pointer">Terms of Service</span>
+        <Link to="/terms" className="hover:text-slate-300 transition-colors">Terms of Service</Link>
         <span aria-hidden="true">&middot;</span>
-        <span className="hover:text-slate-300 transition-colors cursor-pointer">HIPAA Compliance</span>
+        <Link to="/privacy#hipaa" className="hover:text-slate-300 transition-colors">HIPAA Compliance</Link>
       </div>
     </footer>
   );

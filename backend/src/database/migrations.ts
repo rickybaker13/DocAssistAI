@@ -154,6 +154,22 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'is_admin',
     sql: `ALTER TABLE scribe_users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE`,
   },
+  // TOS / Privacy Policy consent tracking
+  {
+    table: 'scribe_users',
+    column: 'tos_accepted_at',
+    sql: `ALTER TABLE scribe_users ADD COLUMN tos_accepted_at TIMESTAMPTZ`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'privacy_accepted_at',
+    sql: `ALTER TABLE scribe_users ADD COLUMN privacy_accepted_at TIMESTAMPTZ`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'tos_version',
+    sql: `ALTER TABLE scribe_users ADD COLUMN tos_version TEXT`,
+  },
 ];
 
 // ---------------------------------------------------------------------------

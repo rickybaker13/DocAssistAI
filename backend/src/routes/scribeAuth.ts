@@ -123,6 +123,21 @@ router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Respons
   return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
 });
 
+router.get('/consent-status', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const status = await userModel.getConsentStatus(req.scribeUserId!);
+  if (!status) return res.status(404).json({ error: 'User not found' }) as any;
+  return res.json(status);
+});
+
+router.post('/accept-terms', scribeAuthMiddleware, async (req: Request, res: Response) => {
+  const { tosVersion } = req.body;
+  if (!tosVersion || typeof tosVersion !== 'string') {
+    return res.status(400).json({ error: 'tosVersion is required' }) as any;
+  }
+  await userModel.acceptTerms(req.scribeUserId!, tosVersion);
+  return res.json({ ok: true });
+});
+
 router.post('/logout', (_req: Request, res: Response) => {
   res.cookie(COOKIE, '', { ...COOKIE_OPTS, maxAge: 0 });
   return res.json({ ok: true });

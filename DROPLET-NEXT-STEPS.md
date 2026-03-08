@@ -1,126 +1,36 @@
-# DocAssistAI — Droplet Deployment: Next Steps
+# DocAssistAI — Droplet Deployment & Operations
 
-> Last updated: 2026-02-27
-> Branch: `claude/fix-fetch-error-FU45p`
+> Last updated: 2026-03-07
 > Droplet IP: `159.203.87.97`
-
-## Where We Left Off
-
-The DigitalOcean droplet is provisioned and partially configured. Docker, UFW firewall, and the base infrastructure are in place. The `.env` file has been created. Two bugs were found and fixed during deployment:
-
-1. **Health checks used `curl`** — Presidio/Whisper Docker images don't have `curl`. Fixed to use Python `urllib`.
-2. **Presidio analyzer volume mount path was wrong** — mounted to `/usr/bin/presidio/conf` but the image's WORKDIR is `/app`. Fixed to mount directly to `/app/presidio_analyzer/conf/default_recognizers.yaml`.
-
-These fixes are committed and pushed to the branch but **have not yet been deployed on the droplet**.
+> Backend URL: `https://api.docassistai.app`
+> Frontend URL: `https://www.docassistai.app`
 
 ---
 
-## Step 1: Deploy the Fixed Stack on the Droplet
+## Deployment Status: COMPLETE
 
-SSH into the droplet and run:
+All deployment steps have been completed and verified:
 
-```bash
-ssh root@159.203.87.97
-cd /opt/docassistai
+- [x] **Step 1: Stack deployed** — Docker Compose stack running on droplet (Caddy, Backend, Presidio, PostgreSQL, Whisper)
+- [x] **Step 2: DNS configured** — `api.docassistai.app` → `159.203.87.97`, TLS auto-provisioned by Caddy (valid through May 2026)
+- [x] **Step 3: Health verified** — All services healthy (`/api/health` returns OK)
+- [x] **Step 4: Data migrated** — PostgreSQL data migrated from Railway to DO droplet
+- [x] **Step 5: Frontend updated** — Vercel points to `api.docassistai.app` via `appConfig.ts`
+- [x] **Step 6: Smoke tested** — Login, audio recording, transcription, note generation all verified on iPhone PWA
 
-# Pull the latest fixes
-git stash          # if needed — clear any local edits
-git pull origin claude/fix-fetch-error-FU45p
+### Performance (verified 2026-03-07)
 
-# Re-copy presidio config (the volume mount path changed)
-cp -r backend/presidio-config presidio-config
-
-# Re-create the symlinks (setup script does this, but just in case)
-ln -sf infra/docker-compose.prod.yml docker-compose.prod.yml
-ln -sf infra/Caddyfile Caddyfile
-
-# Bring up the stack
-docker compose -f docker-compose.prod.yml down
-docker compose -f docker-compose.prod.yml up -d --build
-```
-
-**IMPORTANT:** Always use `docker-compose.prod.yml` (the symlink at project root), never `infra/docker-compose.prod.yml` directly. Docker Compose resolves relative paths from the compose file's directory — using the `infra/` path breaks `.env`, `./backend`, and `./presidio-config` resolution.
-
-### Verify
-
-```bash
-# Check all containers are healthy
-docker compose -f docker-compose.prod.yml ps
-
-# Check individual service logs if something fails
-docker compose -f docker-compose.prod.yml logs presidio-analyzer
-docker compose -f docker-compose.prod.yml logs backend
-docker compose -f docker-compose.prod.yml logs caddy
-```
+| Step | Time |
+|------|------|
+| Audio upload | ~2-3s |
+| Groq Whisper transcription | ~5s |
+| Presidio PII scrubbing | ~1-2s |
+| Claude Haiku 4.5 note generation | ~5-6s |
+| **Total** | **~15 seconds** |
 
 ---
 
-## Step 2: DNS Configuration
-
-Point `api.docassistai.app` to the droplet IP. Caddy auto-provisions TLS once DNS resolves.
-
-```bash
-# Check current DNS
-dig api.docassistai.app +short
-# Should return: 159.203.87.97
-
-# Once DNS is set, verify TLS
-curl https://api.docassistai.app/api/health
-```
-
-If DNS is already configured from a previous setup, verify the A record still points to `159.203.87.97`.
-
----
-
-## Step 3: Verify End-to-End Health
-
-```bash
-# Full health check (should return presidio, analyzer, anonymizer, whisper status)
-curl https://api.docassistai.app/api/health
-
-# Expected response shape:
-# { "presidio": true, "analyzer": true, "anonymizer": true, "whisper": true }
-```
-
----
-
-## Step 4: Data Migration from Railway
-
-If migrating an existing PostgreSQL database from Railway:
-
-```bash
-# On Railway (or wherever the old DB is):
-pg_dump --no-owner --no-acl -Fc "$OLD_DATABASE_URL" > docassistai-backup.dump
-
-# Copy to droplet:
-scp docassistai-backup.dump root@159.203.87.97:/tmp/
-
-# On the droplet — restore into the Docker Postgres container:
-docker compose -f docker-compose.prod.yml exec -T postgres \
-  pg_restore --no-owner --no-acl -d docassistai -U docassistai < /tmp/docassistai-backup.dump
-```
-
----
-
-## Step 5: Update Vercel Frontend
-
-The Vercel frontend at `https://www.docassistai.app` needs its backend URL pointed to the droplet.
-
-1. In Vercel project settings, verify no `VITE_BACKEND_URL` override is set (the app uses `https://api.docassistai.app` for production builds via `appConfig.ts`)
-2. If previously pointing to Railway, trigger a Vercel redeploy to pick up the production backend URL
-
----
-
-## Step 6: Smoke Test the Full App
-
-1. Open `https://www.docassistai.app` in a browser
-2. Test login / session creation
-3. Test the Scribe workflow: upload audio → transcription → AI analysis
-4. Verify PII de-identification is working (check that names/dates are scrubbed in AI requests)
-
----
-
-## Architecture Reference
+## Architecture
 
 ```
                     Internet
@@ -141,13 +51,46 @@ The Vercel frontend at `https://www.docassistai.app` needs its backend URL point
         ▼            ▼            ▼
    ┌─────────┐ ┌──────────┐ ┌─────────┐
    │Presidio │ │PostgreSQL│ │ Whisper  │
-   │Analyzer │ │          │ │  ASR     │
+   │Analyzer │ │          │ │  (backup)│
    │& Anon.  │ │          │ │         │
    └─────────┘ └──────────┘ └─────────┘
    (internal)   (internal)   (internal)
+
+   External APIs: Groq (transcription), Anthropic (AI), Square (billing), Resend (email)
 ```
 
 All inter-service communication stays on Docker's internal network. Only Caddy is exposed externally.
+
+---
+
+## Gotchas & Lessons Learned
+
+### Docker Compose Path Resolution
+**Always use the symlink at project root**, never `infra/docker-compose.prod.yml` directly. Docker Compose resolves relative paths from the compose file's directory — using the `infra/` path breaks `.env`, `./backend`, and `./presidio-config` resolution.
+
+```bash
+# CORRECT
+docker compose -f docker-compose.prod.yml up -d --build
+
+# WRONG — breaks path resolution
+docker compose -f infra/docker-compose.prod.yml up -d --build
+```
+
+### Caddy Port Binding
+If Caddy container shows no port mappings (`docker port docassistai-caddy-1` returns empty), force-recreate:
+```bash
+docker compose -f docker-compose.prod.yml up -d --force-recreate caddy
+```
+Verify with `docker port docassistai-caddy-1` — should show `80/tcp -> 0.0.0.0:80` and `443/tcp -> 0.0.0.0:443`.
+
+### Anthropic Model Deprecation
+`claude-3-5-haiku-20241022` was retired Feb 19, 2026. Current model: `claude-haiku-4-5-20251001`. Set via `SCRIBE_GENERATE_MODEL` in `.env`. Check Anthropic model lifecycle page periodically.
+
+### Old Container Conflicts
+If old containers from previous stack names (e.g., `infra-*`) conflict with new `docassistai-*` containers, stop and remove them:
+```bash
+docker ps -a --filter "name=infra-" -q | xargs docker rm -f
+```
 
 ---
 
@@ -164,6 +107,46 @@ All inter-service communication stays on Docker's internal network. Only Caddy i
 
 ---
 
+## Routine Operations
+
+```bash
+# SSH into droplet
+ssh root@159.203.87.97
+
+# Project directory
+cd /opt/docassistai
+
+# View all logs (live)
+docker compose -f docker-compose.prod.yml logs -f
+
+# View specific service logs
+docker compose -f docker-compose.prod.yml logs -f backend
+docker compose -f docker-compose.prod.yml logs -f caddy
+
+# Check container status
+docker compose -f docker-compose.prod.yml ps
+
+# Restart a single service
+docker compose -f docker-compose.prod.yml restart backend
+
+# Rebuild and restart backend only
+docker compose -f docker-compose.prod.yml up -d --build backend
+
+# Full rebuild (all services)
+docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d --build
+
+# Pull latest code and redeploy
+cd /opt/docassistai && git pull && docker compose -f docker-compose.prod.yml up -d --build
+
+# Database access
+docker compose -f docker-compose.prod.yml exec postgres psql -U docassistai -d docassistai
+
+# Database backup
+docker compose -f docker-compose.prod.yml exec -T postgres pg_dump -U docassistai docassistai > backup-$(date +%Y%m%d).sql
+```
+
+---
+
 ## Troubleshooting
 
 **Presidio analyzer won't start:**
@@ -174,7 +157,6 @@ docker compose -f docker-compose.prod.yml logs presidio-analyzer
 
 **Backend can't reach Presidio:**
 ```bash
-# Verify internal DNS resolution
 docker compose -f docker-compose.prod.yml exec backend \
   node -e "fetch('http://presidio-analyzer:3000/health').then(r=>r.json()).then(console.log)"
 ```
@@ -188,23 +170,19 @@ docker compose -f docker-compose.prod.yml logs caddy
 **POSTGRES_PASSWORD warning:**
 Ensure `.env` exists at project root (`/opt/docassistai/.env`) with `POSTGRES_PASSWORD` set.
 
+**Backend shows deprecated model error:**
+Update `SCRIBE_GENERATE_MODEL` in `.env` to the current Haiku model, then restart:
+```bash
+docker compose -f docker-compose.prod.yml restart backend
+```
+
 ---
 
-## Useful Commands
+## Next Steps
 
-```bash
-# View all logs
-docker compose -f docker-compose.prod.yml logs -f
-
-# Restart a single service
-docker compose -f docker-compose.prod.yml restart backend
-
-# Rebuild and restart backend only
-docker compose -f docker-compose.prod.yml up -d --build backend
-
-# Full rebuild
-docker compose -f docker-compose.prod.yml down && docker compose -f docker-compose.prod.yml up -d --build
-
-# Pull latest code and redeploy
-cd /opt/docassistai && git pull && docker compose -f docker-compose.prod.yml up -d --build
-```
+See **[PRE-LAUNCH-CHECKLIST.md](./PRE-LAUNCH-CHECKLIST.md)** for the full pre-launch plan including:
+- Legal documents (TOS, Privacy Policy)
+- User consent flow
+- Clinical testing plan
+- Social media marketing campaign
+- Launch checklist

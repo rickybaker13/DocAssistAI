@@ -31,6 +31,9 @@ interface ScribeAuthState {
   reset: () => void;
   subscriptionStatus: SubscriptionStatus | null;
   fetchSubscriptionStatus: () => Promise<void>;
+  tosAccepted: boolean | null;
+  checkConsent: () => Promise<void>;
+  acceptTerms: (tosVersion: string) => Promise<void>;
 }
 
 function clearNotesOnUserChange(nextUserId: string | null, prevUserId: string | null): void {
@@ -43,6 +46,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
   loading: false,
   error: null,
   subscriptionStatus: null,
+  tosAccepted: null,
 
   fetchSubscriptionStatus: async () => {
     try {
@@ -140,10 +144,38 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
     }
   },
 
+  checkConsent: async () => {
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/auth/consent-status`, { credentials: 'include' });
+      if (!res.ok) {
+        set({ tosAccepted: null });
+        return;
+      }
+      const data = await res.json();
+      set({ tosAccepted: data.tosAccepted ?? false });
+    } catch {
+      set({ tosAccepted: null });
+    }
+  },
+
+  acceptTerms: async (tosVersion: string) => {
+    const res = await fetch(`${getBackendUrl()}/api/scribe/auth/accept-terms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ tosVersion }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Failed to accept terms');
+    }
+    set({ tosAccepted: true });
+  },
+
   logout: async () => {
     await fetch(`${getBackendUrl()}/api/scribe/auth/logout`, { method: 'POST', credentials: 'include' });
     clearNotesOnUserChange(null, get().user?.id ?? null);
-    set({ user: null, error: null, subscriptionStatus: null });
+    set({ user: null, error: null, subscriptionStatus: null, tosAccepted: null });
   },
 
   fetchMe: async () => {
@@ -164,5 +196,5 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
     }
   },
 
-  reset: () => set({ user: null, loading: false, error: null, subscriptionStatus: null }),
+  reset: () => set({ user: null, loading: false, error: null, subscriptionStatus: null, tosAccepted: null }),
 }));
