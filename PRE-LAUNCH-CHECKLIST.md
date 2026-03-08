@@ -21,50 +21,36 @@ The core product is **functionally complete and deployed**:
 ## Phase 1: Legal & Compliance (BEFORE testers)
 
 ### 1.1 Publish Terms of Service
-- [ ] Draft TOS document covering:
-  - Subscription terms ($20/month, 7-day free trial, auto-renewal, cancellation policy)
-  - AI-generated content disclaimer (notes are drafts, clinician is responsible for review)
-  - HIPAA scope: DocAssistAI as a Business Associate; user responsibilities as Covered Entity
-  - Data handling: PII scrubbing, no PHI stored in frontend, audit logging
-  - Acceptable use policy (licensed healthcare professionals only)
-  - Limitation of liability (AI output is not medical advice)
-  - Intellectual property (user owns their notes; DocAssistAI owns the platform)
-  - Account termination and data deletion policy
+- [x] Draft TOS document (covers subscription, AI disclaimer, HIPAA scope, data handling, acceptable use, liability, IP, termination)
 - [ ] Have attorney review for HIPAA/healthcare compliance
-- [ ] Host at `www.docassistai.app/terms` (add route + page component)
-- [ ] Add link to TOS in app footer and registration page
+- [x] Host at `www.docassistai.app/terms` (ScribeTermsPage.tsx)
+- [x] Add link to TOS in app footer and registration page
+- [x] Contact email updated to `admin@docassistai.app`
 
 ### 1.2 Publish Privacy Policy
-- [ ] Draft Privacy Policy document covering:
-  - What data is collected (email, name, specialty, audio recordings, clinical notes)
-  - How audio is processed (Groq Whisper transcription → PII scrubbing → AI → deleted)
-  - Third-party processors: Anthropic (BAA required), Groq (BAA required), Square (PCI DSS), Resend (transactional email), DigitalOcean (BAA in place via Standard Support)
-  - Data retention policy (notes stored in PostgreSQL, audio not retained after transcription)
-  - User rights (access, correction, deletion of personal data)
-  - HIPAA Notice of Privacy Practices (if applicable as BA)
-  - Cookie policy (JWT auth cookie, no tracking cookies)
-  - Contact information for privacy inquiries
+- [x] Draft Privacy Policy document (covers data collection, audio processing, third-party processors, retention, user rights, HIPAA, cookies, contact)
 - [ ] Have attorney review
-- [ ] Host at `www.docassistai.app/privacy` (add route + page component)
-- [ ] Add link to Privacy Policy in app footer and registration page
+- [x] Host at `www.docassistai.app/privacy` (ScribePrivacyPage.tsx)
+- [x] Add link to Privacy Policy in app footer and registration page
+- [x] Contact email updated to `admin@docassistai.app`
 
 ### 1.3 User Consent Flow
-- [ ] **Registration page update**: Add TOS + Privacy Policy agreement checkbox
-  - Current: Only `agreedToAutoRenewal` checkbox exists (in `ScribeRegisterPage.tsx`)
-  - Add: "I have read and agree to the [Terms of Service](/terms) and [Privacy Policy](/privacy)"
-  - Add: "I understand this application processes Protected Health Information (PHI) and I accept responsibility for ensuring my use complies with HIPAA and applicable regulations"
-  - Both checkboxes required before account creation
-- [ ] Store consent timestamp and version in `scribe_users` table
-  - Add columns: `tos_accepted_at TIMESTAMPTZ`, `tos_version VARCHAR(20)`, `privacy_accepted_at TIMESTAMPTZ`, `privacy_version VARCHAR(20)`
-- [ ] Backend: validate consent fields on `POST /api/scribe/auth/register`
+- [x] Consent attestation modal after account creation (ConsentAttestationModal.tsx)
+  - Non-dismissable popup with checkbox: "I have read and agree to the Terms of Service and the Privacy Policy"
+  - Gated via ScribeAuthGuard — blocks all authenticated routes until accepted
+  - TOS versioning: bumping `CURRENT_TOS_VERSION` re-triggers for all users
+- [x] Store consent timestamp and version in `scribe_users` table
+  - Columns added: `tos_accepted_at TIMESTAMPTZ`, `privacy_accepted_at TIMESTAMPTZ`, `tos_version TEXT`
+- [x] Backend endpoints: `GET /consent-status`, `POST /accept-terms`
 
 ### 1.4 BAA Coverage Verification
-- [ ] Confirm DigitalOcean BAA is in place (Standard Support plan at $99/month — active)
-- [ ] Verify Anthropic BAA status — check if Anthropic offers BAA for API customers
-- [ ] Verify Groq BAA status — check if Groq offers BAA for API customers
-- [ ] If Anthropic or Groq do not offer BAA: document that PII is scrubbed by Presidio before any data reaches these APIs (current architecture already does this)
-- [ ] Square is PCI DSS compliant (no BAA needed for payment processing)
-- [ ] Document BAA chain in a compliance summary
+- [ ] Confirm DigitalOcean BAA is in place (Standard Support plan at $99/month — pending, submitted)
+- [x] **Groq BAA: COVERED** — Groq includes a Business Associate Addendum (BAA) in their Terms of Service (effective October 15, 2025). No separate signing required. By using Groq services, the BAA is automatically in effect.
+  - BAA document: https://console.groq.com/docs/legal/customer-business-associate-addendum
+  - This covers PHI in audio sent to Groq Whisper API for transcription
+- [x] **Anthropic: No BAA needed** — All PII/PHI is scrubbed by Presidio (self-hosted) before any text reaches Anthropic's API. No protected health information is transmitted to Anthropic.
+- [x] **Square: No BAA needed** — PCI DSS compliant for payment processing. No PHI involved in payment flow.
+- [ ] Document full BAA/compliance chain in a compliance summary document
 
 ---
 
