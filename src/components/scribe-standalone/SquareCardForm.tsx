@@ -6,11 +6,12 @@ import { ensureSquareSdkLoaded, fetchSquareConfig } from './square-helpers';
 
 interface Props {
   phone: string;
+  billingCycle?: 'monthly' | 'annual';
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 }
 
-export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) => {
+export const SquareCardForm: React.FC<Props> = ({ phone, billingCycle = 'monthly', onSuccess, onError }) => {
   const [loading, setLoading] = useState(false);
   const [ready, setReady] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
@@ -81,7 +82,7 @@ export const SquareCardForm: React.FC<Props> = ({ phone, onSuccess, onError }) =
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ sourceId: tokenResult.token, phone: phone || undefined }),
+        body: JSON.stringify({ sourceId: tokenResult.token, phone: phone || undefined, billingCycle }),
       });
 
       const data = await res.json();

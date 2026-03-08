@@ -170,6 +170,12 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'tos_version',
     sql: `ALTER TABLE scribe_users ADD COLUMN tos_version TEXT`,
   },
+  // Billing cycle: 'monthly' or 'annual'
+  {
+    table: 'scribe_users',
+    column: 'billing_cycle',
+    sql: `ALTER TABLE scribe_users ADD COLUMN billing_cycle TEXT DEFAULT 'monthly'`,
+  },
 ];
 
 // ---------------------------------------------------------------------------

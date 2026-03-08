@@ -43,6 +43,10 @@ router.get('/options', scribeAuthMiddleware, (_req: Request, res: Response) => {
       monthlyPriceUsd: 20,
       trialDays: 7,
     },
+    plans: [
+      { id: 'monthly', label: '$20/month', priceUsd: 20, priceCents: 2000, interval: 'month' },
+      { id: 'annual', label: '$200/year', priceUsd: 200, priceCents: 20000, interval: 'year', savingsUsd: 40 },
+    ],
     methods: [
       { id: 'square_card', label: 'Credit Card (Square)', type: 'card' },
       { id: 'square_ach', label: 'Bank account (ACH via Square)', type: 'bank' },
@@ -65,11 +69,19 @@ router.get('/square-config', scribeAuthMiddleware, (_req: Request, res: Response
   });
 });
 
+const PLAN_CONFIG = {
+  monthly: { priceCents: 2000, interval: '30 days' as const },
+  annual: { priceCents: 20000, interval: '365 days' as const },
+} as const;
+
 const handleSquarePayment = async (req: Request, res: Response) => {
-  const { sourceId, phone } = req.body as {
+  const { sourceId, phone, billingCycle: rawCycle } = req.body as {
     sourceId?: string;
     phone?: string;
+    billingCycle?: string;
   };
+  const billingCycle = rawCycle === 'annual' ? 'annual' : 'monthly' as const;
+  const plan = PLAN_CONFIG[billingCycle];
 
   if (!sourceId) {
     return res.status(400).json({ error: 'Missing Square payment sourceId.' });
@@ -98,10 +110,10 @@ const handleSquarePayment = async (req: Request, res: Response) => {
     location_id: squareLocationId,
     autocomplete: true,
     amount_money: {
-      amount: 2000,
+      amount: plan.priceCents,
       currency: 'USD',
     },
-    note: `DocAssistAI subscription for ${user.email}`,
+    note: `DocAssistAI ${billingCycle} subscription for ${user.email}`,
     buyer_email_address: user.email,
   };
 
@@ -179,12 +191,12 @@ const handleSquarePayment = async (req: Request, res: Response) => {
   await paymentHistoryModel.create({
     userId: req.scribeUserId!,
     squarePaymentId: squareData?.payment?.id ?? undefined,
-    amountCents: 2000,
+    amountCents: plan.priceCents,
     status: 'completed',
   });
 
-  // Activate subscription: set status to 'active' and extend period by 30 days
-  await userModel.activateSubscription(req.scribeUserId!);
+  // Activate subscription with the selected billing cycle
+  await userModel.activateSubscription(req.scribeUserId!, billingCycle);
 
   return res.status(201).json({
     success: true,
@@ -251,6 +263,7 @@ router.get('/status', scribeAuthMiddleware, async (req: Request, res: Response) 
   }
   return res.json({
     subscription_status: user.subscription_status,
+    billing_cycle: user.billing_cycle ?? 'monthly',
     trial_ends_at: user.trial_ends_at,
     period_ends_at: user.period_ends_at,
     cancelled_at: user.cancelled_at,

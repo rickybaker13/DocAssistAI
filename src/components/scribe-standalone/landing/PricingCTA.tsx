@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
@@ -12,6 +13,8 @@ const checklist = [
 const paymentMethods = ["Credit Card", "ACH Bank", "Apple Pay", "Google Pay"];
 
 export default function PricingCTA() {
+  const [cycle, setCycle] = useState<'monthly' | 'annual'>('monthly');
+
   return (
     <section id="pricing" className="bg-slate-950 py-24 px-4 sm:px-6 lg:px-8">
       <motion.div
@@ -27,9 +30,27 @@ export default function PricingCTA() {
             Start Your Free 7-Day Trial
           </h2>
 
+          {/* Plan toggle */}
+          <div className="mt-4 flex items-center justify-center gap-1 rounded-lg bg-slate-800 p-1 w-fit mx-auto">
+            <button
+              onClick={() => setCycle('monthly')}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${cycle === 'monthly' ? 'bg-teal-400 text-slate-900' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setCycle('annual')}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${cycle === 'annual' ? 'bg-teal-400 text-slate-900' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Annual
+            </button>
+          </div>
+
           {/* Subtext */}
           <p className="mt-3 text-slate-400">
-            $20/month after trial &middot; Cancel anytime
+            {cycle === 'annual'
+              ? '$200/year after trial · Save $40 · Cancel anytime'
+              : '$20/month after trial · Cancel anytime'}
           </p>
 
           {/* Checklist */}

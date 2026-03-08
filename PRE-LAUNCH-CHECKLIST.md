@@ -113,25 +113,28 @@ The core product is **functionally complete and deployed**:
 ## Phase 4: Pre-Launch Polish
 
 ### 4.1 PWA Branding
-- [ ] Rename PWA from "Scribe" to "DocAssist" or "DocAI" (see `TODO-NEXT-SESSION.md` item #2)
-  - Update `manifest.webmanifest` (`name`, `short_name`)
-  - Update `<title>` and `<meta>` tags in `index.html`
+- [x] Already complete — `vite.config.ts` has `name: 'DocAssistAI'`, `short_name: 'DocAI'`
+- [x] `index.html` title and meta tags correct
+- [x] All user-facing branding uses "DocAssistAI" consistently
 
 ### 4.2 Payment Methods & Pricing
 - [ ] Priority: ensure Credit Card (Square embedded) works end-to-end in production
 - [ ] Stretch: wire up ACH, Apple Pay, Google Pay (see `TODO-NEXT-SESSION.md` item #1)
 - [ ] Remove Bitcoin from payment options (Square doesn't support recurring Bitcoin)
-- [ ] **Add $200/year annual subscription option**
-  - Saves user $40/year vs. monthly ($240/year) — ~17% discount
-  - Backend: add annual plan to Square subscription catalog
-  - Frontend: add toggle on registration/account page (Monthly $20/mo | Annual $200/yr — save $40)
-  - Update TOS to cover annual billing terms (prorated refund policy, renewal date)
-  - Square processing cost drops from $0.96/mo to ~$0.88/mo effective (one $200 charge vs twelve $20 charges)
+- [x] **$200/year annual subscription option implemented** (2026-03-08)
+  - DB: `billing_cycle` column added to `scribe_users` (default: 'monthly')
+  - Backend: `activateSubscription(userId, billingCycle)` — 30 days monthly, 365 days annual
+  - Backend: payment handler accepts `billingCycle`, charges $20 or $200 accordingly
+  - Backend: recurring billing reads `billing_cycle` for correct renewal amount
+  - Backend: `/billing/options` returns both plans, `/billing/status` returns `billing_cycle`
+  - Frontend: Monthly/Annual toggle on Account page and landing PricingCTA
+  - Frontend: Registration page mentions both plan options
+  - [ ] Update TOS to cover annual billing terms (prorated refund policy, renewal date)
 
 ### 4.3 Landing Page
-- [ ] Review and polish `www.docassistai.app` landing page
-- [ ] Ensure pricing, feature list, and CTAs are current
-- [ ] Add TOS and Privacy Policy links to footer
+- [x] Pricing CTA updated with Monthly/Annual toggle
+- [x] TOS and Privacy Policy links in footer (done in Phase 1)
+- [ ] Review and polish remaining landing page content
 
 ---
 

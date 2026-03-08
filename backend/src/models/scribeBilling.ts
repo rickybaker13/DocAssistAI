@@ -23,15 +23,17 @@ interface CreateBillingPreferenceInput {
   phone?: string;
   paymentMethod: PaymentMethod;
   network?: string;
+  billingCycle?: 'monthly' | 'annual';
 }
 
 export class ScribeBillingModel {
   async createPreference(input: CreateBillingPreferenceInput): Promise<ScribeBillingPreference> {
     const pool = getPool();
     const id = randomUUID();
-    const monthlyPriceUsd = 20;
-    const discountPercent = 0;
-    const effectivePriceUsd = Number((monthlyPriceUsd * (1 - discountPercent / 100)).toFixed(2));
+    const isAnnual = input.billingCycle === 'annual';
+    const monthlyPriceUsd = isAnnual ? 200 : 20;
+    const discountPercent = isAnnual ? 17 : 0;
+    const effectivePriceUsd = isAnnual ? 200 : 20;
     const trialDays = 7;
 
     await pool.query(

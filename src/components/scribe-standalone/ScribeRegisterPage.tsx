@@ -103,7 +103,7 @@ export const ScribeRegisterPage: React.FC = () => {
             <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4 space-y-3">
               <h3 className="text-sm font-semibold text-slate-100">Payment</h3>
               <p className="text-xs text-slate-400">
-                After creating your account you'll set up your payment method on the Account page via Square's secure checkout.
+                After creating your account you'll choose your plan ($20/month or $200/year — save $40) and set up payment via Square's secure checkout.
                 No payment is collected now — your 7-day free trial starts immediately.
               </p>
               <div className="flex flex-wrap gap-2 text-xs text-slate-500">

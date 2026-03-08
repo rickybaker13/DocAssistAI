@@ -10,6 +10,7 @@ import { SquareGooglePayButton } from './SquareGooglePayButton';
 
 interface SubscriptionStatus {
   subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  billing_cycle: 'monthly' | 'annual';
   trial_ends_at: string | null;
   period_ends_at: string | null;
   cancelled_at: string | null;
@@ -71,6 +72,7 @@ export const ScribeAccountPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loadingBilling, setLoadingBilling] = useState(false);
   const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelMessage, setCancelMessage] = useState<string | null>(null);
@@ -121,6 +123,7 @@ export const ScribeAccountPage: React.FC = () => {
       const statusData = await fetchJsonOrNull<SubscriptionStatus>(`${getBackendUrl()}/api/scribe/billing/status`);
       if (statusData) {
         setSubStatus(statusData);
+        if (statusData.billing_cycle) setBillingCycle(statusData.billing_cycle);
       }
     };
 
@@ -275,8 +278,28 @@ export const ScribeAccountPage: React.FC = () => {
             </div>
           )}
 
+          {/* Plan toggle */}
+          <div className="flex items-center gap-1 rounded-lg bg-slate-800 p-1 w-fit">
+            <button
+              type="button"
+              onClick={() => setBillingCycle('monthly')}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${billingCycle === 'monthly' ? 'bg-teal-400 text-slate-900' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              onClick={() => setBillingCycle('annual')}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${billingCycle === 'annual' ? 'bg-teal-400 text-slate-900' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              Annual
+            </button>
+          </div>
+
           <p className="text-sm text-slate-300">
-            {`$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial.`}
+            {billingCycle === 'annual'
+              ? `$200/year after ${options.subscription.trialDays}-day free trial — save $40/year`
+              : `$${options.subscription.monthlyPriceUsd}/month after ${options.subscription.trialDays}-day free trial`}
           </p>
           <p className="text-xs text-slate-500">
             Payments are processed through Square secure checkout (embedded card form or hosted checkout link).
@@ -388,6 +411,7 @@ export const ScribeAccountPage: React.FC = () => {
               <p className="text-xs text-emerald-300">Use this form to update the credit card on file.</p>
               <SquareCardForm
                 phone={phone}
+                billingCycle={billingCycle}
                 onSuccess={(msg) => {
                   setBillingMessage(msg);
                   setError(null);

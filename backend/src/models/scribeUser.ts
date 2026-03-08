@@ -14,6 +14,7 @@ export interface ScribeUser {
   square_customer_id: string | null;
   square_card_id: string | null;
   is_admin: boolean;
+  billing_cycle: 'monthly' | 'annual';
   tos_accepted_at: string | null;
   privacy_accepted_at: string | null;
   tos_version: string | null;
@@ -122,16 +123,18 @@ export class ScribeUserModel {
     await pool.query('UPDATE scribe_users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, userId]);
   }
 
-  async activateSubscription(userId: string): Promise<ScribeUser | null> {
+  async activateSubscription(userId: string, billingCycle: 'monthly' | 'annual' = 'monthly'): Promise<ScribeUser | null> {
     const pool = getPool();
+    const interval = billingCycle === 'annual' ? '365 days' : '30 days';
     await pool.query(
       `UPDATE scribe_users
        SET subscription_status = 'active',
-           period_ends_at = NOW() + INTERVAL '30 days',
+           billing_cycle = $2,
+           period_ends_at = NOW() + INTERVAL '${interval}',
            cancelled_at = NULL,
            updated_at = NOW()
        WHERE id = $1`,
-      [userId],
+      [userId, billingCycle],
     );
     return this.findById(userId);
   }

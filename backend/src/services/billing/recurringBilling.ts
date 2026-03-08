@@ -26,7 +26,7 @@ export async function processAutoRenewals(squareConfig: {
   // Find active users whose period ends within the next 24 hours
   // and who have a card on file and haven't cancelled
   const { rows } = await pool.query(
-    `SELECT id, email, square_customer_id, square_card_id, period_ends_at
+    `SELECT id, email, square_customer_id, square_card_id, period_ends_at, billing_cycle
      FROM scribe_users
      WHERE subscription_status = 'active'
        AND period_ends_at <= NOW() + INTERVAL '1 day'
@@ -36,28 +36,31 @@ export async function processAutoRenewals(squareConfig: {
   );
 
   for (const user of rows) {
+    const cycle = user.billing_cycle === 'annual' ? 'annual' : 'monthly' as const;
+    const amountCents = cycle === 'annual' ? 20000 : 2000;
+
     try {
       const { paymentId } = await chargeStoredCard(
         { accessToken: squareConfig.accessToken, environment: squareConfig.environment },
         {
           customerId: user.square_customer_id,
           cardId: user.square_card_id,
-          amountCents: 2000,
+          amountCents,
           currency: 'USD',
           locationId: squareConfig.locationId,
           idempotencyKey: randomUUID(),
-          note: `DocAssistAI subscription renewal for ${user.email}`,
+          note: `DocAssistAI ${cycle} subscription renewal for ${user.email}`,
         },
       );
 
-      // Extend period by 30 days
-      await userModel.activateSubscription(user.id);
+      // Extend period by 30 days (monthly) or 365 days (annual)
+      await userModel.activateSubscription(user.id, cycle);
 
       // Log successful payment
       await paymentHistoryModel.create({
         userId: user.id,
         squarePaymentId: paymentId,
-        amountCents: 2000,
+        amountCents,
         status: 'completed',
       });
 
@@ -71,7 +74,7 @@ export async function processAutoRenewals(squareConfig: {
       // Log failed payment
       await paymentHistoryModel.create({
         userId: user.id,
-        amountCents: 2000,
+        amountCents,
         status: 'failed',
         failureReason: errorMsg,
       });

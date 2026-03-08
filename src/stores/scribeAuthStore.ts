@@ -12,6 +12,7 @@ export interface ScribeUser {
 
 export interface SubscriptionStatus {
   subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  billing_cycle: 'monthly' | 'annual';
   trial_ends_at: string | null;
   period_ends_at: string | null;
   cancelled_at: string | null;
