@@ -24,6 +24,28 @@ export interface EncounterItem {
   updatedAt: string;
 }
 
+export interface BillingCode {
+  code: string;
+  description: string;
+  confidence: number;
+  supporting_text?: string;
+  reasoning?: string;
+}
+
+export interface EMLevel {
+  suggested: string;
+  mdm_complexity: string;
+  reasoning: string;
+}
+
+export interface BillingCodesResult {
+  icd10_codes: BillingCode[];
+  cpt_codes: BillingCode[];
+  em_level: EMLevel | null;
+  missing_documentation: string[];
+  disclaimer: string;
+}
+
 interface ScribeNoteState {
   noteId: string | null;
   noteType: string;
@@ -33,6 +55,9 @@ interface ScribeNoteState {
   sections: NoteSection[];
   status: 'draft' | 'finalized';
   encounters: EncounterItem[];
+  billingCodes: BillingCodesResult | null;
+  billingCodesLoading: boolean;
+  billingCodesError: string | null;
 
   initNote: (data: { noteId: string; noteType: string; patientLabel: string; verbosity: string }) => void;
   setTranscript: (transcript: string) => void;
@@ -43,6 +68,9 @@ interface ScribeNoteState {
   failEncounter: (noteId: string, error: string) => void;
   openEncounter: (noteId: string) => void;
   removeEncounter: (noteId: string) => void;
+  setBillingCodes: (codes: BillingCodesResult | null) => void;
+  setBillingCodesLoading: (loading: boolean) => void;
+  setBillingCodesError: (error: string | null) => void;
   reset: () => void;
 }
 
@@ -55,7 +83,7 @@ export function generateNoteId(): string {
   return uuid();
 }
 
-const INITIAL: Pick<ScribeNoteState, 'noteId' | 'noteType' | 'patientLabel' | 'verbosity' | 'transcript' | 'sections' | 'status' | 'encounters'> = {
+const INITIAL: Pick<ScribeNoteState, 'noteId' | 'noteType' | 'patientLabel' | 'verbosity' | 'transcript' | 'sections' | 'status' | 'encounters' | 'billingCodes' | 'billingCodesLoading' | 'billingCodesError'> = {
   noteId: null,
   noteType: '',
   patientLabel: '',
@@ -64,6 +92,9 @@ const INITIAL: Pick<ScribeNoteState, 'noteId' | 'noteType' | 'patientLabel' | 'v
   sections: [],
   status: 'draft',
   encounters: [],
+  billingCodes: null,
+  billingCodesLoading: false,
+  billingCodesError: null,
 };
 
 export const useScribeNoteStore = create<ScribeNoteState>()(
@@ -133,6 +164,10 @@ export const useScribeNoteStore = create<ScribeNoteState>()(
         }),
 
       removeEncounter: (noteId) => set((state) => ({ encounters: state.encounters.filter((item) => item.noteId !== noteId) })),
+
+      setBillingCodes: (billingCodes) => set({ billingCodes }),
+      setBillingCodesLoading: (billingCodesLoading) => set({ billingCodesLoading }),
+      setBillingCodesError: (billingCodesError) => set({ billingCodesError }),
 
       reset: () => set({ ...INITIAL }),
     }),
