@@ -12,6 +12,7 @@ export const ScribeSettingsPage: React.FC = () => {
 
   const [name, setName] = useState(user?.name ?? '');
   const [specialty, setSpecialty] = useState(user?.specialty ?? '');
+  const [billingCodesEnabled, setBillingCodesEnabled] = useState(user?.billing_codes_enabled ?? false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,6 +22,7 @@ export const ScribeSettingsPage: React.FC = () => {
     if (user) {
       setName(user.name ?? '');
       setSpecialty(user.specialty ?? '');
+      setBillingCodesEnabled(user.billing_codes_enabled ?? false);
     }
   }, [user]);
 
@@ -38,6 +40,7 @@ export const ScribeSettingsPage: React.FC = () => {
         body: JSON.stringify({
           name: name.trim() || null,
           specialty: specialty || null,
+          billing_codes_enabled: billingCodesEnabled,
         }),
       });
 
@@ -116,6 +119,30 @@ export const ScribeSettingsPage: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1.5">
               Used to filter the section library to sections relevant to your role.
             </p>
+          </div>
+
+          {/* Billing Code Suggestions */}
+          <div className="pt-4 border-t border-slate-700">
+            <label className="flex items-center justify-between cursor-pointer">
+              <div>
+                <span className="block text-xs font-medium text-slate-400 uppercase tracking-wider">
+                  Billing Code Suggestions
+                </span>
+                <span className="block text-xs text-slate-500 mt-0.5">
+                  Auto-suggest ICD-10 and CPT codes after note finalization
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={billingCodesEnabled}
+                  onChange={e => setBillingCodesEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-slate-700 peer-checked:bg-teal-400 rounded-full transition-colors" />
+                <div className="absolute left-0.5 top-0.5 w-5 h-5 bg-slate-300 peer-checked:bg-slate-900 peer-checked:translate-x-5 rounded-full transition-all" />
+              </div>
+            </label>
           </div>
 
           {/* Error */}

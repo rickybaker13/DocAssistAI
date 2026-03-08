@@ -8,6 +8,7 @@ export interface ScribeUser {
   name: string | null;
   specialty: string | null;
   is_admin: boolean;
+  billing_codes_enabled: boolean;
 }
 
 export interface SubscriptionStatus {
