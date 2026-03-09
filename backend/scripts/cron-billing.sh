@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # cron-billing.sh — Daily billing cron jobs for DocAssistAI
 #
-# Calls two endpoints on the backend:
+# Calls three endpoints on the backend:
 #   1. /api/cron/renew-subscriptions  — charges stored cards for expiring subscriptions
-#   2. /api/cron/trial-reminders      — emails users whose trial expires in ~3 days
+#   2. /api/cron/trial-reminders      — emails users whose trial expires soon (stage 2 + 3)
+#   3. /api/cron/expire-trials        — marks ended trials as expired + sends notification
 #
 # Required environment variables (set in crontab or source a .env):
 #   BACKEND_URL    — e.g. http://localhost:3000 or https://api.docassistai.app
@@ -57,6 +58,23 @@ if [ "$REMINDER_STATUS" = "200" ]; then
   echo "[$TIMESTAMP] Reminders OK: $REMINDER_BODY"
 else
   echo "[$TIMESTAMP] Reminders FAILED (HTTP $REMINDER_STATUS): $REMINDER_BODY" >&2
+fi
+
+# 3. Expire ended trials
+echo "[$TIMESTAMP] POST /api/cron/expire-trials"
+EXPIRE_RESPONSE=$(curl -sf -w "\n%{http_code}" \
+  -X POST "${BACKEND_URL}/api/cron/expire-trials" \
+  -H "Authorization: Bearer ${CRON_SECRET}" \
+  -H "Content-Type: application/json" \
+  2>&1) || true
+
+EXPIRE_BODY=$(echo "$EXPIRE_RESPONSE" | head -n -1)
+EXPIRE_STATUS=$(echo "$EXPIRE_RESPONSE" | tail -n 1)
+
+if [ "$EXPIRE_STATUS" = "200" ]; then
+  echo "[$TIMESTAMP] Expire trials OK: $EXPIRE_BODY"
+else
+  echo "[$TIMESTAMP] Expire trials FAILED (HTTP $EXPIRE_STATUS): $EXPIRE_BODY" >&2
 fi
 
 echo "[$TIMESTAMP] Billing cron jobs complete."
