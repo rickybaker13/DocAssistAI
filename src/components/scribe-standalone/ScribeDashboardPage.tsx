@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw } from 'lucide-react';
+import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw, Pencil } from 'lucide-react';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
@@ -16,13 +16,16 @@ interface SavedNote {
 
 export const ScribeDashboardPage: React.FC = () => {
   const navigate = useNavigate();
-  const { noteId, noteType, patientLabel, status, encounters, openEncounter, removeEncounter, reset } = useScribeNoteStore();
+  const { noteId, noteType, patientLabel, status, encounters, openEncounter, removeEncounter, updateEncounterLabel, reset } = useScribeNoteStore();
   const store = useScribeNoteStore();
 
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [editingLabelId, setEditingLabelId] = useState<string | null>(null);
+  const [editingLabelValue, setEditingLabelValue] = useState('');
+  const labelInputRef = useRef<HTMLInputElement>(null);
   const syncAttempted = useRef<Set<string>>(new Set());
 
   // Reset sync-attempted on every mount so revisiting the dashboard retries failed syncs
@@ -128,6 +131,28 @@ export const ScribeDashboardPage: React.FC = () => {
     fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
   };
 
+  const startEditingLabel = (id: string, currentLabel: string) => {
+    setEditingLabelId(id);
+    setEditingLabelValue(currentLabel);
+    setTimeout(() => labelInputRef.current?.focus(), 0);
+  };
+
+  const saveLabel = (id: string, isLocal: boolean) => {
+    const trimmed = editingLabelValue.trim();
+    setEditingLabelId(null);
+    if (isLocal) {
+      updateEncounterLabel(id, trimmed);
+    } else {
+      setSavedNotes(prev => prev.map(n => n.id === id ? { ...n, patient_label: trimmed } : n));
+      fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ patient_label: trimmed }),
+      }).catch(() => {});
+    }
+  };
+
   // Merge: local encounters that are still processing/failed should show above saved notes.
   // Filter out local encounters that already exist in savedNotes to avoid duplicates.
   const savedNoteIds = new Set(savedNotes.map(n => n.id));
@@ -168,7 +193,25 @@ export const ScribeDashboardPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-teal-400" />
                   <div>
-                    <p className="text-sm font-medium text-slate-100">{item.patientLabel || item.noteType.replace(/_/g, ' ')}</p>
+                    {editingLabelId === item.noteId ? (
+                      <input
+                        ref={labelInputRef}
+                        value={editingLabelValue}
+                        onChange={(e) => setEditingLabelValue(e.target.value)}
+                        onBlur={() => saveLabel(item.noteId, true)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveLabel(item.noteId, true); if (e.key === 'Escape') setEditingLabelId(null); }}
+                        className="text-sm font-medium text-slate-100 bg-slate-700 border border-slate-500 rounded px-1.5 py-0.5 outline-none focus:border-teal-400 w-full"
+                        placeholder="Patient label"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => startEditingLabel(item.noteId, item.patientLabel || '')}
+                        className="flex items-center gap-1.5 group text-left"
+                      >
+                        <p className="text-sm font-medium text-slate-100">{item.patientLabel || item.noteType.replace(/_/g, ' ')}</p>
+                        <Pencil size={12} className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    )}
                     <p className="text-xs text-slate-400">{item.noteType.replace(/_/g, ' ')}</p>
                   </div>
                   {item.status === 'processing' && (
@@ -263,7 +306,25 @@ export const ScribeDashboardPage: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-teal-400" />
                   <div>
-                    <p className="text-sm font-medium text-slate-100">{note.patient_label || note.note_type.replace(/_/g, ' ')}</p>
+                    {editingLabelId === note.id ? (
+                      <input
+                        ref={labelInputRef}
+                        value={editingLabelValue}
+                        onChange={(e) => setEditingLabelValue(e.target.value)}
+                        onBlur={() => saveLabel(note.id, false)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveLabel(note.id, false); if (e.key === 'Escape') setEditingLabelId(null); }}
+                        className="text-sm font-medium text-slate-100 bg-slate-700 border border-slate-500 rounded px-1.5 py-0.5 outline-none focus:border-teal-400 w-full"
+                        placeholder="Patient label"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => startEditingLabel(note.id, note.patient_label || '')}
+                        className="flex items-center gap-1.5 group text-left"
+                      >
+                        <p className="text-sm font-medium text-slate-100">{note.patient_label || note.note_type.replace(/_/g, ' ')}</p>
+                        <Pencil size={12} className="text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </button>
+                    )}
                     <p className="text-xs text-slate-400">{note.note_type.replace(/_/g, ' ')}</p>
                   </div>
                   <span className={
