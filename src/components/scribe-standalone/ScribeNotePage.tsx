@@ -138,18 +138,27 @@ export const ScribeNotePage: React.FC = () => {
     setEdits(prev => ({ ...prev, [id]: content }));
   }, []);
 
-  // Debounced auto-save to backend (2s after last edit)
+  // Debounced auto-save to backend (2s after last edit) — uses POST upsert
+  // so the note is created if the initial save from RecordPage failed.
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!noteId || sections.length === 0) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       const merged = sections.map(s => ({ ...s, content: edits[s.id] ?? s.content }));
-      fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-        method: 'PUT',
+      fetch(`${getBackendUrl()}/api/scribe/notes`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ sections: merged, status: storeNote.status }),
+        body: JSON.stringify({
+          id: noteId,
+          note_type: storeNote.noteType,
+          patient_label: storeNote.patientLabel,
+          verbosity: storeNote.verbosity,
+          transcript: storeNote.transcript,
+          sections: merged,
+          status: storeNote.status,
+        }),
       }).catch(() => { /* best-effort */ });
     }, 2000);
     return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
@@ -233,14 +242,22 @@ export const ScribeNotePage: React.FC = () => {
 
   const handleFinalize = () => {
     storeNote.setStatus('finalized');
-    // Persist finalized state to backend
+    // Persist finalized state to backend — POST upsert ensures note is created if missing
     if (noteId) {
       const merged = sections.map(s => ({ ...s, content: edits[s.id] ?? s.content }));
-      fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
-        method: 'PUT',
+      fetch(`${getBackendUrl()}/api/scribe/notes`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ sections: merged, status: 'finalized' }),
+        body: JSON.stringify({
+          id: noteId,
+          note_type: storeNote.noteType,
+          patient_label: storeNote.patientLabel,
+          verbosity: storeNote.verbosity,
+          transcript: storeNote.transcript,
+          sections: merged,
+          status: 'finalized',
+        }),
       }).catch(() => { /* best-effort */ });
     }
     if (billingCodesEnabled) {
