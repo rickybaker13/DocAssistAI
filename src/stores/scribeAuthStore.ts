@@ -39,7 +39,11 @@ interface ScribeAuthState {
 }
 
 function clearNotesOnUserChange(nextUserId: string | null, prevUserId: string | null): void {
-  if (prevUserId && nextUserId && prevUserId === nextUserId) return;
+  // Fresh page load (no previous user in memory) — keep persisted notes intact
+  if (!prevUserId) return;
+  // Same user — no change needed
+  if (nextUserId === prevUserId) return;
+  // Different user or explicit logout — wipe notes
   useScribeNoteStore.getState().reset();
 }
 
