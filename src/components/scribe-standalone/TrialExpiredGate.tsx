@@ -89,7 +89,7 @@ export const TrialExpiredGate: React.FC<TrialExpiredGateProps> = ({ onContinue }
         >
           Continue with DocAssistAI
         </button>
-        <p className="text-xs text-slate-500">Plans start at $20/month or $200/year. Cancel anytime.</p>
+        <p className="text-xs text-slate-500">Plans start at $20/month or $200/year.</p>
       </div>
 
       {/* Divider */}

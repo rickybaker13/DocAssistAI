@@ -89,7 +89,7 @@ export const ScribeRegisterPage: React.FC = () => {
               {loading ? 'Creating account...' : 'Start free trial'}
             </button>
             <p className="text-xs text-center text-slate-500">
-              After your trial, plans start at $20/mo. Cancel anytime.
+              After your trial, plans start at $20/mo.
             </p>
           </form>
         </div>

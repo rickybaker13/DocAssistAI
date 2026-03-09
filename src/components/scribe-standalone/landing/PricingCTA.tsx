@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 
 const checklist = [
   "Full access to all features",
-  "Cancel anytime within 7 days",
   "No credit card required to start",
   "Payments secured by Square",
 ];
@@ -49,7 +48,7 @@ export default function PricingCTA() {
           {/* Subtext */}
           <p className="mt-3 text-slate-400">
             {cycle === 'annual'
-              ? '$200/year after trial · Save $40 · Cancel anytime'
+              ? '$200/year after trial · Save $40'
               : '$20/month after trial · Cancel anytime'}
           </p>
 
