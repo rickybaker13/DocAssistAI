@@ -100,6 +100,19 @@ CREATE TABLE IF NOT EXISTS scribe_exit_surveys (
   suggestion TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS scribe_notes (
+  id            TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  note_type     TEXT NOT NULL,
+  patient_label TEXT NOT NULL DEFAULT '',
+  verbosity     TEXT NOT NULL DEFAULT 'standard',
+  transcript    TEXT NOT NULL DEFAULT '',
+  sections      JSONB NOT NULL DEFAULT '[]',
+  status        TEXT NOT NULL DEFAULT 'draft',
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 // ---------------------------------------------------------------------------
