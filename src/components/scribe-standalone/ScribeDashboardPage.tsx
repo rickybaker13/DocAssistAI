@@ -22,7 +22,11 @@ export const ScribeDashboardPage: React.FC = () => {
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const syncAttempted = useRef<Set<string>>(new Set());
+
+  // Reset sync-attempted on every mount so revisiting the dashboard retries failed syncs
+  useEffect(() => { syncAttempted.current.clear(); }, []);
 
   // Fetch saved notes from backend on mount
   useEffect(() => {
@@ -59,8 +63,15 @@ export const ScribeDashboardPage: React.FC = () => {
           { id: enc.noteId, note_type: enc.noteType, patient_label: enc.patientLabel, verbosity: enc.verbosity, status: 'draft', created_at: enc.createdAt, updated_at: enc.updatedAt },
           ...prev.filter(n => n.id !== enc.noteId),
         ]);
+      } else {
+        console.warn(`[Scribe sync] POST /api/scribe/notes failed: ${res.status} ${res.statusText}`);
+        // Allow retry on next dashboard visit
+        syncAttempted.current.delete(enc.noteId);
       }
-    } catch { /* will show as unsynced — user can retry manually */ }
+    } catch (err) {
+      console.warn('[Scribe sync] Network error:', err);
+      syncAttempted.current.delete(enc.noteId);
+    }
     setSyncingIds(prev => { const next = new Set(prev); next.delete(enc.noteId); return next; });
   };
 
@@ -212,12 +223,29 @@ export const ScribeDashboardPage: React.FC = () => {
                       Open
                     </button>
                   )}
-                  <button
-                    onClick={() => removeEncounter(item.noteId)}
-                    className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
-                  >
-                    Remove
-                  </button>
+                  {confirmDeleteId === item.noteId ? (
+                    <>
+                      <button
+                        onClick={() => { removeEncounter(item.noteId); setConfirmDeleteId(null); }}
+                        className="px-3 py-1.5 bg-red-600 text-white font-semibold rounded-lg text-sm hover:bg-red-500 transition-colors"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(item.noteId)}
+                      className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -254,12 +282,29 @@ export const ScribeDashboardPage: React.FC = () => {
                   >
                     Open
                   </button>
-                  <button
-                    onClick={() => handleDeleteSavedNote(note.id)}
-                    className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
-                  >
-                    Remove
-                  </button>
+                  {confirmDeleteId === note.id ? (
+                    <>
+                      <button
+                        onClick={() => { handleDeleteSavedNote(note.id); setConfirmDeleteId(null); }}
+                        className="px-3 py-1.5 bg-red-600 text-white font-semibold rounded-lg text-sm hover:bg-red-500 transition-colors"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(note.id)}
+                      className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
