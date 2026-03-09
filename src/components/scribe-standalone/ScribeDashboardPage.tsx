@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw } from 'lucide-react';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
@@ -21,6 +21,8 @@ export const ScribeDashboardPage: React.FC = () => {
 
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(true);
+  const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const syncAttempted = useRef<Set<string>>(new Set());
 
   // Fetch saved notes from backend on mount
   useEffect(() => {
@@ -32,6 +34,46 @@ export const ScribeDashboardPage: React.FC = () => {
       .finally(() => { if (!cancelled) setLoadingNotes(false); });
     return () => { cancelled = true; };
   }, []);
+
+  // Auto-sync: push any "ready" local-only encounters to the backend
+  const syncEncounter = async (enc: typeof encounters[number]) => {
+    setSyncingIds(prev => new Set(prev).add(enc.noteId));
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: enc.noteId,
+          note_type: enc.noteType,
+          patient_label: enc.patientLabel,
+          verbosity: enc.verbosity,
+          transcript: enc.transcript,
+          sections: enc.sections,
+          status: 'draft',
+        }),
+      });
+      if (res.ok) {
+        // Add to saved notes so it moves to the "Saved Notes" section
+        setSavedNotes(prev => [
+          { id: enc.noteId, note_type: enc.noteType, patient_label: enc.patientLabel, verbosity: enc.verbosity, status: 'draft', created_at: enc.createdAt, updated_at: enc.updatedAt },
+          ...prev.filter(n => n.id !== enc.noteId),
+        ]);
+      }
+    } catch { /* will show as unsynced — user can retry manually */ }
+    setSyncingIds(prev => { const next = new Set(prev); next.delete(enc.noteId); return next; });
+  };
+
+  useEffect(() => {
+    if (loadingNotes || savedNotes === null) return;
+    const savedIds = new Set(savedNotes.map(n => n.id));
+    const unsynced = encounters.filter(e => e.status === 'ready' && !savedIds.has(e.noteId) && !syncAttempted.current.has(e.noteId));
+    for (const enc of unsynced) {
+      syncAttempted.current.add(enc.noteId);
+      syncEncounter(enc);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingNotes, savedNotes, encounters]);
 
   const handleDiscard = () => {
     reset();
@@ -124,7 +166,23 @@ export const ScribeDashboardPage: React.FC = () => {
                       Processing
                     </span>
                   )}
-                  {item.status === 'ready' && (
+                  {item.status === 'ready' && !savedNoteIds.has(item.noteId) && (
+                    syncingIds.has(item.noteId) ? (
+                      <span className="inline-flex items-center gap-1.5 bg-blue-950 text-blue-400 border border-blue-400/30 text-xs px-2.5 py-1 rounded-full">
+                        <Loader2 size={12} className="animate-spin" />
+                        Syncing
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => { syncAttempted.current.delete(item.noteId); syncEncounter(item); }}
+                        className="inline-flex items-center gap-1.5 bg-amber-950 text-amber-400 border border-amber-400/30 text-xs px-2.5 py-1 rounded-full hover:bg-amber-900 transition-colors"
+                      >
+                        <CloudOff size={12} />
+                        Not synced — tap to retry
+                      </button>
+                    )
+                  )}
+                  {item.status === 'ready' && savedNoteIds.has(item.noteId) && (
                     <span className="inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-400/30 text-xs px-2.5 py-1 rounded-full">
                       <CheckCircle2 size={12} />
                       Ready

@@ -8,6 +8,25 @@ import { isIosDevice } from '../../utils/isIosDevice';
 
 type Phase = 'record' | 'error';
 
+/** Retry a POST with exponential backoff (2s, 4s, 8s). Returns true on success. */
+async function retrySave(url: string, body: object, maxRetries = 3): Promise<boolean> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+      });
+      if (res.ok) return true;
+    } catch { /* network error — will retry */ }
+    if (attempt < maxRetries) {
+      await new Promise(r => setTimeout(r, 2000 * 2 ** attempt));
+    }
+  }
+  return false;
+}
+
 export const ScribeRecordPage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -50,21 +69,16 @@ export const ScribeRecordPage: React.FC = () => {
       }));
       completeEncounter(noteId, sections);
 
-      // Persist note to backend DB so it's available on any device
-      fetch(`${getBackendUrl()}/api/scribe/notes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          id: noteId,
-          note_type: noteType,
-          patient_label: patientLabel,
-          verbosity,
-          transcript,
-          sections,
-          status: 'draft',
-        }),
-      }).catch(() => { /* best-effort save — note still lives in local store */ });
+      // Persist note to backend DB so it's available on any device (retry on failure)
+      retrySave(`${getBackendUrl()}/api/scribe/notes`, {
+        id: noteId,
+        note_type: noteType,
+        patient_label: patientLabel,
+        verbosity,
+        transcript,
+        sections,
+        status: 'draft',
+      });
     } catch (e: unknown) {
       let msg = 'An unexpected error occurred';
       if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';
