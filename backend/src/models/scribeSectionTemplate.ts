@@ -37,10 +37,10 @@ export class ScribeSectionTemplateModel {
           [randomUUID(), s.name, s.promptHint ?? null, s.category, JSON.stringify(s.disciplines)]
         );
       } else {
-        // Existing section — sync category and disciplines (idempotent)
+        // Existing section — sync category, disciplines, and prompt_hint (idempotent)
         await pool.query(
-          'UPDATE scribe_section_templates SET category = $1, disciplines = $2 WHERE name = $3 AND is_prebuilt = 1',
-          [s.category, JSON.stringify(s.disciplines), s.name]
+          'UPDATE scribe_section_templates SET category = $1, disciplines = $2, prompt_hint = $3 WHERE name = $4 AND is_prebuilt = 1',
+          [s.category, JSON.stringify(s.disciplines), s.promptHint ?? null, s.name]
         );
       }
     }

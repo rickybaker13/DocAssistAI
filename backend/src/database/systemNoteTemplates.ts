@@ -1,9 +1,14 @@
+import { PHYSICAL_EXAM_DEFAULT, REVIEW_OF_SYSTEMS_DEFAULT } from './prebuiltSections.js';
+
 export interface SystemNoteTemplate {
   noteType: 'progress_note' | 'h_and_p' | 'transfer_note' | 'accept_note' | 'consult_note' | 'discharge_summary' | 'procedure_note';
   name: string;
   verbosity: 'brief' | 'standard' | 'detailed';
   sections: Array<{ name: string; promptHint: string | null }>;
 }
+
+const PE_PROMPT_HINT = `TEMPLATE-BASED SECTION. Start with this normal exam template and replace any system findings mentioned in the transcript with the actual patient findings. Keep normal findings for any system not addressed in the transcript.\n\n${PHYSICAL_EXAM_DEFAULT}`;
+const ROS_PROMPT_HINT = `TEMPLATE-BASED SECTION. Start with this negative ROS template and replace any system that has positive findings mentioned in the transcript with the actual positives. Keep negative findings for any system not addressed in the transcript.\n\n${REVIEW_OF_SYSTEMS_DEFAULT}`;
 
 export const SYSTEM_NOTE_TEMPLATES: SystemNoteTemplate[] = [
   {
@@ -29,8 +34,8 @@ export const SYSTEM_NOTE_TEMPLATES: SystemNoteTemplate[] = [
       { name: 'Allergies', promptHint: null },
       { name: 'Social History', promptHint: null },
       { name: 'Family History', promptHint: null },
-      { name: 'Review of Systems', promptHint: null },
-      { name: 'Physical Exam', promptHint: null },
+      { name: 'Review of Systems', promptHint: ROS_PROMPT_HINT },
+      { name: 'Physical Exam', promptHint: PE_PROMPT_HINT },
       { name: 'Assessment', promptHint: null },
       { name: 'Plan', promptHint: null },
     ],
@@ -70,7 +75,7 @@ export const SYSTEM_NOTE_TEMPLATES: SystemNoteTemplate[] = [
       { name: 'Reason for Consult', promptHint: null },
       { name: 'HPI', promptHint: null },
       { name: 'Past Medical History', promptHint: null },
-      { name: 'Physical Exam', promptHint: null },
+      { name: 'Physical Exam', promptHint: PE_PROMPT_HINT },
       { name: 'Assessment', promptHint: 'Consult impression and differential' },
       { name: 'Consult Recommendations', promptHint: null },
     ],

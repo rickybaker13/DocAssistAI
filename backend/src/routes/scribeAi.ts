@@ -71,6 +71,14 @@ Generate structured note content for each section listed below, based ONLY on th
 Write in first-person plural physician voice ("We assessed...", "The patient was...", "Our plan includes...").
 Be clinically precise. Do not fabricate findings not present in the transcript.
 If a section cannot be completed from the transcript, write: "Insufficient information captured."
+
+TEMPLATE-BASED SECTIONS: Some sections include a "TEMPLATE-BASED SECTION" marker with a default template of normal/negative findings. For these sections:
+- Use the provided template as your starting baseline.
+- Replace ONLY the specific system findings that are mentioned in the transcript with the patient's actual findings.
+- Keep normal/negative findings INTACT for any system not addressed in the transcript.
+- NEVER write "Insufficient information captured" for template-based sections — always output the full template with any transcript-based modifications.
+- Preserve the exact format (system name followed by colon, findings).
+
 Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}
 ${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
 

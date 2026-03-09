@@ -5,6 +5,23 @@ export interface PrebuiltSection {
   disciplines: string[];
 }
 
+// ─── Default content templates for prepopulated sections ──────────────────────
+// These are used both in promptHints (for AI generation) and exported for
+// frontend prepopulation when users manually add these sections.
+
+export const PHYSICAL_EXAM_DEFAULT = `General: Well-appearing, in no acute distress. Alert and oriented.
+Neurological: Alert and oriented x4. Cranial nerves II-XII grossly intact. Strength 5/5 in all extremities. Sensation intact to light touch.
+Cardiovascular: Regular rate and rhythm. Normal S1, S2. No murmurs, rubs, or gallops. No peripheral edema.
+Pulmonary: Clear to auscultation bilaterally. No wheezes, rhonchi, or rales. No increased work of breathing.
+Abdominal: Soft, non-tender, non-distended. Normoactive bowel sounds in all four quadrants. No organomegaly.
+Skin/Extremities: Warm, dry, intact. No rashes or lesions. No clubbing, cyanosis, or edema.`;
+
+export const REVIEW_OF_SYSTEMS_DEFAULT = `Constitutional: Denies fever, chills, night sweats, or unintentional weight changes.
+Cardiovascular: Denies chest pain, palpitations, orthopnea, or lower extremity swelling.
+Pulmonary: Denies shortness of breath, cough, wheezing, or hemoptysis.
+Gastrointestinal: Denies nausea, vomiting, diarrhea, constipation, or abdominal pain.
+Neurological: Denies headache, dizziness, numbness, tingling, or focal weakness.`;
+
 /** Disciplines applied to all general physician-authored sections */
 const PHYSICIAN_DISCIPLINES = [
   'hospital_medicine', 'critical_care', 'emergency_medicine',
@@ -23,9 +40,9 @@ export const PREBUILT_SECTIONS: PrebuiltSection[] = [
   { name: 'Family History',      promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Medications',         promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Allergies',           promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
-  { name: 'Review of Systems',   promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
+  { name: 'Review of Systems',   promptHint: `TEMPLATE-BASED SECTION. Start with this negative ROS template and replace any system that has positive findings mentioned in the transcript with the actual positives. Keep negative findings for any system not addressed in the transcript.\n\n${REVIEW_OF_SYSTEMS_DEFAULT}`, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Vital Signs',         promptHint: 'Temperature, blood pressure, heart rate, respiratory rate, oxygen saturation, weight, pain score', category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
-  { name: 'Physical Exam',       promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
+  { name: 'Physical Exam',       promptHint: `TEMPLATE-BASED SECTION. Start with this normal exam template and replace any system findings mentioned in the transcript with the actual patient findings. Keep normal findings for any system not addressed in the transcript.\n\n${PHYSICAL_EXAM_DEFAULT}`, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Assessment',          promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Plan',                promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },
   { name: 'Disposition',         promptHint: null, category: 'general', disciplines: PHYSICIAN_DISCIPLINES },

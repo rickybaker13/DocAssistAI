@@ -8,6 +8,7 @@ import { ScribeChatDrawer } from './ScribeChatDrawer';
 import { useScribeNoteStore, type NoteSection } from '../../stores/scribeNoteStore';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
+import { SECTION_DEFAULT_CONTENT } from '../../lib/sectionDefaults';
 
 interface SectionData {
   id: string;
@@ -119,15 +120,16 @@ export const ScribeNotePage: React.FC = () => {
   };
 
   const handleAddSectionFromLibrary = (template: { id: string; name: string; promptHint: string | null; isPrebuilt: boolean }) => {
+    const defaultContent = SECTION_DEFAULT_CONTENT[template.name] ?? null;
     const newSection: SectionData = {
       id: `local-${crypto.randomUUID ? crypto.randomUUID() : Date.now()}`,
       section_name: template.name,
-      content: null,
+      content: defaultContent,
       confidence: null,
       display_order: sections.length,
     };
     setSections(prev => [...prev, newSection]);
-    setEdits(prev => ({ ...prev, [newSection.id]: '' }));
+    setEdits(prev => ({ ...prev, [newSection.id]: defaultContent ?? '' }));
     setShowAddSection(false);
   };
 
