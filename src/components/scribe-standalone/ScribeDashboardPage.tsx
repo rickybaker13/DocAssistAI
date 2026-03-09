@@ -22,6 +22,7 @@ export const ScribeDashboardPage: React.FC = () => {
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [loadingNotes, setLoadingNotes] = useState(true);
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const syncAttempted = useRef<Set<string>>(new Set());
 
   // Reset sync-attempted on every mount so revisiting the dashboard retries failed syncs
@@ -222,12 +223,29 @@ export const ScribeDashboardPage: React.FC = () => {
                       Open
                     </button>
                   )}
-                  <button
-                    onClick={() => removeEncounter(item.noteId)}
-                    className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
-                  >
-                    Remove
-                  </button>
+                  {confirmDeleteId === item.noteId ? (
+                    <>
+                      <button
+                        onClick={() => { removeEncounter(item.noteId); setConfirmDeleteId(null); }}
+                        className="px-3 py-1.5 bg-red-600 text-white font-semibold rounded-lg text-sm hover:bg-red-500 transition-colors"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(item.noteId)}
+                      className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -264,12 +282,29 @@ export const ScribeDashboardPage: React.FC = () => {
                   >
                     Open
                   </button>
-                  <button
-                    onClick={() => handleDeleteSavedNote(note.id)}
-                    className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
-                  >
-                    Remove
-                  </button>
+                  {confirmDeleteId === note.id ? (
+                    <>
+                      <button
+                        onClick={() => { handleDeleteSavedNote(note.id); setConfirmDeleteId(null); }}
+                        className="px-3 py-1.5 bg-red-600 text-white font-semibold rounded-lg text-sm hover:bg-red-500 transition-colors"
+                      >
+                        Delete
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-slate-200 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(note.id)}
+                      className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
