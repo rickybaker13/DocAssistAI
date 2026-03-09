@@ -1,14 +1,86 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
+import { getBackendUrl } from '../../config/appConfig';
+
+interface SavedNote {
+  id: string;
+  note_type: string;
+  patient_label: string;
+  verbosity: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export const ScribeDashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const { noteId, noteType, patientLabel, status, encounters, openEncounter, removeEncounter, reset } = useScribeNoteStore();
+  const store = useScribeNoteStore();
+
+  const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [loadingNotes, setLoadingNotes] = useState(true);
+
+  // Fetch saved notes from backend on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${getBackendUrl()}/api/scribe/notes`, { credentials: 'include' })
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
+      .then(data => { if (!cancelled) setSavedNotes(data.notes || []); })
+      .catch(() => { /* non-critical — local encounters still show */ })
+      .finally(() => { if (!cancelled) setLoadingNotes(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleDiscard = () => {
     reset();
   };
+
+  const handleOpenSavedNote = async (id: string) => {
+    // If already loaded locally, just navigate
+    if (noteId === id) {
+      navigate(`/scribe/note/${id}`);
+      return;
+    }
+    // Check local encounters first
+    const localEnc = encounters.find(e => e.noteId === id && e.status === 'ready');
+    if (localEnc) {
+      openEncounter(id);
+      navigate(`/scribe/note/${id}`);
+      return;
+    }
+    // Fetch full note from backend and hydrate the store
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, { credentials: 'include' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const { note } = await res.json();
+      const sections = (typeof note.sections === 'string' ? JSON.parse(note.sections) : note.sections) || [];
+      store.initNote({ noteId: note.id, noteType: note.note_type, patientLabel: note.patient_label, verbosity: note.verbosity });
+      store.setTranscript(note.transcript || '');
+      store.setSections(sections);
+      store.setStatus(note.status === 'finalized' ? 'finalized' : 'draft');
+      navigate(`/scribe/note/${id}`);
+    } catch {
+      // If fetch fails, can't open
+    }
+  };
+
+  const handleDeleteSavedNote = async (id: string) => {
+    setSavedNotes(prev => prev.filter(n => n.id !== id));
+    // Also remove from local encounters if present
+    removeEncounter(id);
+    // If this is the currently-open note, clear it
+    if (noteId === id) reset();
+    fetch(`${getBackendUrl()}/api/scribe/notes/${id}`, { method: 'DELETE', credentials: 'include' }).catch(() => {});
+  };
+
+  // Merge: local encounters that are still processing/failed should show above saved notes.
+  // Filter out local encounters that already exist in savedNotes to avoid duplicates.
+  const savedNoteIds = new Set(savedNotes.map(n => n.id));
+  const localOnlyEncounters = encounters.filter(e => !savedNoteIds.has(e.noteId));
+
+  const hasAnything = localOnlyEncounters.length > 0 || savedNotes.length > 0 || noteId;
 
   return (
     <div className="flex flex-col gap-5">
@@ -33,11 +105,12 @@ export const ScribeDashboardPage: React.FC = () => {
         Record Next Encounter
       </Link>
 
-      {encounters.length > 0 && (
+      {/* Local-only encounters (processing / failed — not yet saved to backend) */}
+      {localOnlyEncounters.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Recent Encounters</p>
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">In Progress</p>
           <div className="flex flex-col gap-2">
-            {encounters.map((item) => (
+            {localOnlyEncounters.map((item) => (
               <div key={item.noteId} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <FileText size={20} className="text-teal-400" />
@@ -68,9 +141,7 @@ export const ScribeDashboardPage: React.FC = () => {
                   {item.status === 'ready' ? (
                     <Link
                       to={`/scribe/note/${item.noteId}`}
-                      onClick={() => {
-                        openEncounter(item.noteId);
-                      }}
+                      onClick={() => { openEncounter(item.noteId); }}
                       className="px-3 py-1.5 bg-teal-400 text-slate-900 font-semibold rounded-lg text-sm hover:bg-teal-300 transition-colors"
                     >
                       Open
@@ -96,43 +167,55 @@ export const ScribeDashboardPage: React.FC = () => {
         </div>
       )}
 
-      {noteId ? (
+      {/* Saved Notes from backend — available on any device */}
+      {savedNotes.length > 0 && (
         <div className="flex flex-col gap-2">
-          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Current Note</p>
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <FileText size={20} className="text-teal-400" />
-              <div>
-                <p className="text-sm font-medium text-slate-100">
-                  {patientLabel || noteType.replace(/_/g, ' ')}
-                </p>
-                <p className="text-xs text-slate-400">{noteType.replace(/_/g, ' ')}</p>
+          <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Saved Notes</p>
+          <div className="flex flex-col gap-2">
+            {savedNotes.map((note) => (
+              <div key={note.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <FileText size={20} className="text-teal-400" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-100">{note.patient_label || note.note_type.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-slate-400">{note.note_type.replace(/_/g, ' ')}</p>
+                  </div>
+                  <span className={
+                    note.status === 'finalized'
+                      ? 'inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-400/30 text-xs px-2.5 py-1 rounded-full'
+                      : 'inline-flex items-center gap-1.5 bg-amber-950 text-amber-400 border border-amber-400/30 text-xs px-2.5 py-1 rounded-full'
+                  }>
+                    {note.status === 'finalized' ? <CheckCircle2 size={12} /> : <Clock size={12} />}
+                    {note.status}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleOpenSavedNote(note.id)}
+                    className="px-3 py-1.5 bg-teal-400 text-slate-900 font-semibold rounded-lg text-sm hover:bg-teal-300 transition-colors"
+                  >
+                    Open
+                  </button>
+                  <button
+                    onClick={() => handleDeleteSavedNote(note.id)}
+                    className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
               </div>
-              <span className={
-                status === 'finalized'
-                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-400/30 text-xs px-2.5 py-1 rounded-full'
-                  : 'bg-amber-950 text-amber-400 border border-amber-400/30 text-xs px-2.5 py-1 rounded-full'
-              }>
-                {status}
-              </span>
-            </div>
-            <div className="flex gap-2">
-              <Link
-                to={`/scribe/note/${noteId}`}
-                className="px-3 py-1.5 bg-teal-400 text-slate-900 font-semibold rounded-lg text-sm hover:bg-teal-300 transition-colors"
-              >
-                Open
-              </Link>
-              <button
-                onClick={handleDiscard}
-                className="px-3 py-1.5 border border-slate-600 text-slate-400 rounded-lg text-sm hover:text-red-400 hover:border-red-400/30 transition-colors"
-              >
-                Discard
-              </button>
-            </div>
+            ))}
           </div>
         </div>
-      ) : encounters.length === 0 ? (
+      )}
+
+      {loadingNotes && savedNotes.length === 0 && encounters.length === 0 && !noteId && (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 size={24} className="animate-spin text-slate-400" />
+        </div>
+      )}
+
+      {!loadingNotes && !hasAnything && (
         <div className="text-center py-16">
           <p className="text-slate-400 text-base mb-2">No notes yet</p>
           <p className="text-slate-400 text-sm mb-4">Record your first patient encounter to get started</p>
@@ -140,7 +223,7 @@ export const ScribeDashboardPage: React.FC = () => {
             Create first note →
           </Link>
         </div>
-      ) : null}
+      )}
 
       <Link
         to="/scribe/note/new"

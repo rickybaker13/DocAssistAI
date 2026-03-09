@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, X } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
@@ -92,23 +92,69 @@ export const ScribeNotePage: React.FC = () => {
   const { user } = useScribeAuthStore();
   const billingCodesEnabled = user?.billing_codes_enabled ?? false;
 
-  // Initialise local editing state from the Zustand store
+  // Initialise local editing state — try Zustand store first, fall back to backend
   useEffect(() => {
-    if (!noteId || storeNote.noteId !== noteId) {
-      setError(storeNote.noteId ? 'Note ID mismatch' : 'No active note');
+    if (!noteId) { setError('No note ID'); setLoading(false); return; }
+
+    // If the local store already has this note loaded, use it directly
+    if (storeNote.noteId === noteId && storeSections.length > 0) {
+      setSections(storeSections);
+      const initial: Record<string, string> = {};
+      storeSections.forEach((s: NoteSection) => { initial[s.id] = s.content || ''; });
+      setEdits(initial);
       setLoading(false);
       return;
     }
-    setSections(storeSections);
-    const initial: Record<string, string> = {};
-    storeSections.forEach((s: NoteSection) => { initial[s.id] = s.content || ''; });
-    setEdits(initial);
-    setLoading(false);
-  }, [noteId, storeNote.noteId, storeSections]);
+
+    // Otherwise fetch from backend (e.g. opening on a different device)
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, { credentials: 'include' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { note } = await res.json();
+        if (cancelled) return;
+        const remoteSections: NoteSection[] = (typeof note.sections === 'string' ? JSON.parse(note.sections) : note.sections) || [];
+        // Hydrate the Zustand store so the rest of the page works normally
+        storeNote.initNote({ noteId: note.id, noteType: note.note_type, patientLabel: note.patient_label, verbosity: note.verbosity });
+        storeNote.setTranscript(note.transcript || '');
+        storeNote.setSections(remoteSections);
+        storeNote.setStatus(note.status === 'finalized' ? 'finalized' : 'draft');
+        setSections(remoteSections);
+        const initial: Record<string, string> = {};
+        remoteSections.forEach((s: NoteSection) => { initial[s.id] = s.content || ''; });
+        setEdits(initial);
+      } catch {
+        if (!cancelled) setError('Note not found');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteId]);
 
   const handleSectionChange = useCallback((id: string, content: string) => {
     setEdits(prev => ({ ...prev, [id]: content }));
   }, []);
+
+  // Debounced auto-save to backend (2s after last edit)
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!noteId || sections.length === 0) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      const merged = sections.map(s => ({ ...s, content: edits[s.id] ?? s.content }));
+      fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ sections: merged, status: storeNote.status }),
+      }).catch(() => { /* best-effort */ });
+    }, 2000);
+    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [edits, sections, noteId]);
 
   const handleDeleteSection = (sectionId: string) => {
     setSections(prev => prev.filter(s => s.id !== sectionId));
@@ -186,8 +232,17 @@ export const ScribeNotePage: React.FC = () => {
   };
 
   const handleFinalize = () => {
-    // Client-side only — no server call
     storeNote.setStatus('finalized');
+    // Persist finalized state to backend
+    if (noteId) {
+      const merged = sections.map(s => ({ ...s, content: edits[s.id] ?? s.content }));
+      fetch(`${getBackendUrl()}/api/scribe/notes/${noteId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ sections: merged, status: 'finalized' }),
+      }).catch(() => { /* best-effort */ });
+    }
     if (billingCodesEnabled) {
       fetchBillingCodes();
       setActiveTab('billing');

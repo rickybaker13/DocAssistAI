@@ -41,7 +41,6 @@ export const ScribeRecordPage: React.FC = () => {
       }
       const genData = await genRes.json();
 
-      // Store generated sections client-side only — never sent to DB
       const sections = (genData.sections || []).map((s: any, i: number) => ({
         id: crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${i}`,
         section_name: s.name,
@@ -50,6 +49,22 @@ export const ScribeRecordPage: React.FC = () => {
         display_order: i,
       }));
       completeEncounter(noteId, sections);
+
+      // Persist note to backend DB so it's available on any device
+      fetch(`${getBackendUrl()}/api/scribe/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          id: noteId,
+          note_type: noteType,
+          patient_label: patientLabel,
+          verbosity,
+          transcript,
+          sections,
+          status: 'draft',
+        }),
+      }).catch(() => { /* best-effort save — note still lives in local store */ });
     } catch (e: unknown) {
       let msg = 'An unexpected error occurred';
       if (e instanceof TypeError) msg = 'Unable to reach server. Check your connection.';

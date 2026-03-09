@@ -25,6 +25,7 @@ import scribeBillingRouter from './routes/scribeBilling.js';
 import scribeCronRouter from './routes/scribeCron.js';
 import scribeFeedbackRouter from './routes/scribeFeedback.js';
 import scribeExitSurveyRouter from './routes/scribeExitSurvey.js';
+import scribeNotesRouter from './routes/scribeNotes.js';
 import { scribeAuthMiddleware } from './middleware/scribeAuth.js';
 import { scribeSubscriptionMiddleware } from './middleware/scribeSubscription.js';
 import healthRouter from './routes/health.js';
@@ -118,6 +119,7 @@ app.use('/api/scribe/note-templates', scribeAuthMiddleware, scribeSubscriptionMi
 app.use('/api/scribe/billing', scribeBillingRouter);
 app.use('/api/scribe/feedback', scribeAuthMiddleware, scribeSubscriptionMiddleware, scribeFeedbackRouter);
 app.use('/api/scribe/exit-survey', scribeAuthMiddleware, scribeExitSurveyRouter);
+app.use('/api/scribe/notes', scribeAuthMiddleware, scribeSubscriptionMiddleware, scribeNotesRouter);
 app.use('/api/cron', scribeCronRouter);
 app.use('/api', healthRouter);
 
