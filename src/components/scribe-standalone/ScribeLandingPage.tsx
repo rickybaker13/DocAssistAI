@@ -5,6 +5,7 @@ import { DocAssistLogo } from './DocAssistLogo';
 import HeroSection from './landing/HeroSection';
 import PainPointSection from './landing/PainPointSection';
 import HowItWorksSection from './landing/HowItWorksSection';
+import InteractiveTourSection from './landing/InteractiveTourSection';
 import FeaturesGrid from './landing/FeaturesGrid';
 import PricingCTA from './landing/PricingCTA';
 import LandingFooter from './landing/LandingFooter';
@@ -117,6 +118,7 @@ export default function ScribeLandingPage() {
         <HeroSection />
         <PainPointSection />
         <HowItWorksSection />
+        <InteractiveTourSection />
         <FeaturesGrid />
         <PricingCTA />
       </main>
