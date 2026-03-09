@@ -1,8 +1,16 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ScribeDashboardPage } from './ScribeDashboardPage';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { vi } from 'vitest';
+
+// Mock fetch to return empty notes list by default
+beforeEach(() => {
+  globalThis.fetch = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => ({ notes: [] }),
+  }) as any;
+});
 
 describe('ScribeDashboardPage', () => {
   afterEach(() => {
@@ -10,40 +18,79 @@ describe('ScribeDashboardPage', () => {
     useScribeNoteStore.getState().reset();
   });
 
-  it('shows empty state when no active note', () => {
+  it('shows empty state when no active note', async () => {
     render(<MemoryRouter><ScribeDashboardPage /></MemoryRouter>);
-    expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
+    });
   });
 
-  it('shows current note when one is in progress', () => {
+  it('shows encounter when one is ready', async () => {
     useScribeNoteStore.setState({
-      noteId: 'note-1',
-      noteType: 'progress_note',
-      patientLabel: 'Bed 3',
-      verbosity: 'standard',
-      transcript: '',
-      sections: [],
-      status: 'draft',
+      encounters: [{
+        noteId: 'note-1',
+        noteType: 'progress_note',
+        patientLabel: 'Bed 3',
+        verbosity: 'standard',
+        transcript: 'test transcript',
+        sections: [{ id: 's1', section_name: 'HPI', content: 'test', confidence: 0.9, display_order: 0 }],
+        status: 'ready',
+        error: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
     });
     render(<MemoryRouter><ScribeDashboardPage /></MemoryRouter>);
-    expect(screen.getByText('Bed 3')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Bed 3')).toBeInTheDocument();
+    });
+  });
+
+  it('shows saved notes from backend', async () => {
+    (globalThis.fetch as any).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        notes: [{
+          id: 'saved-1',
+          note_type: 'progress_note',
+          patient_label: 'Room 5',
+          verbosity: 'standard',
+          status: 'draft',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }],
+      }),
+    });
+    render(<MemoryRouter><ScribeDashboardPage /></MemoryRouter>);
+    await waitFor(() => {
+      expect(screen.getByText('Room 5')).toBeInTheDocument();
+    });
     expect(screen.getByText('draft')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /open/i })).toBeInTheDocument();
   });
 
-  it('discards the active note on Discard click', () => {
+  it('removes encounter on Remove click', async () => {
     useScribeNoteStore.setState({
-      noteId: 'note-1',
-      noteType: 'progress_note',
-      patientLabel: 'Bed 3',
-      verbosity: 'standard',
-      transcript: '',
-      sections: [],
-      status: 'draft',
+      encounters: [{
+        noteId: 'note-1',
+        noteType: 'progress_note',
+        patientLabel: 'Bed 3',
+        verbosity: 'standard',
+        transcript: '',
+        sections: [],
+        status: 'failed',
+        error: 'test error',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }],
     });
     render(<MemoryRouter><ScribeDashboardPage /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /discard/i }));
-    expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
-    expect(useScribeNoteStore.getState().noteId).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByText('Bed 3')).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole('button', { name: /remove/i }));
+    await waitFor(() => {
+      expect(screen.getByText(/no notes yet/i)).toBeInTheDocument();
+    });
+    expect(useScribeNoteStore.getState().encounters).toHaveLength(0);
   });
 });
