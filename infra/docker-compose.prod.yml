@@ -112,6 +112,10 @@ services:
       retries: 5
       start_period: 60s
 
+networks:
+  default:
+    name: infra_default
+
 volumes:
   caddy_data:
   caddy_config:
