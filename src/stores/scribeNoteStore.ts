@@ -68,6 +68,7 @@ interface ScribeNoteState {
   failEncounter: (noteId: string, error: string) => void;
   openEncounter: (noteId: string) => void;
   removeEncounter: (noteId: string) => void;
+  updateEncounterLabel: (noteId: string, patientLabel: string) => void;
   setBillingCodes: (codes: BillingCodesResult | null) => void;
   setBillingCodesLoading: (loading: boolean) => void;
   setBillingCodesError: (error: string | null) => void;
@@ -164,6 +165,13 @@ export const useScribeNoteStore = create<ScribeNoteState>()(
         }),
 
       removeEncounter: (noteId) => set((state) => ({ encounters: state.encounters.filter((item) => item.noteId !== noteId) })),
+
+      updateEncounterLabel: (noteId, patientLabel) =>
+        set((state) => ({
+          encounters: state.encounters.map((item) =>
+            item.noteId === noteId ? { ...item, patientLabel, updatedAt: new Date().toISOString() } : item
+          ),
+        })),
 
       setBillingCodes: (billingCodes) => set({ billingCodes }),
       setBillingCodesLoading: (billingCodesLoading) => set({ billingCodesLoading }),
