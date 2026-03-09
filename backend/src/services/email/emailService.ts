@@ -23,7 +23,70 @@ async function send(to: string, subject: string, html: string): Promise<void> {
   }
 }
 
+function formatTrialDate(isoDate: string): string {
+  if (!isoDate) return 'soon';
+  const d = new Date(isoDate);
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
 export class EmailService {
+  async sendTrialWelcomeEmail(toEmail: string, trialEndsAt: string): Promise<void> {
+    const endDate = formatTrialDate(trialEndsAt);
+    await send(toEmail, 'Welcome to DocAssistAI — your 7-day trial is active!', `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#0f172a">Welcome to DocAssistAI!</h2>
+        <p>Your free 7-day trial is now active. Here's what you can do:</p>
+        <ul style="padding-left:20px;color:#334155">
+          <li><strong>Record patient encounters</strong> — use your microphone or paste transcripts</li>
+          <li><strong>Generate clinical notes</strong> — SOAP, H&P, progress notes, and more</li>
+          <li><strong>Customize templates</strong> — tailor note sections to your workflow</li>
+        </ul>
+        <p>Your trial ends on <strong>${endDate}</strong>. No credit card is required during your trial.</p>
+        <a href="${APP_URL}/scribe/dashboard" style="display:inline-block;background:#2dd4bf;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+          Start Documenting
+        </a>
+        <p style="color:#64748b;font-size:13px;margin-top:24px">Questions? Reply to this email or contact admin@docassistai.app.</p>
+      </div>
+    `);
+  }
+
+  async sendTrialMidpointEmail(toEmail: string, trialEndsAt: string): Promise<void> {
+    const endDate = formatTrialDate(trialEndsAt);
+    await send(toEmail, 'Your DocAssistAI trial is halfway done', `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#0f172a">Your trial is halfway through!</h2>
+        <p>Just a friendly reminder — your DocAssistAI free trial ends on <strong>${endDate}</strong>.</p>
+        <p>Have you tried all the features?</p>
+        <ul style="padding-left:20px;color:#334155">
+          <li>Create notes from live recordings or pasted transcripts</li>
+          <li>Customize note templates for your specialty</li>
+          <li>Use billing code suggestions for faster coding</li>
+        </ul>
+        <p>To keep using DocAssistAI after your trial, add a payment method to your account.</p>
+        <a href="${APP_URL}/scribe/account" style="display:inline-block;background:#2dd4bf;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+          Add Payment Method
+        </a>
+        <p style="color:#64748b;font-size:13px;margin-top:24px">Plans start at $20/month. Cancel anytime.</p>
+      </div>
+    `);
+  }
+
+  async sendTrialUrgentEmail(toEmail: string, trialEndsAt: string): Promise<void> {
+    const endDate = formatTrialDate(trialEndsAt);
+    await send(toEmail, 'Your DocAssistAI trial ends tomorrow!', `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#dc2626">Your trial ends tomorrow!</h2>
+        <p>Your DocAssistAI free trial ends on <strong>${endDate}</strong>. After that, you'll lose access to note generation and your dashboard.</p>
+        <p><strong>Don't worry</strong> — your existing notes and settings will be saved and waiting for you.</p>
+        <p>Add a payment method now to continue without interruption:</p>
+        <a href="${APP_URL}/scribe/account" style="display:inline-block;background:#2dd4bf;color:#0f172a;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin:8px 0">
+          Continue Using DocAssistAI
+        </a>
+        <p style="color:#64748b;font-size:13px;margin-top:24px">Plans start at $20/month or $200/year (save $40). Cancel anytime.</p>
+      </div>
+    `);
+  }
+
   async sendPasswordResetEmail(toEmail: string, resetUrl: string): Promise<void> {
     await send(toEmail, 'Reset your DocAssistAI password', `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">

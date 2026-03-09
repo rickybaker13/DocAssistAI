@@ -89,21 +89,89 @@ export async function processAutoRenewals(squareConfig: {
   return results;
 }
 
-export async function sendTrialExpiringReminders(): Promise<number> {
+/**
+ * 3-stage trial reminder system.
+ * Stage 1 (welcome) is sent at registration (fire-and-forget).
+ * Stage 2 (midpoint) is sent ~3-4 days into the trial.
+ * Stage 3 (urgent) is sent ~6 days into the trial (1 day before expiry).
+ *
+ * Each stage atomically updates trial_reminder_stage to prevent duplicates.
+ */
+export async function sendTrialExpiringReminders(): Promise<{ stage2: number; stage3: number }> {
+  const pool = getPool();
+  let stage2Sent = 0;
+  let stage3Sent = 0;
+
+  // --- Stage 2: Midpoint reminder (trial ends in 2.5–3.5 days) ---
+  const { rows: midpointUsers } = await pool.query(
+    `SELECT id, email, trial_ends_at
+     FROM scribe_users
+     WHERE subscription_status = 'trialing'
+       AND trial_reminder_stage < 2
+       AND trial_ends_at > NOW() + INTERVAL '2.5 days'
+       AND trial_ends_at <= NOW() + INTERVAL '3.5 days'`,
+  );
+
+  for (const user of midpointUsers) {
+    try {
+      await emailService.sendTrialMidpointEmail(user.email, user.trial_ends_at);
+      await pool.query(
+        'UPDATE scribe_users SET trial_reminder_stage = 2 WHERE id = $1 AND trial_reminder_stage < 2',
+        [user.id],
+      );
+      stage2Sent++;
+    } catch (err) {
+      console.error(`[trial-reminder] Stage 2 failed for ${user.email}:`, err);
+    }
+  }
+
+  // --- Stage 3: Urgent reminder (trial ends in 0.5–1.5 days) ---
+  const { rows: urgentUsers } = await pool.query(
+    `SELECT id, email, trial_ends_at
+     FROM scribe_users
+     WHERE subscription_status = 'trialing'
+       AND trial_reminder_stage < 3
+       AND trial_ends_at > NOW() + INTERVAL '0.5 days'
+       AND trial_ends_at <= NOW() + INTERVAL '1.5 days'`,
+  );
+
+  for (const user of urgentUsers) {
+    try {
+      await emailService.sendTrialUrgentEmail(user.email, user.trial_ends_at);
+      await pool.query(
+        'UPDATE scribe_users SET trial_reminder_stage = 3 WHERE id = $1 AND trial_reminder_stage < 3',
+        [user.id],
+      );
+      stage3Sent++;
+    } catch (err) {
+      console.error(`[trial-reminder] Stage 3 failed for ${user.email}:`, err);
+    }
+  }
+
+  return { stage2: stage2Sent, stage3: stage3Sent };
+}
+
+/**
+ * Proactively expire ended trials and send notification emails.
+ * This is a safety net — scribeSubscriptionMiddleware also marks users expired on-the-fly.
+ */
+export async function expireEndedTrials(): Promise<number> {
   const pool = getPool();
 
-  // Find trialing users whose trial ends in ~3 days (between 2.5 and 3.5 days from now)
   const { rows } = await pool.query(
     `SELECT id, email
      FROM scribe_users
      WHERE subscription_status = 'trialing'
-       AND trial_ends_at > NOW() + INTERVAL '2.5 days'
-       AND trial_ends_at <= NOW() + INTERVAL '3.5 days'
-       AND square_card_id IS NULL`,
+       AND trial_ends_at < NOW()`,
   );
 
   for (const user of rows) {
-    await emailService.sendTrialExpiringEmail(user.email, 3);
+    try {
+      await userModel.markExpired(user.id);
+      await emailService.sendSubscriptionExpiredEmail(user.email);
+    } catch (err) {
+      console.error(`[expire-trials] Failed for ${user.email}:`, err);
+    }
   }
 
   return rows.length;

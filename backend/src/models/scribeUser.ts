@@ -16,6 +16,7 @@ export interface ScribeUser {
   is_admin: boolean;
   billing_cycle: 'monthly' | 'annual';
   billing_codes_enabled: boolean;
+  trial_reminder_stage: number;
   tos_accepted_at: string | null;
   privacy_accepted_at: string | null;
   tos_version: string | null;

@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
 import { emailService } from '../services/email/emailService.js';
+import { getPool } from '../database/db.js';
 
 const router = Router();
 const userModel = new ScribeUserModel();
@@ -45,6 +46,20 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   const user = await userModel.create({ email, passwordHash, name, specialty });
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '7d' });
   res.cookie(COOKIE, token, COOKIE_OPTS);
+
+  // Fire-and-forget: send welcome email and mark stage 1
+  (async () => {
+    try {
+      await emailService.sendTrialWelcomeEmail(user.email, user.trial_ends_at ?? '');
+      await getPool().query(
+        'UPDATE scribe_users SET trial_reminder_stage = 1 WHERE id = $1 AND trial_reminder_stage < 1',
+        [user.id],
+      );
+    } catch (err) {
+      console.error('Failed to send welcome email:', err);
+    }
+  })();
+
   return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
 });
 

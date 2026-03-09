@@ -13,34 +13,18 @@ export const ScribeRegisterPage: React.FC = () => {
     password: '',
     name: '',
     specialty: '',
-    agreedToAutoRenewal: false,
   });
-  const [billingError, setBillingError] = useState<string | null>(null);
 
   useEffect(() => { if (user) navigate('/scribe/dashboard'); }, [user, navigate]);
 
   const setField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const value = field === 'agreedToAutoRenewal' && e.target instanceof HTMLInputElement
-      ? e.target.checked
-      : e.target.value;
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
-
-  const isBillingFormValid = () => {
-    if (!form.agreedToAutoRenewal) return 'You must agree to auto-renewal terms to start the trial.';
-    return null;
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const billingValidationError = isBillingFormValid();
-    if (billingValidationError) {
-      setBillingError(billingValidationError);
-      return;
-    }
-    setBillingError(null);
     const ok = await register(form.email, form.password, form.name, form.specialty);
-    if (ok) navigate('/scribe/account');
+    if (ok) navigate('/scribe/dashboard');
   };
 
   return (
@@ -54,13 +38,10 @@ export const ScribeRegisterPage: React.FC = () => {
 
         <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8">
           <div className="mb-5 rounded-xl border border-teal-400/30 bg-teal-400/10 p-4">
-            <div className="mb-3 inline-flex items-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
-              <img src="/square-wordmark.svg" alt="Square" className="h-6 w-auto" />
-            </div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-300">Limited-time offer</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-300">No credit card required</p>
             <h2 className="mt-1 text-lg font-semibold text-slate-50">Start your free 7-day trial</h2>
             <p className="mt-1 text-sm text-slate-300">
-              Create your account to begin. Cancel anytime within 7 days and you will not be charged.
+              Create your account and start documenting immediately. No payment info needed to get started.
             </p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -98,33 +79,6 @@ export const ScribeRegisterPage: React.FC = () => {
                 {DISCIPLINE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
               </select>
             </div>
-            <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-slate-100">Payment</h3>
-              <p className="text-xs text-slate-400">
-                After creating your account you'll choose your plan ($20/month or $200/year — save $40) and set up payment via Square's secure checkout.
-                No payment is collected now — your 7-day free trial starts immediately.
-              </p>
-              <div className="flex flex-wrap gap-2 text-xs text-slate-500">
-                <span className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1">Credit Card</span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1">ACH Bank</span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1">Apple Pay</span>
-                <span className="inline-flex items-center gap-1 rounded-md border border-slate-700 px-2 py-1">Google Pay</span>
-              </div>
-            </div>
-            <label className="flex items-start gap-3 rounded-lg border border-slate-700 bg-slate-900/70 p-3">
-              <input
-                type="checkbox"
-                checked={form.agreedToAutoRenewal}
-                onChange={setField('agreedToAutoRenewal')}
-                className="mt-0.5 h-4 w-4 rounded border-slate-500 bg-slate-900 text-teal-400 focus:ring-teal-400"
-              />
-              <span className="text-xs text-slate-300 leading-relaxed">
-                I agree that my subscription starts with a free 7-day trial and will automatically renew unless I cancel before trial end.
-              </span>
-            </label>
-            {billingError && (
-              <p role="alert" className="text-sm text-red-400 bg-red-950 border border-red-400/20 rounded-lg p-2.5">{billingError}</p>
-            )}
             {error && (
               <p role="alert" className="text-sm text-red-400 bg-red-950 border border-red-400/20 rounded-lg p-2.5">{error}</p>
             )}
@@ -134,6 +88,9 @@ export const ScribeRegisterPage: React.FC = () => {
             >
               {loading ? 'Creating account...' : 'Start free trial'}
             </button>
+            <p className="text-xs text-center text-slate-500">
+              After your trial, plans start at $20/mo. Cancel anytime.
+            </p>
           </form>
         </div>
 

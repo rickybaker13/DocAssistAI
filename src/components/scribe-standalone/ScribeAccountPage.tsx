@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, AlertTriangle, CircleCheck, Clock, CreditCard, KeyRound, Mail, MessageSquare, XCircle } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
@@ -7,6 +7,7 @@ import { SquareCardForm } from './SquareCardForm';
 import { SquareAchButton } from './SquareAchButton';
 import { SquareApplePayButton } from './SquareApplePayButton';
 import { SquareGooglePayButton } from './SquareGooglePayButton';
+import { TrialExpiredGate } from './TrialExpiredGate';
 
 interface SubscriptionStatus {
   subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
@@ -76,6 +77,7 @@ export const ScribeAccountPage: React.FC = () => {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+  const billingRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -213,15 +215,9 @@ export const ScribeAccountPage: React.FC = () => {
       </header>
 
       {(expiredParam || subStatus?.subscription_status === 'expired') && (
-        <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 space-y-2">
-          <div className="flex items-center gap-2 text-red-300">
-            <AlertTriangle size={20} />
-            <h2 className="text-lg font-semibold">Your subscription has expired</h2>
-          </div>
-          <p className="text-sm text-slate-300">
-            Add a payment method below to restore access to DocAssistAI. Your notes and settings are safe.
-          </p>
-        </div>
+        <TrialExpiredGate
+          onContinue={() => billingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+        />
       )}
 
       <div className="grid gap-4">
@@ -373,7 +369,7 @@ export const ScribeAccountPage: React.FC = () => {
           )}
         </article>
 
-        <form onSubmit={handleBillingUpdate} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+        <form ref={billingRef} onSubmit={handleBillingUpdate} className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
           <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Change billing method</h2>
           <div>
             <label className="text-xs uppercase tracking-wide text-slate-400">Payment method</label>

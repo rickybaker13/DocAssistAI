@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { processAutoRenewals, sendTrialExpiringReminders } from '../services/billing/recurringBilling.js';
+import { processAutoRenewals, sendTrialExpiringReminders, expireEndedTrials } from '../services/billing/recurringBilling.js';
 
 const router = Router();
 
@@ -49,11 +49,26 @@ router.post('/trial-reminders', async (req: Request, res: Response) => {
   }
 
   try {
-    const count = await sendTrialExpiringReminders();
-    return res.json({ sent: count });
+    const { stage2, stage3 } = await sendTrialExpiringReminders();
+    return res.json({ stage2_sent: stage2, stage3_sent: stage3 });
   } catch (err) {
     console.error('[cron] Trial reminder error:', err);
     return res.status(500).json({ error: 'Trial reminders failed' });
+  }
+});
+
+router.post('/expire-trials', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const expired = await expireEndedTrials();
+    return res.json({ expired });
+  } catch (err) {
+    console.error('[cron] Expire trials error:', err);
+    return res.status(500).json({ error: 'Expire trials processing failed' });
   }
 });
 

@@ -92,6 +92,14 @@ CREATE TABLE IF NOT EXISTS scribe_feedback (
   admin_note TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS scribe_exit_surveys (
+  id         TEXT PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  reason     TEXT NOT NULL,
+  suggestion TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 // ---------------------------------------------------------------------------
@@ -181,6 +189,12 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     table: 'scribe_users',
     column: 'billing_codes_enabled',
     sql: `ALTER TABLE scribe_users ADD COLUMN billing_codes_enabled BOOLEAN DEFAULT FALSE`,
+  },
+  // Trial reminder email stage tracking (0=none, 1=welcome, 2=midpoint, 3=urgent)
+  {
+    table: 'scribe_users',
+    column: 'trial_reminder_stage',
+    sql: `ALTER TABLE scribe_users ADD COLUMN trial_reminder_stage INTEGER DEFAULT 0`,
   },
 ];
 
