@@ -19,7 +19,10 @@ async function retrySave(url: string, body: object, maxRetries = 3): Promise<boo
         body: JSON.stringify(body),
       });
       if (res.ok) return true;
-    } catch { /* network error — will retry */ }
+      console.warn(`[Scribe save] attempt ${attempt + 1}/${maxRetries + 1} failed: ${res.status} ${res.statusText}`);
+    } catch (err) {
+      console.warn(`[Scribe save] attempt ${attempt + 1}/${maxRetries + 1} network error:`, err);
+    }
     if (attempt < maxRetries) {
       await new Promise(r => setTimeout(r, 2000 * 2 ** attempt));
     }
