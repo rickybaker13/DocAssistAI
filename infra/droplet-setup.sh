@@ -18,7 +18,7 @@
 #
 # After setup:
 #   - API:  https://api.docassistai.app/api/health
-#   - Logs: docker compose -f docker-compose.prod.yml logs -f
+#   - Logs: docker compose -f infra/docker-compose.prod.yml logs -f
 # ──────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -95,19 +95,15 @@ if grep -q 'CHANGE_ME' "$PROJECT_DIR/.env"; then
   exit 1
 fi
 
-# ── Symlink production files to project root ─────────────────────────────────
-ln -sf "$PROJECT_DIR/infra/docker-compose.prod.yml" "$PROJECT_DIR/docker-compose.prod.yml"
-ln -sf "$PROJECT_DIR/infra/Caddyfile" "$PROJECT_DIR/Caddyfile"
-
-# Copy presidio config to project root if not already there
-if [ -d "$PROJECT_DIR/backend/presidio-config" ] && [ ! -d "$PROJECT_DIR/presidio-config" ]; then
-  cp -r "$PROJECT_DIR/backend/presidio-config" "$PROJECT_DIR/presidio-config"
-fi
-
 # ── Pull images and build ────────────────────────────────────────────────────
+# NOTE: Always use -f infra/docker-compose.prod.yml (NOT a symlink at project root).
+# Docker Compose resolves relative paths from the compose file's directory (infra/),
+# so ../backend, ../.env etc. correctly point to the project root's backend/ and .env.
+COMPOSE="docker compose -f infra/docker-compose.prod.yml"
+
 echo "==> Pulling Docker images and building backend (this may take a few minutes)"
-docker compose -f docker-compose.prod.yml pull --ignore-buildable
-docker compose -f docker-compose.prod.yml build backend
+$COMPOSE pull --ignore-buildable
+$COMPOSE build backend
 
 # Restart Docker daemon so it re-creates iptables rules with the new
 # FORWARD policy.
@@ -115,7 +111,7 @@ echo "==> Restarting Docker to apply firewall changes"
 systemctl restart docker
 
 echo "==> Starting services"
-docker compose -f docker-compose.prod.yml up -d
+$COMPOSE up -d
 
 echo ""
 echo "==> Waiting for services to become healthy..."
@@ -134,7 +130,7 @@ check() {
 # Services are NOT exposed on host ports — check health via docker exec.
 docker_check() {
   local name=$1 container=$2 url=$3
-  if docker compose -f docker-compose.prod.yml exec -T "$container" \
+  if $COMPOSE exec -T "$container" \
        python -c "import urllib.request; urllib.request.urlopen('$url')" 2>/dev/null; then
     echo "  [OK]  $name"
   else
@@ -149,7 +145,7 @@ docker_check "Whisper ASR"         whisper              "http://localhost:9000/"
 
 echo ""
 echo "==> Container status"
-docker compose -f docker-compose.prod.yml ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+$COMPOSE ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
 
 DROPLET_IP=$(curl -s http://checkip.amazonaws.com || hostname -I | awk '{print $1}')
 
@@ -160,7 +156,7 @@ if curl -sf --max-time 10 "https://api.docassistai.app/api/health" >/dev/null 2>
 else
   echo "  [!!]  HTTPS not responding yet."
   echo "        Check DNS: api.docassistai.app should point to $DROPLET_IP"
-  echo "        Check logs: docker compose -f docker-compose.prod.yml logs caddy"
+  echo "        Check logs: docker compose -f infra/docker-compose.prod.yml logs caddy"
 fi
 
 echo ""
@@ -169,8 +165,8 @@ echo "  Setup complete!"
 echo ""
 echo "  Public IP:   $DROPLET_IP"
 echo "  API:         https://api.docassistai.app/api/health"
-echo "  Logs:        docker compose -f docker-compose.prod.yml logs -f"
-echo "  Rebuild:     docker compose -f docker-compose.prod.yml up -d --build"
+echo "  Logs:        docker compose -f infra/docker-compose.prod.yml logs -f"
+echo "  Rebuild:     docker compose -f infra/docker-compose.prod.yml up -d --build"
 echo ""
 echo "  Next steps:"
 echo "    1. Verify DNS: api.docassistai.app → $DROPLET_IP"

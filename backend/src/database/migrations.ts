@@ -272,4 +272,21 @@ export async function runMigrations(): Promise<void> {
   await pool.query(
     `UPDATE scribe_users SET trial_ends_at = created_at + INTERVAL '7 days' WHERE trial_ends_at IS NULL`,
   );
+
+  // 4. Backfill scribe_signup_tracking for existing users who don't have a tracking row yet
+  await pool.query(
+    `INSERT INTO scribe_signup_tracking (id, user_id, email, name, specialty, subscription_status, billing_cycle, trial_ends_at, converted_at, cancelled_at, created_at, updated_at)
+     SELECT gen_random_uuid()::text, su.id, su.email, su.name, su.specialty,
+            su.subscription_status,
+            su.billing_cycle,
+            su.trial_ends_at,
+            CASE WHEN su.subscription_status = 'active' THEN su.updated_at END,
+            su.cancelled_at,
+            su.created_at,
+            NOW()
+     FROM scribe_users su
+     WHERE NOT EXISTS (
+       SELECT 1 FROM scribe_signup_tracking st WHERE st.user_id = su.id
+     )`,
+  );
 }
