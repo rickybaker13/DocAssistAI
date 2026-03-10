@@ -10,6 +10,7 @@ import {
   Settings,
   MessageSquare,
   Shield,
+  Users,
 } from 'lucide-react';
 import { DocAssistLogo } from './DocAssistLogo';
 
@@ -20,7 +21,10 @@ const getNavItems = (isAdmin: boolean) => [
   { to: '/scribe/settings',  icon: Settings,         label: 'Settings'  },
   { to: '/scribe/feedback',  icon: MessageSquare,    label: 'Feedback'  },
   { to: '/scribe/account',   icon: User,             label: 'Account'   },
-  ...(isAdmin ? [{ to: '/scribe/admin/feedback', icon: Shield, label: 'Admin' }] : []),
+  ...(isAdmin ? [
+    { to: '/scribe/admin/feedback', icon: Shield, label: 'Feedback' },
+    { to: '/scribe/admin/signups', icon: Users, label: 'Signups' },
+  ] : []),
 ];
 
 export const ScribeLayout: React.FC = () => {

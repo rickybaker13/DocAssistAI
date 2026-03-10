@@ -14,6 +14,7 @@ import { ScribeAccountPage } from './components/scribe-standalone/ScribeAccountP
 import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
 import { ScribeFeedbackPage } from './components/scribe-standalone/ScribeFeedbackPage';
 import { ScribeAdminFeedbackPage } from './components/scribe-standalone/ScribeAdminFeedbackPage';
+import { ScribeAdminSignupsPage } from './components/scribe-standalone/ScribeAdminSignupsPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
 import { ScribeTermsPage } from './components/scribe-standalone/ScribeTermsPage';
 import { ScribePrivacyPage } from './components/scribe-standalone/ScribePrivacyPage';
@@ -48,6 +49,7 @@ function App() {
           <Route path="account" element={<ScribeAccountPage />} />
           <Route path="feedback" element={<ScribeFeedbackPage />} />
           <Route path="admin/feedback" element={<ScribeAdminFeedbackPage />} />
+          <Route path="admin/signups" element={<ScribeAdminSignupsPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
           <Route path="note/:id/record" element={<ScribeRecordPage />} />
           <Route path="note/:id" element={<ScribeNotePage />} />

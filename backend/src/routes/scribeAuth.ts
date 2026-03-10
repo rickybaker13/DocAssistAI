@@ -3,12 +3,14 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import rateLimit from 'express-rate-limit';
 import { ScribeUserModel } from '../models/scribeUser.js';
+import { ScribeSignupTrackingModel } from '../models/scribeSignupTracking.js';
 import { scribeAuthMiddleware } from '../middleware/scribeAuth.js';
 import { emailService } from '../services/email/emailService.js';
 import { getPool } from '../database/db.js';
 
 const router = Router();
 const userModel = new ScribeUserModel();
+const signupTrackingModel = new ScribeSignupTrackingModel();
 const getSecret = () => {
   const secret = process.env.JWT_SECRET;
   if (!secret && process.env.NODE_ENV === 'production') {
@@ -36,7 +38,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 router.post('/register', authLimiter, async (req: Request, res: Response) => {
-  const { email, password, name, specialty } = req.body;
+  const { email, password, name, specialty, signupSource, utmSource, utmMedium, utmCampaign, referralCode } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' }) as any;
   if (password.length < MIN_PASSWORD_LENGTH) return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }) as any;
@@ -47,8 +49,30 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '7d' });
   res.cookie(COOKIE, token, COOKIE_OPTS);
 
-  // Fire-and-forget: send welcome email and mark stage 1
+  // Derive device type from user-agent
+  const ua = req.headers['user-agent'] ?? '';
+  const deviceType = /mobile|android|iphone|ipad/i.test(ua) ? 'mobile' : 'desktop';
+
+  // Fire-and-forget: signup tracking + welcome email
   (async () => {
+    try {
+      await signupTrackingModel.create({
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        specialty: user.specialty,
+        signupSource: signupSource ?? null,
+        utmSource: utmSource ?? null,
+        utmMedium: utmMedium ?? null,
+        utmCampaign: utmCampaign ?? null,
+        referralCode: referralCode ?? null,
+        deviceType,
+        userAgent: ua || null,
+        trialEndsAt: user.trial_ends_at,
+      });
+    } catch (err) {
+      console.error('Failed to record signup tracking:', err);
+    }
     try {
       await emailService.sendTrialWelcomeEmail(user.email, user.trial_ends_at ?? '');
       await getPool().query(

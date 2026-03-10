@@ -5,11 +5,13 @@ import { ScribeBillingModel, PaymentMethod } from '../models/scribeBilling.js';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { createSquareCustomer, storeCardOnFile } from '../services/billing/squareCustomer.js';
 import { ScribePaymentHistoryModel } from '../models/scribePaymentHistory.js';
+import { ScribeSignupTrackingModel } from '../models/scribeSignupTracking.js';
 
 const router = Router();
 const billingModel = new ScribeBillingModel();
 const userModel = new ScribeUserModel();
 const paymentHistoryModel = new ScribePaymentHistoryModel();
+const signupTrackingModel = new ScribeSignupTrackingModel();
 
 const PHONE_RE = /^\+?[1-9]\d{7,14}$/;
 
@@ -198,6 +200,11 @@ const handleSquarePayment = async (req: Request, res: Response) => {
   // Activate subscription with the selected billing cycle
   await userModel.activateSubscription(req.scribeUserId!, billingCycle);
 
+  // Update signup tracking with conversion data (fire-and-forget)
+  signupTrackingModel.markConverted(req.scribeUserId!, billingCycle, 'square_card').catch(err =>
+    console.error('[billing] Failed to update signup tracking:', err),
+  );
+
   return res.status(201).json({
     success: true,
     paymentId: squareData?.payment?.id ?? null,
@@ -276,6 +283,12 @@ router.post('/cancel', scribeAuthMiddleware, async (req: Request, res: Response)
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
+
+  // Update signup tracking (fire-and-forget)
+  signupTrackingModel.markCancelled(req.scribeUserId!).catch(err =>
+    console.error('[billing] Failed to update signup tracking on cancel:', err),
+  );
+
   return res.json({
     success: true,
     cancelled_at: result.user?.cancelled_at ?? null,

@@ -101,6 +101,33 @@ CREATE TABLE IF NOT EXISTS scribe_exit_surveys (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS scribe_signup_tracking (
+  id                  TEXT PRIMARY KEY,
+  user_id             TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  email               TEXT NOT NULL,
+  name                TEXT,
+  specialty           TEXT,
+  signup_source       TEXT,
+  utm_source          TEXT,
+  utm_medium          TEXT,
+  utm_campaign        TEXT,
+  referral_code       TEXT,
+  device_type         TEXT,
+  user_agent          TEXT,
+  ip_country          TEXT,
+  ip_region           TEXT,
+  subscription_status TEXT NOT NULL DEFAULT 'trialing',
+  billing_cycle       TEXT,
+  payment_method      TEXT,
+  trial_ends_at       TIMESTAMPTZ,
+  converted_at        TIMESTAMPTZ,
+  cancelled_at        TIMESTAMPTZ,
+  non_conversion_reason TEXT,
+  non_conversion_detail TEXT,
+  created_at          TIMESTAMPTZ DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS scribe_notes (
   id            TEXT PRIMARY KEY,
   user_id       TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
