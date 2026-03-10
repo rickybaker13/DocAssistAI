@@ -1,8 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { ScribeExitSurveyModel } from '../models/scribeExitSurvey.js';
+import { ScribeSignupTrackingModel } from '../models/scribeSignupTracking.js';
 
 const router = Router();
 const exitSurveyModel = new ScribeExitSurveyModel();
+const signupTrackingModel = new ScribeSignupTrackingModel();
 
 const VALID_REASONS = [
   'too_expensive',
@@ -41,6 +43,14 @@ router.post('/', async (req: Request, res: Response) => {
       reason,
       suggestion: suggestion?.trim() || null,
     });
+
+    // Update signup tracking with non-conversion reason (fire-and-forget)
+    signupTrackingModel.recordNonConversion(
+      req.scribeUserId!,
+      reason,
+      suggestion?.trim() || null,
+    ).catch(err => console.error('[exit-survey] Failed to update signup tracking:', err));
+
     return res.status(201).json(record);
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Submission failed';

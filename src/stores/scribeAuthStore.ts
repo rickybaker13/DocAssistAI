@@ -91,12 +91,28 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
 
   register: async (email, password, name?, specialty?) => {
     set({ loading: true, error: null });
+    // Capture UTM params from URL for signup tracking
+    const params = new URLSearchParams(window.location.search);
+    const trackingFields: Record<string, string> = {};
+    const utmSource = params.get('utm_source');
+    const utmMedium = params.get('utm_medium');
+    const utmCampaign = params.get('utm_campaign');
+    const ref = params.get('ref');
+    if (utmSource) trackingFields.utmSource = utmSource;
+    if (utmMedium) trackingFields.utmMedium = utmMedium;
+    if (utmCampaign) trackingFields.utmCampaign = utmCampaign;
+    if (ref) trackingFields.referralCode = ref;
+    // Determine signup source from referrer or UTM
+    const referrer = document.referrer;
+    if (utmSource) trackingFields.signupSource = utmSource;
+    else if (referrer && !referrer.includes(window.location.hostname)) trackingFields.signupSource = new URL(referrer).hostname;
+    else trackingFields.signupSource = 'direct';
     try {
       const res = await fetch(`${getBackendUrl()}/api/scribe/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password, name, specialty }),
+        body: JSON.stringify({ email, password, name, specialty, ...trackingFields }),
       });
       const data = await res.json();
       if (!res.ok) { set({ loading: false, error: data.error || 'Registration failed' }); return false; }
