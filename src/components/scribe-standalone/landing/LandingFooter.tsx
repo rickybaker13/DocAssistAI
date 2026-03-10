@@ -20,10 +20,12 @@ export default function LandingFooter() {
       </p>
 
       {/* Legal links */}
-      <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500">
+      <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-sm text-slate-500">
         <Link to="/privacy" className="hover:text-slate-300 transition-colors">Privacy Policy</Link>
         <span aria-hidden="true">&middot;</span>
         <Link to="/terms" className="hover:text-slate-300 transition-colors">Terms of Service</Link>
+        <span aria-hidden="true">&middot;</span>
+        <Link to="/security" className="hover:text-slate-300 transition-colors">Security</Link>
         <span aria-hidden="true">&middot;</span>
         <Link to="/privacy#hipaa" className="hover:text-slate-300 transition-colors">HIPAA Compliance</Link>
       </div>

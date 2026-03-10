@@ -18,6 +18,11 @@ import { ScribeAdminSignupsPage } from './components/scribe-standalone/ScribeAdm
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
 import { ScribeTermsPage } from './components/scribe-standalone/ScribeTermsPage';
 import { ScribePrivacyPage } from './components/scribe-standalone/ScribePrivacyPage';
+import ForPAsPage from './components/scribe-standalone/ForPAsPage';
+import ForNPsPage from './components/scribe-standalone/ForNPsPage';
+import ForResidentsPage from './components/scribe-standalone/ForResidentsPage';
+import ForPracticesPage from './components/scribe-standalone/ForPracticesPage';
+import SecurityPage from './components/scribe-standalone/SecurityPage';
 import { install402Interceptor } from './utils/fetchInterceptor';
 
 // Install once at app startup
@@ -34,6 +39,11 @@ function App() {
         <Route path="/scribe/reset-password" element={<ScribeResetPasswordPage />} />
         <Route path="/terms" element={<ScribeTermsPage />} />
         <Route path="/privacy" element={<ScribePrivacyPage />} />
+        <Route path="/for-pas" element={<ForPAsPage />} />
+        <Route path="/for-nps" element={<ForNPsPage />} />
+        <Route path="/for-residents" element={<ForResidentsPage />} />
+        <Route path="/for-practices" element={<ForPracticesPage />} />
+        <Route path="/security" element={<SecurityPage />} />
         <Route
           path="/scribe/*"
           element={
