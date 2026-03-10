@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Check, X, Minus } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 
-type CellValue = string | boolean | null;
+type CellValue = string | boolean;
 
 interface ComparisonRow {
   feature: string;
@@ -20,22 +20,22 @@ const rows: ComparisonRow[] = [
   {
     feature: 'Monthly Cost',
     competitors: ['$600\u2013900/provider', '$225\u2013375/provider', '$99/provider', '$119/provider'],
-    docassist: 'Free (beta)',
+    docassist: '$20/month',
   },
   {
-    feature: 'Free Tier',
+    feature: 'Free Trial',
     competitors: [false, false, '10-visit trial', '30 consults/mo'],
-    docassist: 'Unlimited (beta)',
+    docassist: 'Unlimited during the Free Trial',
   },
   {
     feature: 'PII De-identification',
-    competitors: [null, null, false, false],
+    competitors: ['Unclear', 'Unclear', false, false],
     docassist: true,
   },
   {
-    feature: 'PHI Reaches the AI',
-    competitors: [true, true, true, true],
-    docassist: false,
+    feature: 'Patient Data Protected from AI',
+    competitors: [false, false, false, false],
+    docassist: true,
   },
   {
     feature: 'Fail-Closed if Service Down',
@@ -53,44 +53,24 @@ const rows: ComparisonRow[] = [
     docassist: true,
   },
   {
-    feature: 'EHR Integration Required',
-    competitors: ['Epic only', 'Epic/Cerner', false, false],
-    docassist: false,
-  },
-  {
-    feature: 'Built for PAs & NPs',
+    feature: 'Works Without EHR Integration',
     competitors: [false, false, true, true],
-    docassist: true,
+    docassist: 'Yes \u2014 copy-paste with any EHR',
   },
 ];
 
-function CellContent({ value, invert }: { value: CellValue; invert?: boolean }) {
+function CellContent({ value }: { value: CellValue }) {
   if (value === true) {
-    return invert ? (
-      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-400/10">
-        <X className="w-4 h-4 text-red-400" />
-      </span>
-    ) : (
+    return (
       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-400/10">
         <Check className="w-4 h-4 text-teal-400" />
       </span>
     );
   }
   if (value === false) {
-    return invert ? (
-      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-400/10">
-        <Check className="w-4 h-4 text-teal-400" />
-      </span>
-    ) : (
+    return (
       <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-400/10">
         <X className="w-4 h-4 text-red-400" />
-      </span>
-    );
-  }
-  if (value === null) {
-    return (
-      <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-slate-700/40">
-        <Minus className="w-4 h-4 text-slate-500" />
       </span>
     );
   }
@@ -131,12 +111,7 @@ export default function ComparisonTable() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row, idx) => {
-                const isPhiRow = row.feature === 'PHI Reaches the AI';
-                const isEhrRow = row.feature === 'EHR Integration Required';
-                const invertCompetitor = isPhiRow || isEhrRow;
-                const invertDocassist = isPhiRow || isEhrRow;
-                return (
+              {rows.map((row, idx) => (
                   <tr
                     key={row.feature}
                     className={`border-b border-slate-800/50 ${idx % 2 === 0 ? 'bg-slate-900/30' : ''}`}
@@ -146,26 +121,21 @@ export default function ComparisonTable() {
                     </td>
                     {row.competitors.map((val, i) => (
                       <td key={i} className="py-3.5 px-4 text-center text-slate-400">
-                        <CellContent value={val} invert={invertCompetitor} />
+                        <CellContent value={val} />
                       </td>
                     ))}
                     <td className="py-3.5 px-4 text-center font-semibold text-teal-300 bg-teal-400/5">
-                      <CellContent value={row.docassist} invert={invertDocassist} />
+                      <CellContent value={row.docassist} />
                     </td>
                   </tr>
-                );
-              })}
+              ))}
             </tbody>
           </table>
         </div>
 
         {/* ─── Mobile cards (shown on mobile & tablet) ─── */}
         <div className="lg:hidden space-y-4">
-          {rows.map((row) => {
-            const isPhiRow = row.feature === 'PHI Reaches the AI';
-            const isEhrRow = row.feature === 'EHR Integration Required';
-            const invertDocassist = isPhiRow || isEhrRow;
-            return (
+          {rows.map((row) => (
               <div
                 key={row.feature}
                 className="rounded-xl border border-slate-800 bg-slate-900 p-4"
@@ -174,7 +144,7 @@ export default function ComparisonTable() {
                 <div className="flex items-center justify-between rounded-lg bg-teal-400/5 border border-teal-400/20 px-3 py-2 mb-2">
                   <span className="text-sm font-semibold text-teal-400">DocAssistAI</span>
                   <span className="text-sm font-semibold text-teal-300">
-                    <CellContent value={row.docassist} invert={invertDocassist} />
+                    <CellContent value={row.docassist} />
                   </span>
                 </div>
                 <div className="space-y-1.5">
@@ -182,14 +152,13 @@ export default function ComparisonTable() {
                     <div key={i} className="flex items-center justify-between px-3 py-1.5 text-slate-400">
                       <span className="text-xs">{competitorNames[i]}</span>
                       <span className="text-xs">
-                        <CellContent value={val} invert={isPhiRow || isEhrRow} />
+                        <CellContent value={val} />
                       </span>
                     </div>
                   ))}
                 </div>
               </div>
-            );
-          })}
+          ))}
         </div>
       </motion.div>
     </section>
