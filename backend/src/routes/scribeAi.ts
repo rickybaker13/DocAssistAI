@@ -8,6 +8,8 @@ const ICD10_TERMINOLOGY_INSTRUCTION = `Use ICD-10-CM preferred terminology throu
 
 const TOKEN_PRESERVATION_INSTRUCTION = `\nText may contain privacy-protection tokens in [TOKEN_N] format (e.g., [PERSON_0], [DATE_0], [MRN_0]). Preserve these tokens exactly as written — do not rephrase, remove, or modify any [BRACKET_N] token.`;
 
+const NO_TRANSCRIPT_DISCLAIMER = `\nNEVER reference "the transcript", "the recording", "the dictation", or any source material in your output. A physician's note never says "not included in the transcript" or "not mentioned in the recording." If information is missing or incomplete, use natural clinical language a physician would actually write — for example: "Further history to be obtained", "Details to be clarified on follow-up", "Not assessed at this encounter", "Will review and update", or simply omit the item. The note must read as if authored entirely by the clinician.`;
+
 const router = Router();
 router.use(scribeAuthMiddleware);
 
@@ -70,7 +72,7 @@ router.post('/generate', async (req: Request, res: Response) => {
 Generate structured note content for each section listed below, based ONLY on the transcript provided.
 Write in first-person plural physician voice ("We assessed...", "The patient was...", "Our plan includes...").
 Be clinically precise. Do not fabricate findings not present in the transcript.
-If a section cannot be completed from the transcript, write: "Insufficient information captured."
+If a section cannot be completed from the transcript, write a natural clinical phrase such as "Further history to be obtained" or "Not assessed at this encounter" — never say "Insufficient information captured."
 
 TEMPLATE-BASED SECTIONS: Some sections include a "TEMPLATE-BASED SECTION" marker with a default template of normal/negative findings. For these sections:
 - Use the provided template as your starting baseline.
@@ -80,7 +82,7 @@ TEMPLATE-BASED SECTIONS: Some sections include a "TEMPLATE-BASED SECTION" marker
 - Preserve the exact format (system name followed by colon, findings).
 
 Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}
-${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}${NO_TRANSCRIPT_DISCLAIMER}`;
 
   const userPrompt = `Transcript:
 "${scrubbedTranscript}"
@@ -169,7 +171,7 @@ router.post('/focused', async (req: Request, res: Response) => {
 
   const systemPrompt = `You are a senior ${specialty} physician AI providing expert clinical analysis.
 Analyze the provided note section and return structured JSON only — no markdown, no extra text.
-${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}${NO_TRANSCRIPT_DISCLAIMER}`;
 
   const userPrompt = `Analyze this note section and provide deep clinical insight.
 
@@ -289,7 +291,7 @@ Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj
 Output ONLY the note text — no explanation, no JSON, no markdown, no preamble.
 Never include notes about transcription quality, source artifacts, uncertainty about the source material, or any meta-commentary.
 Never include caveats, disclaimers, or any text that would not appear verbatim in a physician's clinical note.
-${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}${NO_TRANSCRIPT_DISCLAIMER}`;
 
   const userPrompt = `Convert the following clinical information into note text for the "${destinationSection}" section.
 ${verbosityInstruction}
@@ -385,7 +387,7 @@ Never include notes about transcription quality, source artifacts, uncertainty a
 Never include the suggestion text itself, caveats, or guidance — only note-ready clinical content.
 
 Return ONLY valid JSON. No markdown fences. No extra text.
-${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}${NO_TRANSCRIPT_DISCLAIMER}`;
 
   const userPrompt = `Suggestion to resolve: "${scrubbedSuggestion}"
 
