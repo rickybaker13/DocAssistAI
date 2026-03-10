@@ -11,29 +11,27 @@ These must be done before any paid ads run. They are the conversion infrastructu
   - This single asset powers ads across all 4 platforms.
   - Export as: square (1:1) for Instagram/Facebook feed, vertical (9:16) for Stories/Reels, landscape (16:9) for LinkedIn/YouTube
 
-- [ ] **2. Build dedicated Security & Privacy page** (`/security`)
-  - Diagram showing the PII de-identification flow: Audio → Transcription → Presidio scrubs PHI → De-identified text sent to AI → AI generates note → Presidio re-injects PHI → Encrypted response to client
-  - Key claims (each with technical backing):
-    - "Patient data is de-identified before it ever reaches the AI"
-    - "If de-identification is unavailable, the system stops — it never proceeds unprotected"
-    - "Substitution maps are request-scoped, never persisted, never logged"
-    - "All traffic encrypted via TLS (Caddy)"
-  - HIPAA compliance badge
-  - BAA availability mention
-  - Link to technical architecture details
+- [x] **2. Build dedicated Security & Privacy page** (`/security`) ✅
+  - 8-step PII flow diagram: Audio → TLS → Transcription → Presidio scrub → AI → Presidio re-inject → TLS → Clinician Review
+  - Before/after de-identification example (John Smith → [PERSON_0], etc.)
+  - 6 security commitments with technical backing
+  - BAA availability section
+  - Live at: `docassistai.app/security`
 
-- [ ] **3. Build segment-specific landing pages**
-  - [ ] `/for-pas` — PA-focused messaging, pain points, CTA
-  - [ ] `/for-nps` — NP-focused messaging
-  - [ ] `/for-residents` — Residents + medical students
-  - [ ] `/for-practices` — Attending physicians and practice leaders
-  - Each page: tailored headline, pain point stats, 15s demo video embed, comparison table, trust signals, single CTA
-  - Tagline on all pages: **"Doc Assist AI — documentation assistance for every doc."** (surfaces the double meaning naturally)
+- [x] **3. Build segment-specific landing pages** ✅
+  - [x] `/for-pas` — PA-focused: "You Didn't Go to PA School to Chart Until 9 PM"
+  - [x] `/for-nps` — NP-focused: "No Scribe. No Coder. No MA to Help with Notes."
+  - [x] `/for-residents` — Residents + med students: "80-Hour Weeks Are Hard Enough Without Charting Until 2 AM"
+  - [x] `/for-practices` — Attendings & practice leaders: "Your Providers Spend 40% of Their Day on Documentation"
+  - Each page includes: tailored headline, pain point stats, demo video slot, comparison table, trust signals, CTA
+  - Tagline on all pages: **"Doc Assist AI — documentation assistance for every doc."**
+  - Shared components: SegmentNav (cross-links all pages), SegmentHero, SegmentCTA, SegmentFooter, TrustSignals
 
-- [ ] **4. Build comparison table component**
-  - Anonymous competitor comparison (no names — "Enterprise Scribe A", "Standalone Scribe B", etc.)
-  - Columns: Price, Free Tier, PII De-identification, Custom Templates, Specialty Support, EHR Required, Self-Serve Signup
-  - DocAssistAI highlighted row showing: Free (beta), Yes (Presidio), Yes (72+ sections, 10 categories), Any specialty, No EHR required, Yes
+- [x] **4. Build comparison table component** ✅
+  - Anonymous competitor comparison (Enterprise Scribe A/B, Standalone Scribe C/D)
+  - Reframed rows so checkmarks always mean "good": "Patient Data Protected from AI", "Works Without EHR Integration"
+  - DocAssistAI pricing shown as $20/month, free trial as "Unlimited during the Free Trial"
+  - Desktop table + mobile card responsive layouts
 
 - [ ] **5. Install analytics and retargeting pixels**
   - [ ] Meta Pixel on all pages (required before running FB/IG ads)
@@ -100,12 +98,12 @@ These run in parallel with Phase 1 and continue indefinitely.
 
 - [ ] **12. Meta (Facebook/Instagram) ads**
   - **Campaign 1 — PAs:**
-    - Primary text: "Still charting at 9 PM? Your AI scribe writes the note while you see the patient. HIPAA compliant. Free during beta."
+    - Primary text: "Still charting at 9 PM? Your AI scribe writes the note while you see the patient. HIPAA compliant. $20/month with a free trial."
     - Headline: "Stop Charting After Hours"
     - CTA button: "Sign Up" → `/for-pas`
     - Format: 15s video (demo) + static image variant (product UI screenshot with headline overlay)
   - **Campaign 2 — NPs:**
-    - Primary text: "No scribe. No coder. No MA to help with notes. Sound familiar? DocAssistAI is the AI scribe you actually have access to. Free and HIPAA compliant."
+    - Primary text: "No scribe. No coder. No MA to help with notes. Sound familiar? DocAssistAI is the AI scribe you actually have access to. $20/month — free trial included."
     - Headline: "NPs Deserve Better Tools"
     - CTA button: "Sign Up" → `/for-nps`
   - **Targeting:** Job title (Physician Assistant, Nurse Practitioner) + Interests (Medical Documentation, Electronic Health Records, Clinical Workflow)
@@ -119,13 +117,13 @@ These run in parallel with Phase 1 and continue indefinitely.
 
 - [ ] **14. X/Twitter ads**
   - **Promoted tweet:**
-    - "Things that should not exist in 2026: Charting until midnight. Writing the same ROS template 20x a day. Copy-pasting your own notes because you're too tired to type. AI scribes exist now. HIPAA compliant ones. docassistai.app (free) #MedTwitter #PAlife"
+    - "Things that should not exist in 2026: Charting until midnight. Writing the same ROS template 20x a day. Copy-pasting your own notes because you're too tired to type. AI scribes exist now. HIPAA compliant ones. docassistai.app — free trial #MedTwitter #PAlife"
   - **Targeting:** #MedTwitter, #PAlife, #NPlife, healthcare interests
   - **Format:** Promoted tweet with link
 
 - [ ] **15. LinkedIn ads (minimal test budget)**
   - **Sponsored content:**
-    - "Your providers are spending 40% of their day on documentation. That is recoverable time. DocAssistAI generates structured notes during the encounter. PII is scrubbed before anything reaches the AI. Free during pilot."
+    - "Your providers are spending 40% of their day on documentation. That is recoverable time. DocAssistAI generates structured notes during the encounter. PII is scrubbed before anything reaches the AI. $20/month — free trial to start."
   - **Targeting:** Job title (Physician Assistant, Nurse Practitioner, Physician, Medical Director) + Industry (Hospital & Healthcare)
   - **Format:** Single image (product UI) with text
 
@@ -162,7 +160,7 @@ Once you have data (4-6 weeks in), the strategy shifts:
   - Move budget from underperformers to the channel with lowest cost per signup
   - If Meta is winning: increase to $500/mo, add lookalike audiences from signup list
   - If Reddit is winning: increase to $300/mo, expand to more subreddits
-  - Target: keep cost per signup under $10 during free beta
+  - Target: keep cost per signup under $10
 
 - [ ] **20. Explore higher-budget channels when ready**
   - **Doximity** — 50% of PAs, 80% of MDs. Enterprise pricing but worth exploring when budget > $2K/mo
@@ -184,19 +182,18 @@ Once you have data (4-6 weeks in), the strategy shifts:
 
 ## Competitor Comparison Table (For Landing Pages)
 
-Use this on all segment landing pages. No competitor names — position DocAssistAI as the clear winner.
+Live on all segment landing pages. No competitor names — rows reframed so ✓ always means "good."
 
 | Feature | Enterprise Scribe A | Enterprise Scribe B | Standalone Scribe C | Standalone Scribe D | **DocAssistAI** |
 |---|---|---|---|---|---|
-| **Monthly Cost** | $600-900/provider | $225-375/provider | $99/provider | $119/provider | **Free (beta)** |
-| **Free Tier** | No | No | 10-visit trial | 30 consults/mo | **Unlimited (beta)** |
+| **Monthly Cost** | $600–900/provider | $225–375/provider | $99/provider | $119/provider | **$20/month** |
+| **Free Trial** | No | No | 10-visit trial | 30 consults/mo | **Unlimited during the Free Trial** |
 | **PII De-identification** | Unclear | Unclear | No | No | **Yes — Presidio** |
-| **PHI Reaches the AI?** | Yes | Yes | Yes | Yes | **No — scrubbed first** |
-| **Fail-Closed If Service Down?** | No | No | No | No | **Yes — 503, AI never called** |
-| **Custom Note Templates** | Limited | Specialty-specific | Learns your style | 55+ templates | **72+ sections, 10 categories, fully customizable** |
+| **Patient Data Protected from AI** | No | No | No | No | **Yes — scrubbed first** |
+| **Fail-Closed if Service Down** | No | No | No | No | **Yes — 503, AI never called** |
+| **Custom Note Templates** | Limited | Specialty-specific | Learns your style | 55+ templates | **72+ sections, 10 categories** |
 | **Self-Serve Signup** | No (enterprise sales) | No (enterprise sales) | Yes | Yes | **Yes** |
-| **EHR Integration Required** | Epic only | Epic/Cerner | No | No | **No** |
-| **Works for PAs/NPs** | Physician-focused | Physician-focused | All providers | All providers | **Built for PAs, NPs, and all providers** |
+| **Works Without EHR Integration** | No (Epic only) | No (Epic/Cerner) | Yes | Yes | **Yes — copy-paste with any EHR** |
 
 ---
 
@@ -267,4 +264,4 @@ Use this on all segment landing pages. No competitor names — position DocAssis
 - **Organic is your best ROI.** KevinMD article, Reddit engagement, #MedTwitter presence, and Facebook groups cost nothing but time and will compound.
 - **The 15s demo video is the most important single asset.** Prioritize recording it before anything else.
 - **Retargeting is where Meta excels.** Most clinicians won't sign up on first visit. The retargeting sequence (demo video → social proof → direct CTA) converts the warm audience cheaply.
-- **PAs are your wedge.** Nobody else is marketing AI scribes directly to PAs. Own this audience first, then expand.
+- **Pricing is $20/month.** All ad copy and landing pages reflect this. Free trial is unlimited duration — use "free trial" not "free tier."
