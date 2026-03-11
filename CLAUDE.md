@@ -15,7 +15,7 @@
 - **AI Provider:** Direct Anthropic API (`EXTERNAL_AI_TYPE=anthropic`). Requires `ANTHROPIC_API_KEY` in droplet `.env`. Model: `claude-sonnet-4-6` (override via `ANTHROPIC_MODEL`). Alternative: `EXTERNAL_AI_TYPE=openrouter` + `OPENROUTER_MODEL` for Gemini/other providers. See `backend/.env.example`.
 - **Whisper:** Groq cloud API is the primary transcription path (`GROQ_API_KEY`). Self-hosted Whisper container runs as fallback only. Both are configured in droplet `.env`.
 - **Deploy check:** `GET https://api.docassistai.app/api/health` → `{ presidio, analyzer, anonymizer, whisper }` — if this returns JSON the backend is up.
-- **Deploy flow:** `ssh root@api.docassistai.app 'cd /opt/docassistai && git pull && docker compose -f infra/docker-compose.prod.yml up -d --build'` — MUST run from `/opt/docassistai/` (project root). All compose paths are relative to CWD. No symlinks needed.
+- **Deploy flow:** `ssh root@api.docassistai.app 'cd /opt/docassistai && git pull && docker compose -f infra/docker-compose.prod.yml up -d --build'` — compose file paths use `../` relative to `infra/` dir. NEVER use symlinks (Docker follows them and breaks path resolution).
 
 ## Test Commands
 ```bash
