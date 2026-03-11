@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocAssistAI — Breakroom Flyer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+  @page {
+    size: letter;
+    margin: 0;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #020617;
+    color: #F8FAFC;
+    width: 8.5in;
+    height: 11in;
+    margin: 0 auto;
+    padding: 0.5in 0.55in 0.45in;
+    display: flex;
+    flex-direction: column;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 6px;
+  }
+  .logo-icon {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+  .logo-text {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .logo-text span {
+    background: linear-gradient(135deg, #5EEAD4, #2DD4BF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    text-align: center;
+    padding: 18px 0 14px;
+    border-bottom: 2px solid #1E293B;
+  }
+  .hero h1 {
+    font-size: 38px;
+    font-weight: 900;
+    line-height: 1.1;
+    letter-spacing: -1px;
+    margin-bottom: 8px;
+  }
+  .hero h1 .teal {
+    background: linear-gradient(135deg, #5EEAD4, #2DD4BF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero .subtitle {
+    font-size: 15px;
+    color: #94A3B8;
+    font-weight: 500;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.4;
+  }
+
+  /* ── TIME STAT ── */
+  .time-stat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 0;
+    border-bottom: 2px solid #1E293B;
+  }
+  .time-before {
+    text-align: center;
+  }
+  .time-before .num {
+    font-size: 36px;
+    font-weight: 800;
+    color: #EF4444;
+  }
+  .time-before .label {
+    font-size: 11px;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .arrow-block {
+    font-size: 28px;
+    color: #334155;
+  }
+  .time-after {
+    text-align: center;
+  }
+  .time-after .num {
+    font-size: 42px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #5EEAD4, #2DD4BF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .time-after .label {
+    font-size: 11px;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  /* ── GRID ── */
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 16px 0;
+    border-bottom: 2px solid #1E293B;
+  }
+  .feature-card {
+    background: #0F172A;
+    border: 1px solid #1E293B;
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .feature-card .icon-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .feature-card .icon-row .icon {
+    font-size: 20px;
+    width: 28px;
+    text-align: center;
+  }
+  .feature-card .icon-row h3 {
+    font-size: 14px;
+    font-weight: 700;
+    color: #E2E8F0;
+  }
+  .feature-card p {
+    font-size: 12.5px;
+    color: #94A3B8;
+    line-height: 1.45;
+  }
+  .feature-card .highlight {
+    color: #2DD4BF;
+    font-weight: 600;
+  }
+
+  /* ── PRICING BANNER ── */
+  .pricing {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 16px 0;
+    border-bottom: 2px solid #1E293B;
+  }
+  .price-them {
+    text-align: center;
+  }
+  .price-them .amount {
+    font-size: 22px;
+    font-weight: 700;
+    color: #64748B;
+    text-decoration: line-through;
+    text-decoration-color: #EF4444;
+    text-decoration-thickness: 2px;
+  }
+  .price-them .label {
+    font-size: 11px;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .price-vs {
+    font-size: 14px;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+  .price-us {
+    text-align: center;
+  }
+  .price-us .amount {
+    font-size: 36px;
+    font-weight: 900;
+    background: linear-gradient(135deg, #5EEAD4, #2DD4BF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .price-us .label {
+    font-size: 11px;
+    color: #94A3B8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+  }
+  .price-trial {
+    text-align: center;
+  }
+  .price-trial .badge {
+    background: linear-gradient(135deg, #5EEAD4, #2DD4BF);
+    color: #020617;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .price-trial .sublabel {
+    font-size: 10px;
+    color: #64748B;
+    margin-top: 3px;
+    font-weight: 500;
+  }
+
+  /* ── CTA ── */
+  .cta {
+    text-align: center;
+    padding: 14px 0 0;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .cta .url {
+    font-size: 30px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, #5EEAD4, #2DD4BF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+  .cta .subtext {
+    font-size: 13px;
+    color: #64748B;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <svg class="logo-icon" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="bgBrand" x1="68" y1="44" x2="452" y2="468" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#5EEAD4"/><stop offset="1" stop-color="#2DD4BF"/>
+      </linearGradient>
+      <linearGradient id="darkLines" x1="136" y1="148" x2="376" y2="378" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#0F172A"/><stop offset="1" stop-color="#111827"/>
+      </linearGradient>
+    </defs>
+    <rect x="32" y="32" width="448" height="448" rx="110" fill="url(#bgBrand)"/>
+    <rect x="124" y="104" width="264" height="304" rx="44" fill="#F0FDFA" stroke="#99F6E4" stroke-width="10"/>
+    <rect x="158" y="156" width="196" height="20" rx="10" fill="url(#darkLines)"/>
+    <rect x="158" y="206" width="196" height="20" rx="10" fill="url(#darkLines)"/>
+    <rect x="158" y="256" width="196" height="20" rx="10" fill="url(#darkLines)"/>
+    <rect x="158" y="306" width="92" height="20" rx="10" fill="url(#darkLines)"/>
+    <rect x="272" y="306" width="34" height="20" rx="10" fill="url(#darkLines)" opacity="0.45"/>
+    <circle cx="338" cy="316" r="18" fill="#F0FDFA" stroke="#0F172A" stroke-width="8"/>
+    <path d="M338 304V316L346 322" stroke="#0F172A" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="logo-text"><span>DocAssist</span>AI</div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Clinical Notes.<br><span class="teal">Written in Seconds.</span></h1>
+  <p class="subtitle">AI-powered medical documentation that listens to your encounter and generates structured clinical notes. Spend time with patients, not paperwork.</p>
+</div>
+
+<!-- TIME COMPARISON -->
+<div class="time-stat">
+  <div class="time-before">
+    <div class="num">15+ min</div>
+    <div class="label">Per note today</div>
+  </div>
+  <div class="arrow-block">&#10132;</div>
+  <div class="time-after">
+    <div class="num">Seconds</div>
+    <div class="label">With DocAssistAI</div>
+  </div>
+</div>
+
+<!-- FEATURE CARDS -->
+<div class="features">
+
+  <div class="feature-card">
+    <div class="icon-row">
+      <div class="icon">&#x1F512;</div>
+      <h3>HIPAA-Compliant Architecture</h3>
+    </div>
+    <p>Patient data is <span class="highlight">de-identified before it ever reaches AI</span>. Fail-closed design &mdash; if de-identification is down, AI is never called. No PHI stored or logged. BAA available.</p>
+  </div>
+
+  <div class="feature-card">
+    <div class="icon-row">
+      <div class="icon">&#x1F4CB;</div>
+      <h3>ICD-10 &amp; Billing Code Assist</h3>
+    </div>
+    <p>Flags vague terminology and suggests <span class="highlight">specific ICD-10 codes</span>, CPT codes, and E/M levels with confidence scores. Catch missed HCC-weighted codes before you submit.</p>
+  </div>
+
+  <div class="feature-card">
+    <div class="icon-row">
+      <div class="icon">&#x1F399;</div>
+      <h3>Record &rarr; Generate &rarr; Review</h3>
+    </div>
+    <p>Speak naturally during the encounter. Choose your note type &mdash; SOAP, H&amp;P, Progress, Procedure, Discharge, Consult, or Custom. <span class="highlight">Review and finalize in one click.</span></p>
+  </div>
+
+  <div class="feature-card">
+    <div class="icon-row">
+      <div class="icon">&#x2728;</div>
+      <h3>Built for PAs, NPs &amp; Residents</h3>
+    </div>
+    <p>No Epic or Cerner required &mdash; <span class="highlight">works with any EHR via copy-paste</span>. Smart templates, 3 verbosity levels, AI chat, and guideline-cited suggestions.</p>
+  </div>
+
+</div>
+
+<!-- PRICING -->
+<div class="pricing">
+  <div class="price-them">
+    <div class="amount">$600+/mo</div>
+    <div class="label">Enterprise AI Scribes</div>
+  </div>
+  <div class="price-vs">vs</div>
+  <div class="price-us">
+    <div class="amount">$20/mo</div>
+    <div class="label">DocAssistAI</div>
+  </div>
+  <div class="price-trial">
+    <div class="badge">7-Day Free Trial</div>
+    <div class="sublabel">No credit card required</div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta">
+  <div class="url">docassistai.app</div>
+  <div class="subtext">Sign up in 30 seconds. Start charting smarter today.</div>
+</div>
+
+</body>
+</html>
