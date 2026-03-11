@@ -13,9 +13,9 @@
 - **`appConfig.ts` backendUrl:** Uses `'https://api.docassistai.app'` in production builds. Uses `VITE_BACKEND_URL || 'http://localhost:3000'` in local dev.
 - **Droplet stack:** Caddy (TLS/reverse proxy) · Express API · PostgreSQL · Presidio (analyzer + anonymizer) · Whisper ASR. Only Caddy is exposed externally (ports 80/443). All other services communicate over Docker's internal network.
 - **AI Provider:** Direct Anthropic API (`EXTERNAL_AI_TYPE=anthropic`). Requires `ANTHROPIC_API_KEY` in droplet `.env`. Model: `claude-sonnet-4-6` (override via `ANTHROPIC_MODEL`). Alternative: `EXTERNAL_AI_TYPE=openrouter` + `OPENROUTER_MODEL` for Gemini/other providers. See `backend/.env.example`.
-- **Whisper:** Self-hosted on DigitalOcean droplet (`WHISPER_API_URL`). OpenAI fallback has been removed — `WHISPER_API_URL` is required.
+- **Whisper:** Groq cloud API is the primary transcription path (`GROQ_API_KEY`). Self-hosted Whisper container runs as fallback only. Both are configured in droplet `.env`.
 - **Deploy check:** `GET https://api.docassistai.app/api/health` → `{ presidio, analyzer, anonymizer, whisper }` — if this returns JSON the backend is up.
-- **Deploy flow:** `ssh root@droplet 'cd /opt/docassistai && git pull && docker compose -f infra/docker-compose.prod.yml up -d --build'`
+- **Deploy flow:** `ssh root@api.docassistai.app 'cd /opt/docassistai && git pull && docker compose -f infra/docker-compose.prod.yml up -d --build'` — MUST run from `/opt/docassistai/` (project root). All compose paths are relative to CWD. No symlinks needed.
 
 ## Test Commands
 ```bash
