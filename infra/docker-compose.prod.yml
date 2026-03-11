@@ -4,13 +4,15 @@
 # Presidio, Whisper, PostgreSQL, and the Express backend communicate over
 # Docker's internal network — no PHI leaves the machine until scrubbed.
 #
-# IMPORTANT: All paths are relative to the PROJECT ROOT, not to infra/.
-# Docker Compose V2 resolves paths from CWD, so always run from /opt/docassistai:
+# All paths are relative to THIS FILE's directory (infra/).
+# Docker Compose resolves paths from the compose file's parent dir.
+# Run from project root with -f flag:
 #
 #   cd /opt/docassistai
 #   docker compose -f infra/docker-compose.prod.yml up -d --build
 #
-# Requires: .env file in /opt/docassistai (project root)
+# Do NOT use symlinks — Docker follows them and breaks path resolution.
+# Requires: .env file in project root (parent of infra/)
 
 services:
   caddy:
@@ -22,7 +24,7 @@ services:
       - 8.8.8.8
       - 8.8.4.4
     volumes:
-      - ./infra/Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
@@ -31,12 +33,12 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../backend
       dockerfile: Dockerfile
     expose:
       - "3000"
     env_file:
-      - ./.env
+      - ../.env
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -77,7 +79,7 @@ services:
   presidio-analyzer:
     image: mcr.microsoft.com/presidio-analyzer:latest
     volumes:
-      - ./backend/presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
+      - ../backend/presidio-config/recognizers.yaml:/app/presidio_analyzer/conf/default_recognizers.yaml
     expose:
       - "3000"
     restart: always

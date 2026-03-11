@@ -15,15 +15,20 @@ Deploy DocAssistAI backend to the DigitalOcean droplet safely.
 
 ## Background — Path Resolution
 
-The `docker-compose.prod.yml` file lives in `infra/` but all its paths (`./backend`, `./.env`, `./infra/Caddyfile`, `./backend/presidio-config/`) are relative to the **project root** (`/opt/docassistai/`).
+The `docker-compose.prod.yml` file lives in `infra/`. Docker Compose resolves relative paths from the **compose file's parent directory** (`infra/`). So all paths use `../` to reach the project root:
 
-Docker Compose V2 resolves relative paths from **CWD**, not from the compose file's directory. So the deploy command MUST `cd /opt/docassistai` first, then reference `infra/docker-compose.prod.yml` with the `-f` flag:
+- `../backend` → project root's `backend/`
+- `../.env` → project root's `.env`
+- `./Caddyfile` → `infra/Caddyfile`
+- `../backend/presidio-config/...` → project root's `backend/presidio-config/...`
+
+The deploy command references the file via `-f infra/docker-compose.prod.yml`:
 
 ```bash
 cd /opt/docassistai && docker compose -f infra/docker-compose.prod.yml up -d --build   # CORRECT
 ```
 
-**NO symlinks are needed.** The old symlink approach (`docker-compose.prod.yml` symlinked at project root) does NOT work — Docker follows symlinks when resolving the file location, causing `../` paths in the YAML to resolve incorrectly.
+**NEVER use symlinks.** Symlinking `docker-compose.prod.yml` to the project root breaks path resolution — Docker follows symlinks, so `../` resolves from the project root (going UP one level to `/opt/`) instead of from `infra/`.
 
 ## Deploy Workflow
 
@@ -53,9 +58,9 @@ ssh root@api.docassistai.app 'cd /opt/docassistai && git pull && docker compose 
 ```
 
 **Critical details:**
-- `cd /opt/docassistai` — MUST be in project root (all compose paths are relative to here)
+- `cd /opt/docassistai` — MUST be in project root
 - `git pull` — pulls latest code from the branch deployed on the droplet
-- `-f infra/docker-compose.prod.yml` — points to the compose file in `infra/`, paths resolve from CWD
+- `-f infra/docker-compose.prod.yml` — compose file in `infra/`, paths resolve relative to `infra/`
 - `--build` — rebuilds the backend image with new code
 - `-d` — detached mode
 
@@ -150,9 +155,9 @@ Should show the DocAssistAI custom recognizer YAML, not the default Presidio con
 
 ## Common Deploy Failures
 
-### 1. "path not found" for ./backend or .env
-**Cause:** Paths in docker-compose.prod.yml don't match CWD. All paths must be relative to `/opt/docassistai/` (project root).
-**Fix:** Ensure CWD is `/opt/docassistai/` and use `-f infra/docker-compose.prod.yml`.
+### 1. "path not found" for backend or .env
+**Cause:** Symlinks or wrong `-f` path. Paths in the compose file are relative to `infra/` (the compose file's directory). Using symlinks breaks this — Docker follows symlinks and resolves `../` from the wrong directory.
+**Fix:** Remove any symlinks (`rm -f /opt/docassistai/docker-compose.prod.yml /opt/docassistai/Caddyfile`) and use `-f infra/docker-compose.prod.yml`.
 
 ### 2. ERR_ERL_UNEXPECTED_X_FORWARDED_FOR
 **Cause:** `app.set('trust proxy', 1)` is missing or not the first line after `const app = express()`.
