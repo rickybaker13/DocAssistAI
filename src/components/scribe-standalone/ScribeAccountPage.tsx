@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, CircleCheck, Clock, CreditCard, KeyRound, Mail, MessageSquare, XCircle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CircleCheck, Clock, CreditCard, Gift, KeyRound, Mail, MessageSquare, XCircle } from 'lucide-react';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
 import { SquareCardForm } from './SquareCardForm';
@@ -78,6 +78,10 @@ export const ScribeAccountPage: React.FC = () => {
   const [cancelLoading, setCancelLoading] = useState(false);
   const [cancelMessage, setCancelMessage] = useState<string | null>(null);
   const billingRef = useRef<HTMLFormElement>(null);
+  const [compCode, setCompCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [redeemMessage, setRedeemMessage] = useState<string | null>(null);
+  const [redeemError, setRedeemError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -197,6 +201,35 @@ export const ScribeAccountPage: React.FC = () => {
     }
   };
 
+  const handleRedeemCode = async () => {
+    if (!compCode.trim()) return;
+    setRedeemLoading(true);
+    setRedeemMessage(null);
+    setRedeemError(null);
+    try {
+      const res = await fetch(`${getBackendUrl()}/api/scribe/comp-codes/redeem`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ code: compCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRedeemError(data.error || 'Could not redeem code.');
+        return;
+      }
+      setRedeemMessage(data.message || 'Code redeemed!');
+      setCompCode('');
+      // Refresh subscription status to show comp badge
+      const statusData = await fetchJsonOrNull<SubscriptionStatus>(`${getBackendUrl()}/api/scribe/billing/status`);
+      if (statusData) setSubStatus(statusData);
+    } catch {
+      setRedeemError('Could not redeem code. Please try again.');
+    } finally {
+      setRedeemLoading(false);
+    }
+  };
+
   return (
     <section className="space-y-5">
       <button
@@ -221,6 +254,41 @@ export const ScribeAccountPage: React.FC = () => {
       )}
 
       <div className="grid gap-4">
+        {subStatus && subStatus.subscription_status !== 'comp' && (
+          <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+            <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide flex items-center gap-2">
+              <Gift size={16} className="text-purple-400" />
+              Have a code?
+            </h2>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={compCode}
+                onChange={(e) => setCompCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleRedeemCode()}
+                placeholder="Enter invitation or promo code"
+                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+              />
+              <button
+                type="button"
+                onClick={handleRedeemCode}
+                disabled={redeemLoading || !compCode.trim()}
+                className="bg-purple-500 hover:bg-purple-400 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 transition-colors"
+              >
+                {redeemLoading ? 'Redeeming...' : 'Redeem'}
+              </button>
+            </div>
+            {redeemMessage && (
+              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
+                <p className="text-sm text-emerald-300">{redeemMessage}</p>
+              </div>
+            )}
+            {redeemError && (
+              <p className="text-sm text-red-400">{redeemError}</p>
+            )}
+          </article>
+        )}
+
         <article className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wide">Billing information</h2>

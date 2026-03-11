@@ -140,6 +140,26 @@ CREATE TABLE IF NOT EXISTS scribe_notes (
   created_at    TIMESTAMPTZ DEFAULT NOW(),
   updated_at    TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS scribe_comp_codes (
+  id         TEXT PRIMARY KEY,
+  code       TEXT UNIQUE NOT NULL,
+  label      TEXT,
+  max_uses   INTEGER,
+  uses_count INTEGER NOT NULL DEFAULT 0,
+  expires_at TIMESTAMPTZ,
+  active     BOOLEAN NOT NULL DEFAULT TRUE,
+  created_by TEXT REFERENCES scribe_users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS scribe_comp_code_redemptions (
+  id          TEXT PRIMARY KEY,
+  code_id     TEXT NOT NULL REFERENCES scribe_comp_codes(id),
+  user_id     TEXT NOT NULL REFERENCES scribe_users(id),
+  redeemed_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(code_id, user_id)
+);
 `;
 
 // ---------------------------------------------------------------------------
