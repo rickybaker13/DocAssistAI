@@ -10,7 +10,7 @@ import { SquareGooglePayButton } from './SquareGooglePayButton';
 import { TrialExpiredGate } from './TrialExpiredGate';
 
 interface SubscriptionStatus {
-  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired' | 'comp';
   billing_cycle: 'monthly' | 'annual';
   trial_ends_at: string | null;
   period_ends_at: string | null;
@@ -250,6 +250,12 @@ export const ScribeAccountPage: React.FC = () => {
               )}
             </div>
           )}
+          {subStatus?.subscription_status === 'comp' && (
+            <div className="flex items-center gap-2 text-sm text-purple-400">
+              <CircleCheck size={16} />
+              <span>Complimentary</span>
+            </div>
+          )}
           {subStatus?.subscription_status === 'cancelled' && (
             <div className="flex items-center gap-2 text-sm text-amber-400">
               <XCircle size={16} />
@@ -318,7 +324,7 @@ export const ScribeAccountPage: React.FC = () => {
             </div>
           )}
 
-          {/* Cancel button — only show for active or trialing */}
+          {/* Cancel button — only show for active or trialing (not comp) */}
           {(subStatus?.subscription_status === 'active' || subStatus?.subscription_status === 'trialing') && !showCancelConfirm && (
             <button
               type="button"

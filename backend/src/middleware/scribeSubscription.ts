@@ -39,6 +39,12 @@ export async function scribeSubscriptionMiddleware(
     return;
   }
 
+  // Complimentary accounts — always allowed, no expiry check
+  if (status === 'comp') {
+    next();
+    return;
+  }
+
   if (status === 'active' || status === 'cancelled') {
     const periodEnd = user.period_ends_at ? new Date(user.period_ends_at) : null;
     if (periodEnd && now > periodEnd) {

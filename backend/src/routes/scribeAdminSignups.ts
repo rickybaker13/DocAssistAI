@@ -100,4 +100,59 @@ router.get('/export', requireAdmin, async (req: Request, res: Response) => {
   return res.send(csv);
 });
 
+// POST /comp — Grant complimentary subscription by email
+router.post('/comp', requireAdmin, async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const target = await userModel.findByEmail(email.trim().toLowerCase());
+  if (!target) {
+    return res.status(404).json({ error: `No user found with email: ${email}` });
+  }
+
+  const updated = await userModel.grantComp(target.id);
+  return res.json({
+    message: `Complimentary access granted to ${email}`,
+    user: { id: updated?.id, email: updated?.email, subscription_status: updated?.subscription_status },
+  });
+});
+
+// DELETE /comp — Revoke complimentary subscription by email
+router.delete('/comp', requireAdmin, async (req: Request, res: Response) => {
+  const { email } = req.body;
+  if (!email || typeof email !== 'string') {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const target = await userModel.findByEmail(email.trim().toLowerCase());
+  if (!target) {
+    return res.status(404).json({ error: `No user found with email: ${email}` });
+  }
+
+  if (target.subscription_status !== 'comp') {
+    return res.status(400).json({ error: `User is not on a complimentary plan (current status: ${target.subscription_status})` });
+  }
+
+  const updated = await userModel.revokeComp(target.id);
+  return res.json({
+    message: `Complimentary access revoked for ${email}`,
+    user: { id: updated?.id, email: updated?.email, subscription_status: updated?.subscription_status },
+  });
+});
+
+// GET /comp — List all comp users
+router.get('/comp', requireAdmin, async (_req: Request, res: Response) => {
+  const { getPool } = await import('../database/db.js');
+  const pool = getPool();
+  const { rows } = await pool.query(
+    `SELECT id, email, name, specialty, created_at
+     FROM scribe_users
+     WHERE subscription_status = 'comp'
+     ORDER BY updated_at DESC`,
+  );
+  return res.json({ users: rows });
+});
+
 export default router;

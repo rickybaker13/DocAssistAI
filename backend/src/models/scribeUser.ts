@@ -7,7 +7,7 @@ export interface ScribeUser {
   password_hash: string;
   name: string | null;
   specialty: string | null;
-  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired';
+  subscription_status: 'trialing' | 'active' | 'cancelled' | 'expired' | 'comp';
   trial_ends_at: string | null;
   period_ends_at: string | null;
   cancelled_at: string | null;
@@ -243,6 +243,31 @@ export class ScribeUserModel {
       tosVersion: user.tos_version,
       tosAcceptedAt: user.tos_accepted_at,
     };
+  }
+
+  async grantComp(userId: string): Promise<ScribeUser | null> {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE scribe_users
+       SET subscription_status = 'comp',
+           cancelled_at = NULL,
+           updated_at = NOW()
+       WHERE id = $1`,
+      [userId],
+    );
+    return this.findById(userId);
+  }
+
+  async revokeComp(userId: string): Promise<ScribeUser | null> {
+    const pool = getPool();
+    await pool.query(
+      `UPDATE scribe_users
+       SET subscription_status = 'expired',
+           updated_at = NOW()
+       WHERE id = $1 AND subscription_status = 'comp'`,
+      [userId],
+    );
+    return this.findById(userId);
   }
 
   async updateSquareIds(userId: string, squareCustomerId: string, squareCardId: string): Promise<void> {
