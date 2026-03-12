@@ -1,6 +1,6 @@
 # DocAssistAI — HIPAA Compliance & Infrastructure Next Steps
 
-_Last updated: 2026-02-27_
+_Last updated: 2026-03-12_
 
 ---
 
@@ -114,32 +114,32 @@ Replace Railway's auto-deploy with one of:
 
 ### Critical — Before Handling Real Patient Data
 
-| # | Gap | Fix | Effort |
-|---|---|---|---|
-| 1 | **Sign AWS BAA** | Accept in AWS Artifact → Agreements | 5 min |
-| 2 | **Request DO BAA** | Contact DigitalOcean support | 1 day (wait) |
-| 3 | **TLS on droplet** | Caddy + Let's Encrypt (part of migration Phase 1) | 1–2 hrs |
-| 4 | **Hardcoded JWT secret fallback** | Hard-fail in production if `JWT_SECRET` is unset | 10 min |
-| 5 | **Remove OpenAI Whisper fallback** | Delete the `callOpenAI` code path in `whisperService.ts`. Self-hosted only. Eliminates accidental PHI leak to OpenAI. | 15 min |
-| 6 | **Audit logs to durable storage** | Write audit events to PostgreSQL instead of ephemeral filesystem. On the droplet the filesystem is persistent (unlike Railway), but DB storage is more queryable and easier to back up. | 2–4 hrs |
-| 7 | **Scrub console.log output** | Remove or redact any `console.log` that could contain clinical content (system prompts, transcripts, note text). | 1–2 hrs |
+| # | Gap | Fix | Effort | Status |
+|---|---|---|---|---|
+| 1 | **Sign AWS BAA** | Accept in AWS Artifact → Agreements | 5 min | |
+| 2 | **Request DO BAA** | Contact DigitalOcean support | 1 day (wait) | **DONE** — BAA received 2026-03-12 |
+| 3 | **TLS on droplet** | Caddy + Let's Encrypt (part of migration Phase 1) | 1–2 hrs | **DONE** — Caddy auto-TLS live |
+| 4 | **Hardcoded JWT secret fallback** | Hard-fail in production if `JWT_SECRET` is unset | 10 min | **DONE** — `getSecret()` throws in production |
+| 5 | **Remove OpenAI Whisper fallback** | Delete the `callOpenAI` code path in `whisperService.ts`. Self-hosted only. Eliminates accidental PHI leak to OpenAI. | 15 min | |
+| 6 | **Audit logs to durable storage** | Write audit events to PostgreSQL instead of ephemeral filesystem. On the droplet the filesystem is persistent (unlike Railway), but DB storage is more queryable and easier to back up. | 2–4 hrs | |
+| 7 | **Scrub console.log output** | Remove or redact any `console.log` that could contain clinical content (system prompts, transcripts, note text). | 1–2 hrs | |
 
 ### High Priority — Soon After Launch
 
-| # | Gap | Fix | Effort |
-|---|---|---|---|
-| 8 | **Automatic session timeout** | Frontend idle timer (15–30 min inactivity → logout). Required by 45 CFR 164.312(a)(2)(iii). | 2–3 hrs |
-| 9 | **MFA** | TOTP-based (e.g., `otplib`). HIPAA recommends for PHI access. | 1–2 days |
-| 10 | **Token revocation** | Server-side session table or token blocklist. Force logout on password change. | 4–6 hrs |
-| 11 | **Password reset flow** | Email-based reset with time-limited token. | 4–6 hrs |
+| # | Gap | Fix | Effort | Status |
+|---|---|---|---|---|
+| 8 | **Automatic session timeout** | Frontend idle timer (15 min inactivity → logout) with 60-second warning banner. Required by 45 CFR 164.312(a)(2)(iii). | 2–3 hrs | **DONE** — `useInactivityTimeout` hook + ScribeLayout integration (2026-03-12) |
+| 9 | **MFA** | TOTP-based (e.g., `otplib`). HIPAA recommends for PHI access. | 1–2 days | Deferred — not strictly required |
+| 10 | **Token revocation** | `token_invalidated_at` column on `scribe_users`. Auth middleware checks JWT `iat` against invalidation timestamp. All sessions revoked on password change. | 4–6 hrs | **DONE** — Deployed 2026-03-12 |
+| 11 | **Password reset flow** | Email-based reset with time-limited OTP. | 4–6 hrs | **DONE** — OTP via Resend email |
 
 ### Moderate — As Product Matures
 
-| # | Gap | Fix |
-|---|---|---|
-| 12 | **RBAC** | Add role column to `scribe_users`, enforce in middleware. |
-| 13 | **Data retention policy** | Define retention periods, add cleanup jobs. |
-| 14 | **Backup & disaster recovery plan** | Document backup strategy (DO snapshots + `pg_dump` cron), test restores. |
+| # | Gap | Fix | Status |
+|---|---|---|---|
+| 12 | **RBAC** | Add role column to `scribe_users`, enforce in middleware. | |
+| 13 | **Data retention policy** | Define retention periods, add cleanup jobs. | **DONE** — Notes: 3 days. Expired trials: 30 days. Cancelled accounts: 90 days. Stale tokens: 24 hours. Cron job deployed at 3 AM daily (2026-03-12). |
+| 14 | **Backup & disaster recovery plan** | Document backup strategy (DO snapshots + `pg_dump` cron), test restores. | **DONE** — `docs/disaster-recovery.md` + daily pg_dump cron at 2 AM (2026-03-12) |
 
 ---
 
@@ -154,9 +154,16 @@ Replace Railway's auto-deploy with one of:
 - **CORS whitelisting** — Only configured frontend origins allowed
 - **Helmet.js security headers**
 - **Rate limiting** — Global and per-endpoint
-- **Audit logging middleware** — Logs PHI access, AI usage, auth events
+- **Audit logging middleware** — Logs PHI access, AI usage, auth events (no PHI in logs)
 - **Self-hosted Whisper and Presidio** — PHI stays on infrastructure you control
 - **UFW firewall on droplet** — Only SSH + service ports exposed
+- **Automatic session timeout** — 15-minute inactivity auto-logout with 60-second warning (HIPAA 45 CFR 164.312(a)(2)(iii))
+- **Token revocation on password change** — `token_invalidated_at` timestamp; all prior sessions immediately rejected
+- **Data retention policy with automated cleanup** — Notes: 3 days, expired trials: 30 days, cancelled accounts: 90 days, stale tokens: 24 hours
+- **Disaster recovery runbook** — Documented backup/restore procedures, daily `pg_dump` cron, weekly DO snapshots
+- **DigitalOcean BAA** — Signed and in place (2026-03-12)
+- **Groq BAA** — Included in Groq ToS (effective 2025-10-15)
+- **Published Privacy Policy + Terms of Service** — With consent tracking (TOS version, acceptance timestamp)
 
 ---
 
