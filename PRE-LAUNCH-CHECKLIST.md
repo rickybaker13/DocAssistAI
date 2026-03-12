@@ -147,7 +147,7 @@ The app already has social media accounts linked in the UI (`SocialMediaLinks.ts
 | Platform | Handle/URL | Status |
 |----------|-----------|--------|
 | LinkedIn | [/company/docassistai](https://www.linkedin.com/company/docassistai) | Created — needs content |
-| X (Twitter) | [@docassistai](https://x.com/docassistai) | Created — needs content |
+| X (Twitter) | [@docassistai_app](https://x.com/docassistai_app) | Created — needs content |
 | Facebook | [/docassistai](https://www.facebook.com/docassistai) | Created — needs content |
 | Instagram | [@docassistai](https://www.instagram.com/docassistai) | Created — needs content |
 | YouTube | [@docassistai](https://www.youtube.com/@docassistai) | Created — needs content |
