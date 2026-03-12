@@ -263,6 +263,10 @@ Groq Whisper (`whisper-large-v3-turbo`) supports 99+ languages. Currently hardco
 
 ## Unit Economics Reference
 
+> Last updated: 2026-03-12 — includes Chart-to-Note and Billing Codes features
+
+### Fixed Costs
+
 | Item | Monthly Cost |
 |------|-------------|
 | DigitalOcean Droplet (4GB) | $24 |
@@ -271,16 +275,97 @@ Groq Whisper (`whisper-large-v3-turbo`) supports 99+ languages. Currently hardco
 | Domain (docassistai.app) | ~$1.25 |
 | **Fixed costs** | **~$144/month** |
 
-| Item | Per-User Cost (300 encounters/month) |
-|------|--------------------------------------|
-| Groq Whisper (transcription) | ~$1.00 |
-| Anthropic Haiku 4.5 (note gen) | ~$1.35 |
-| Anthropic Sonnet 4.6 (focused AI, chat) | ~$1.88 |
-| Square processing (3.3% + $0.30) | ~$0.96 |
-| **Variable cost per user** | **~$5.19/month** |
+### Variable Costs Per User (300 encounters/month)
 
-**At $20/month**: ~$14.81 margin per user (74%), break-even at ~10 paying users
-**At $200/year** (~$16.67/month effective): ~$11.48 margin/mo per user (69%), but higher LTV due to annual commitment and lower churn
+#### Scenario A: Record-Only User (all 300 encounters via audio recording)
+
+| Item | Per-User Cost |
+|------|--------------|
+| Groq Whisper (transcription, 300 encounters) | ~$1.00 |
+| Anthropic Haiku 4.5 (note generation, 300 calls) | ~$1.35 |
+| Anthropic Sonnet 4.6 (focused AI, chat, ghost-write) | ~$1.88 |
+| Anthropic Sonnet 4.6 (billing codes, ~150 notes = 50% usage) | ~$2.25 |
+| Square processing (3.3% + $0.30) | ~$0.96 |
+| **Variable cost per user** | **~$7.44/month** |
+
+#### Scenario B: Mixed User (200 recorded + 100 chart-to-note)
+
+| Item | Per-User Cost |
+|------|--------------|
+| Groq Whisper (transcription, 200 encounters) | ~$0.67 |
+| Anthropic Haiku 4.5 (note generation, 200 recorded) | ~$0.90 |
+| Anthropic Haiku 4.5 (chart-generate, 100 chart-to-note) | ~$0.55 |
+| Anthropic Sonnet 4.6 (focused AI, chat, ghost-write) | ~$1.88 |
+| Anthropic Sonnet 4.6 (billing codes, ~150 notes = 50% usage) | ~$2.25 |
+| Square processing (3.3% + $0.30) | ~$0.96 |
+| **Variable cost per user** | **~$7.21/month** |
+
+#### Scenario C: Chart-Heavy User (50 recorded + 250 chart-to-note, e.g. hospitalist doing discharge summaries)
+
+| Item | Per-User Cost |
+|------|--------------|
+| Groq Whisper (transcription, 50 encounters) | ~$0.17 |
+| Anthropic Haiku 4.5 (note generation, 50 recorded) | ~$0.23 |
+| Anthropic Haiku 4.5 (chart-generate, 250 chart-to-note) | ~$1.38 |
+| Anthropic Sonnet 4.6 (focused AI, chat, ghost-write) | ~$1.88 |
+| Anthropic Sonnet 4.6 (billing codes, ~200 notes = 67% usage) | ~$3.00 |
+| Square processing (3.3% + $0.30) | ~$0.96 |
+| **Variable cost per user** | **~$7.62/month** |
+
+### Cost Notes
+
+**Chart-to-Note vs. Record-to-Note**: Chart-to-note encounters skip Groq Whisper entirely (~$0.003/encounter saved). Anthropic input tokens are slightly higher for chart-generate (pasted chart data is typically longer than transcribed dictation), but the net cost is roughly neutral. Chart-heavy users save on transcription.
+
+**Billing Codes (NEW — not in previous projections)**: The `/billing-codes` endpoint sends the full note text + transcript excerpt to Sonnet 4.6 and returns structured ICD-10 and CPT codes. Estimated ~$0.015/call. This is the most significant new cost line — at 50% usage (150 notes/month), it adds ~$2.25/user/month. At 100% usage (all 300 notes), ~$4.50/month. However, billing codes directly help users capture revenue (better coding = fewer denials, higher RVU capture), making this a high-value feature worth the cost.
+
+**Chart-generate input sizes**: Pasted chart data (labs, imaging, med lists) averages ~1,500–3,000 input tokens vs. ~800–1,500 for a transcribed encounter. The per-call cost is ~$0.0055 vs. ~$0.0045 for standard generate — a marginal difference.
+
+### Margin Analysis
+
+#### Without Billing Codes (legacy projection)
+
+| Pricing | Margin/User | Margin % | Break-Even |
+|---------|------------|----------|------------|
+| $20/month | ~$14.81 | 74% | ~10 users |
+| $200/year ($16.67/mo) | ~$11.48/mo | 69% | ~13 users |
+
+#### With Billing Codes @ 50% Usage (current projection)
+
+| Pricing | Margin/User | Margin % | Break-Even |
+|---------|------------|----------|------------|
+| $20/month | ~$12.56 | 63% | ~12 users |
+| $200/year ($16.67/mo) | ~$9.23/mo | 55% | ~16 users |
+
+#### With Billing Codes @ 100% Usage (worst case)
+
+| Pricing | Margin/User | Margin % | Break-Even |
+|---------|------------|----------|------------|
+| $20/month | ~$10.31 | 52% | ~14 users |
+| $200/year ($16.67/mo) | ~$6.98/mo | 42% | ~21 users |
+
+### Revenue Projections (12-month, monthly pricing only)
+
+| Users | Monthly Revenue | Monthly Variable Cost | Monthly Margin (after fixed) | Annual Profit |
+|-------|----------------|----------------------|------------------------------|---------------|
+| 10 | $200 | $74 | -$18 (break-even zone) | -$216 |
+| 25 | $500 | $186 | $170 | $2,040 |
+| 50 | $1,000 | $372 | $484 | $5,808 |
+| 100 | $2,000 | $744 | $1,112 | $13,344 |
+| 250 | $5,000 | $1,860 | $2,996 | $35,952 |
+| 500 | $10,000 | $3,720 | $6,136 | $73,632 |
+| 1,000 | $20,000 | $7,440 | $12,416 | $149,000 |
+
+*Assumes Scenario A (record-only + 50% billing codes) at $7.44/user/month. Mixed/chart-heavy users are slightly cheaper. Fixed costs of $144/month deducted from margin.*
+
+### Strategic Cost Considerations
+
+1. **Billing codes are opt-in**: Not every user will use them. Conservative 50% adoption is the baseline projection. Power users who use billing codes on every note are also the users most likely to retain — high engagement = low churn.
+
+2. **Chart-to-Note is cost-neutral to cost-positive**: Saves transcription costs, slightly higher AI input costs. Net wash. But it opens an entirely new use case (chart review, discharge summaries from existing data) that competitors don't offer.
+
+3. **Prompt caching mitigates Sonnet costs**: The billing-codes system prompt benefits from Anthropic prompt caching (90% savings on cached input tokens). Actual Sonnet costs may be 20-30% lower than listed above once caching hit rates stabilize.
+
+4. **Scale efficiencies**: At 500+ users, consider negotiating volume pricing with Anthropic and Groq. At 1,000+ users, may need to upgrade Droplet ($48/month for 8GB) — still negligible vs. revenue.
 
 ---
 
