@@ -14,6 +14,11 @@
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     background: #020617;
@@ -26,6 +31,39 @@
     flex-direction: column;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  /* ── PRINT INSTRUCTIONS (screen only) ── */
+  .print-instructions {
+    background: #1E293B;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    color: #CBD5E1;
+    text-align: center;
+  }
+  .print-instructions kbd {
+    background: #334155;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 12px;
+  }
+
+  @media print {
+    .print-instructions { display: none; }
+    html, body {
+      width: 8.5in;
+      height: 11in;
+      margin: 0;
+      padding: 0.5in 0.55in 0.45in;
+      overflow: hidden;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    body * { break-inside: avoid; }
   }
 
   /* ── HEADER ── */
@@ -266,6 +304,11 @@
 </style>
 </head>
 <body>
+
+<!-- PRINT INSTRUCTIONS (hidden in print/PDF) -->
+<div class="print-instructions">
+  <strong>To save as PDF:</strong> Press <kbd>Ctrl+P</kbd> (or <kbd>&#8984;+P</kbd> on Mac) &rarr; set Destination to <em>"Save as PDF"</em> &rarr; set Margins to <em>"None"</em> &rarr; check <em>"Background graphics"</em> &rarr; Save.
+</div>
 
 <!-- HEADER -->
 <div class="header">
