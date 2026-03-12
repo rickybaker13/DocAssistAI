@@ -6,7 +6,7 @@ export interface NoteTemplate {
   user_id: string | null;
   note_type: string;
   name: string;
-  verbosity: 'brief' | 'standard' | 'detailed';
+  verbosity: 'concise' | 'brief' | 'standard' | 'detailed';
   sections: string; // JSON string: Array<{name, promptHint}>
   created_at: string;
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Settings, FileText, Mic, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw, Pencil } from 'lucide-react';
+import { Plus, Settings, FileText, Mic, ClipboardPaste, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw, Pencil } from 'lucide-react';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
@@ -175,13 +175,22 @@ export const ScribeDashboardPage: React.FC = () => {
         </div>
       </div>
 
-      <Link
-        to="/scribe/note/new"
-        className="w-full py-4 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 transition-colors flex items-center justify-center gap-2"
-      >
-        <Mic size={18} aria-hidden="true" />
-        Record Next Encounter
-      </Link>
+      <div className="flex gap-3">
+        <Link
+          to="/scribe/note/new"
+          className="flex-1 py-4 bg-teal-400 text-slate-900 rounded-xl font-semibold text-base hover:bg-teal-300 transition-colors flex items-center justify-center gap-2"
+        >
+          <Mic size={18} aria-hidden="true" />
+          Record
+        </Link>
+        <Link
+          to="/scribe/chart-collector"
+          className="flex-1 py-4 bg-slate-800 border border-teal-400/40 text-teal-400 rounded-xl font-semibold text-base hover:bg-slate-750 hover:border-teal-400/60 transition-colors flex items-center justify-center gap-2"
+        >
+          <ClipboardPaste size={18} aria-hidden="true" />
+          Chart to Note
+        </Link>
+      </div>
 
       {/* Local-only encounters (processing / failed — not yet saved to backend) */}
       {localOnlyEncounters.length > 0 && (

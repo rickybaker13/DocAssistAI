@@ -6,6 +6,7 @@ import { ScribeRegisterPage } from './components/scribe-standalone/ScribeRegiste
 import { ScribeForgotPasswordPage } from './components/scribe-standalone/ScribeForgotPasswordPage';
 import { ScribeResetPasswordPage } from './components/scribe-standalone/ScribeResetPasswordPage';
 import { NoteBuilderPage } from './components/scribe-standalone/NoteBuilderPage';
+import { ChartCollectorPage } from './components/scribe-standalone/ChartCollectorPage';
 import { ScribeRecordPage } from './components/scribe-standalone/ScribeRecordPage';
 import { ScribeNotePage } from './components/scribe-standalone/ScribeNotePage';
 import { ScribeDashboardPage } from './components/scribe-standalone/ScribeDashboardPage';
@@ -61,6 +62,7 @@ function App() {
           <Route path="admin/feedback" element={<ScribeAdminFeedbackPage />} />
           <Route path="admin/signups" element={<ScribeAdminSignupsPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
+          <Route path="chart-collector" element={<ChartCollectorPage />} />
           <Route path="note/:id/record" element={<ScribeRecordPage />} />
           <Route path="note/:id" element={<ScribeNotePage />} />
           <Route index element={<Navigate to="/scribe/dashboard" replace />} />
