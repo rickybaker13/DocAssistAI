@@ -21,7 +21,8 @@ Comprehensive reference for the production hosting, networking, security, and op
 13. [CI/CD & Deployment Flow](#13-cicd--deployment-flow)
 14. [Health Checks & Monitoring](#14-health-checks--monitoring)
 15. [Infrastructure Setup (DigitalOcean)](#15-infrastructure-setup-digitalocean)
-16. [Key Infrastructure Gotchas](#16-key-infrastructure-gotchas)
+16. [Data Retention & Automated Cleanup](#16-data-retention--automated-cleanup)
+17. [Key Infrastructure Gotchas](#17-key-infrastructure-gotchas)
 
 ---
 
@@ -193,11 +194,13 @@ See `infra/.env.example` for the full template.
 |----------|-------|
 | Type | JWT stored in HTTP-only cookie |
 | Cookie name | `scribe_token` |
-| Expiration | 7 days |
+| Expiration | 7 days (30 days with "Remember Me") |
 | `SameSite` (production) | `None` + `Secure: true` (required for cross-domain) |
 | `SameSite` (development) | `Lax` |
-| Secret | `JWT_SECRET` env var |
+| Secret | `JWT_SECRET` env var (hard-fail in production if unset) |
 | Routes | `/api/scribe/auth/login`, `/logout`, `/me` |
+| **Inactivity timeout** | 15 minutes — frontend auto-logout with 60-second warning banner (HIPAA 45 CFR 164.312(a)(2)(iii)) |
+| **Token revocation** | `token_invalidated_at` column on `scribe_users`. Auth middleware rejects tokens where JWT `iat` < `token_invalidated_at`. Set automatically on password change. |
 
 ### SMART on FHIR (EHR Access)
 
@@ -429,7 +432,30 @@ The `infra/droplet-setup.sh` script provisions a fresh DigitalOcean droplet:
 
 ---
 
-## 16. Key Infrastructure Gotchas
+## 16. Data Retention & Automated Cleanup
+
+| Data Type | Retention Period | Cleanup Mechanism |
+|---|---|---|
+| **Clinical notes** | 3 days from last edit | `POST /api/cron/data-retention` (daily at 3 AM) |
+| **Expired trial accounts** | 30 days after trial ends | Same cron job (CASCADE deletes all related data) |
+| **Cancelled accounts** | 90 days after period ends | Same cron job |
+| **Password reset tokens/OTPs** | 24 hours after expiry | Same cron job |
+| **Audit logs** | 1 year | Winston file rotation (10 MB × 10 files) |
+| **Database backups** | 7 daily `pg_dump` + 4 weekly DO snapshots | Cron at 2 AM + `find -mtime +7 -delete` |
+
+### Cron Jobs (Droplet crontab)
+
+| Time (UTC) | Job | Log |
+|---|---|---|
+| 2 AM | Database backup (`pg_dump`) | `/var/log/docassistai-backup.log` |
+| 3 AM | Data retention cleanup | `/var/log/docassistai-retention.log` |
+| 6 AM | Billing/trial processing | `/var/log/docassistai-cron.log` |
+
+See `docs/disaster-recovery.md` for full backup/restore procedures.
+
+---
+
+## 17. Key Infrastructure Gotchas
 
 | Issue | Detail |
 |-------|--------|

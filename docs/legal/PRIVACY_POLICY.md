@@ -84,26 +84,35 @@ On request (and where contractually required), we provide available subprocessor
 
 ## 8. Data Retention
 
-We retain personal information only as long as necessary for:
+We retain personal information only as long as necessary for service delivery, contractual commitments, legal and regulatory obligations, dispute resolution, and security purposes.
 
-- service delivery,
-- contractual commitments,
-- legal and regulatory obligations,
-- dispute resolution and enforcement,
-- security and fraud-prevention purposes.
+### Retention Periods by Data Type
 
-Retention periods vary by data category and Customer configuration.
+| Data Type | Retention Period | Notes |
+|---|---|---|
+| **Clinical notes** | 3 days from last edit | DocAssistAI is a drafting tool, not a system of record. Notes should be copied to your EHR before the retention window expires. |
+| **Account data (active subscription)** | Duration of subscription | Retained while subscription is active. |
+| **Account data (expired trial)** | 30 days after trial ends | Account and all associated data purged automatically. |
+| **Account data (cancelled subscription)** | 90 days after billing period ends | Grace period for resubscription without data loss. |
+| **Password reset tokens** | 24 hours after expiry | Automatically swept. |
+| **Audit logs** | 1 year | Rotated via file-size limits (100 MB total). |
+| **Audio recordings** | Not retained | Audio is processed in-memory for transcription and immediately discarded. Never stored to disk. |
+
+Automated cleanup runs daily. Users may request earlier deletion by contacting admin@docassistai.app.
 
 ## 9. Security Measures
 
-We implement safeguards designed to protect personal information, including as appropriate:
+We implement safeguards designed to protect personal information, including:
 
-- encryption controls,
-- access and authorization controls,
-- logging and monitoring,
-- secure development and change management practices,
-- workforce confidentiality/security obligations,
-- incident response procedures.
+- **Encryption in transit** — TLS/HTTPS on all external connections (auto-provisioned via Let's Encrypt).
+- **PII de-identification** — All clinical text is scrubbed of protected health information (PHI) using Microsoft Presidio before reaching any external AI provider. The system fails closed: if de-identification is unavailable, AI requests are blocked (HTTP 503).
+- **Access and authentication controls** — bcrypt-hashed passwords (cost 12), HTTP-only secure cookies, cross-site request protections.
+- **Automatic session timeout** — Sessions expire after 15 minutes of inactivity, with a 60-second warning (per HIPAA 45 CFR 164.312(a)(2)(iii)).
+- **Token revocation** — All active sessions are immediately invalidated when a password is changed.
+- **Audit logging** — Access to clinical data and AI service usage is logged with metadata only (no PHI in logs).
+- **Rate limiting** — Global and per-endpoint rate limiting to prevent abuse.
+- **Infrastructure isolation** — All backend services (database, PII scrubbing, transcription) communicate over an internal network; only the TLS reverse proxy is externally accessible.
+- **Automated data retention** — Clinical notes, expired accounts, and stale credentials are automatically purged per the retention schedule in Section 8.
 
 No system is completely secure; however, we continuously assess and improve controls.
 
