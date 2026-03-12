@@ -10,10 +10,10 @@ interface SegmentCTAProps {
 }
 
 const defaultBenefits = [
-  'Full access to all features',
+  'Full access to all features — record or paste chart data',
   'No credit card required to start',
-  'HIPAA-compliant from day one',
-  'Works on any device',
+  'HIPAA-compliant — all PHI de-identified before AI processing',
+  'Built by clinicians, for clinicians — works on any device',
 ];
 
 export default function SegmentCTA({
@@ -62,7 +62,7 @@ export default function SegmentCTA({
 
         {/* Tagline */}
         <p className="mt-8 text-center text-sm text-slate-500 italic">
-          Doc Assist AI &mdash; documentation assistance for every doc.
+          Doc Assist AI &mdash; built by clinicians, for clinicians.
         </p>
       </motion.div>
     </section>

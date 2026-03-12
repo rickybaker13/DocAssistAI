@@ -62,7 +62,7 @@ export default function ForResidentsPage() {
         <SegmentHero
           badge="For Residents & Medical Students"
           headline="80-Hour Weeks Are Hard Enough Without Charting Until 2 AM"
-          subheadline="DocAssistAI generates structured clinical notes from your patient encounters. Learn documentation by reviewing AI-generated drafts, not by typing from scratch at midnight."
+          subheadline="Built by clinicians who survived residency. Record your encounter or paste chart data — DocAssistAI generates structured notes you review and learn from, not type from scratch at midnight. All PHI is de-identified before AI processing."
           painPoints={painPoints}
         />
 
@@ -121,10 +121,10 @@ export default function ForResidentsPage() {
           headline="Your Attending Is Going to Read Your Note. Make It Good."
           benefits={[
             '7 note types covering every rotation documentation need',
-            'AI generates structured drafts you review and refine',
+            'Chart to Note: paste labs and consult notes — AI synthesizes the note',
             'Normal PE and ROS baselines built in — no retyping templates',
-            'Works on your phone between rounds',
-            'Free trial — no credit card, no commitment',
+            'HIPAA compliant — all PHI de-identified before reaching AI',
+            'Free trial — no credit card, built by clinicians for clinicians',
           ]}
         />
       </main>

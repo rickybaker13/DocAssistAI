@@ -58,9 +58,9 @@ export default function HeroSection() {
           className="text-base md:text-lg lg:text-xl text-slate-400 max-w-2xl mt-6 leading-relaxed"
           variants={item}
         >
-          AI-powered medical documentation that listens to your patient encounter
-          and generates structured clinical notes instantly. Spend time with
-          patients, not paperwork.
+          AI-powered medical documentation built by clinicians, for clinicians.
+          Record your encounter or paste chart data &mdash; structured clinical notes
+          in seconds. All patient data is de-identified before the AI ever sees it.
         </motion.p>
 
         {/* CTA buttons */}
@@ -81,7 +81,7 @@ export default function HeroSection() {
 
         {/* Sub-CTA text */}
         <motion.p className="text-sm text-slate-500 mt-4" variants={item}>
-          No credit card required to start.
+          No credit card required &middot; HIPAA compliant &middot; Built by clinicians
         </motion.p>
 
         {/* Waveform animation */}

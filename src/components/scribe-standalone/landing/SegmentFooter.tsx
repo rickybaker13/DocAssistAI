@@ -12,7 +12,7 @@ export default function SegmentFooter() {
 
       {/* Tagline */}
       <p className="mt-3 text-sm text-slate-400 italic">
-        Doc Assist AI &mdash; documentation assistance for every doc.
+        Doc Assist AI &mdash; built by clinicians, for clinicians.
       </p>
 
       {/* Segment links */}

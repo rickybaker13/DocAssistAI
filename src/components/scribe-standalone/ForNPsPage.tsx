@@ -62,7 +62,7 @@ export default function ForNPsPage() {
         <SegmentHero
           badge="For Nurse Practitioners"
           headline="No Scribe. No Coder. No MA to Help with Notes."
-          subheadline="You're the provider, the scribe, and the billing coder. DocAssistAI handles the documentation so you can focus on the patient."
+          subheadline="You're the provider, the scribe, and the billing coder. Built by clinicians who understand, DocAssistAI handles documentation — record encounters or paste chart data, with all PHI de-identified before AI processing."
           painPoints={painPoints}
         />
 
@@ -121,10 +121,10 @@ export default function ForNPsPage() {
           headline="Let AI Handle One of Those Three Roles"
           benefits={[
             'AI scribe that writes notes while you see patients',
-            'No EHR integration required — works independently',
+            'Chart to Note: paste labs, imaging, med lists — no recording needed',
             'Custom templates for any specialty or practice type',
-            'Works on phone, tablet, or laptop — wherever you practice',
-            'HIPAA compliant with full PII de-identification',
+            'HIPAA compliant — all PHI de-identified before AI sees it',
+            'Built by clinicians, for clinicians — works on any device',
           ]}
         />
       </main>
