@@ -1,0 +1,80 @@
+<svg width="1584" height="500" viewBox="0 0 1584 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1584" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#020617"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </linearGradient>
+    <linearGradient id="tealGrad" x1="0" y1="0" x2="400" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EEAD4"/>
+      <stop offset="1" stop-color="#2DD4BF"/>
+    </linearGradient>
+    <linearGradient id="iconBg" x1="0" y1="0" x2="80" y2="80" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5EEAD4"/>
+      <stop offset="1" stop-color="#2DD4BF"/>
+    </linearGradient>
+    <linearGradient id="iconLines" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+    <!-- Subtle grid pattern -->
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1E293B" stroke-width="0.5" opacity="0.4"/>
+    </pattern>
+    <!-- Glow effect -->
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2DD4BF" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#2DD4BF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1584" height="500" fill="url(#bg)"/>
+  <rect width="1584" height="500" fill="url(#grid)"/>
+
+  <!-- Subtle glow behind logo area -->
+  <ellipse cx="792" cy="220" rx="500" ry="250" fill="url(#glow)"/>
+
+  <!-- Teal accent line at top -->
+  <rect x="0" y="0" width="1584" height="3" fill="url(#tealGrad)"/>
+
+  <!-- Logo icon (scaled-down version of icon-brand.svg) -->
+  <g transform="translate(610, 120)">
+    <rect x="0" y="0" width="84" height="84" rx="20" fill="url(#iconBg)"/>
+    <rect x="17" y="13" width="50" height="58" rx="8" fill="#F0FDFA" stroke="#99F6E4" stroke-width="2"/>
+    <rect x="24" y="23" width="36" height="4" rx="2" fill="url(#iconLines)"/>
+    <rect x="24" y="33" width="36" height="4" rx="2" fill="url(#iconLines)"/>
+    <rect x="24" y="43" width="36" height="4" rx="2" fill="url(#iconLines)"/>
+    <rect x="24" y="53" width="17" height="4" rx="2" fill="url(#iconLines)"/>
+    <rect x="46" y="53" width="6" height="4" rx="2" fill="url(#iconLines)" opacity="0.45"/>
+    <circle cx="59" cy="55" r="3.5" fill="#F0FDFA" stroke="#0F172A" stroke-width="1.5"/>
+    <path d="M59 52.7V55L61 56.2" stroke="#0F172A" stroke-width="1.2" stroke-linecap="round"/>
+  </g>
+
+  <!-- App name -->
+  <text x="710" y="178" fill="#F8FAFC" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="52" font-weight="700" text-anchor="start">DocAssist</text>
+  <text x="1003" y="178" fill="url(#tealGrad)" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="52" font-weight="700" text-anchor="start">AI</text>
+
+  <!-- Tagline -->
+  <text x="792" y="240" fill="#94A3B8" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="22" font-weight="400" text-anchor="middle">AI-Powered Clinical Documentation for Modern Clinicians</text>
+
+  <!-- Feature pills -->
+  <g transform="translate(792, 280)">
+    <!-- Pill 1 -->
+    <rect x="-370" y="0" width="220" height="38" rx="19" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+    <text x="-260" y="25" fill="#5EEAD4" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" text-anchor="middle">Real-Time AI Scribe</text>
+
+    <!-- Pill 2 -->
+    <rect x="-110" y="0" width="220" height="38" rx="19" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+    <text x="0" y="25" fill="#5EEAD4" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" text-anchor="middle">HIPAA Compliant</text>
+
+    <!-- Pill 3 -->
+    <rect x="150" y="0" width="220" height="38" rx="19" fill="#1E293B" stroke="#334155" stroke-width="1"/>
+    <text x="260" y="25" fill="#5EEAD4" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="14" font-weight="600" text-anchor="middle">Evidence-Based Coding</text>
+  </g>
+
+  <!-- Website URL -->
+  <text x="792" y="380" fill="#64748B" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="16" font-weight="500" text-anchor="middle">docassistai.app</text>
+
+  <!-- Bottom teal accent line -->
+  <rect x="0" y="497" width="1584" height="3" fill="url(#tealGrad)"/>
+</svg>
