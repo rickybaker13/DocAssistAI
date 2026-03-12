@@ -112,20 +112,45 @@ export const ScribePrivacyPage: React.FC = () => {
 
             <div>
               <h2 className="text-xl font-semibold text-slate-100 mt-8 mb-3">8. Data Retention</h2>
-              <p>We retain personal information only as long as necessary for service delivery, contractual commitments, legal and regulatory obligations, dispute resolution and enforcement, and security and fraud-prevention purposes.</p>
-              <p className="mt-2">Retention periods vary by data category and Customer configuration.</p>
+              <p>We retain personal information only as long as necessary for service delivery, contractual commitments, legal and regulatory obligations, dispute resolution, and security purposes.</p>
+
+              <h3 className="text-base font-medium text-slate-200 mt-4 mb-2">Retention Periods by Data Type</h3>
+              <div className="overflow-x-auto mt-2">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-700">
+                      <th className="text-left py-2 pr-4 text-slate-300 font-medium">Data Type</th>
+                      <th className="text-left py-2 pr-4 text-slate-300 font-medium">Retention Period</th>
+                      <th className="text-left py-2 text-slate-300 font-medium">Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800">
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Clinical notes</td><td className="py-2 pr-4">3 days from last edit</td><td className="py-2">DocAssistAI is a drafting tool, not a system of record. Notes should be copied to your EHR before the retention window expires.</td></tr>
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Account data (active)</td><td className="py-2 pr-4">Duration of subscription</td><td className="py-2">Retained while subscription is active.</td></tr>
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Account data (expired trial)</td><td className="py-2 pr-4">30 days after trial ends</td><td className="py-2">Account and all associated data purged automatically.</td></tr>
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Account data (cancelled)</td><td className="py-2 pr-4">90 days after billing period ends</td><td className="py-2">Grace period for resubscription without data loss.</td></tr>
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Password reset tokens</td><td className="py-2 pr-4">24 hours after expiry</td><td className="py-2">Automatically swept.</td></tr>
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Audit logs</td><td className="py-2 pr-4">1 year</td><td className="py-2">Rotated via file-size limits (100 MB total).</td></tr>
+                    <tr><td className="py-2 pr-4 font-medium text-slate-200">Audio recordings</td><td className="py-2 pr-4">Not retained</td><td className="py-2">Audio is processed in-memory for transcription and immediately discarded. Never stored to disk.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3">Automated cleanup runs daily. Users may request earlier deletion by contacting <a href="mailto:admin@docassistai.app" className="text-teal-400 hover:text-teal-300">admin@docassistai.app</a>.</p>
             </div>
 
             <div>
               <h2 className="text-xl font-semibold text-slate-100 mt-8 mb-3">9. Security Measures</h2>
-              <p>We implement safeguards designed to protect personal information, including as appropriate:</p>
+              <p>We implement safeguards designed to protect personal information, including:</p>
               <ul className="list-disc pl-6 mt-2 space-y-1">
-                <li>encryption controls,</li>
-                <li>access and authorization controls,</li>
-                <li>logging and monitoring,</li>
-                <li>secure development and change management practices,</li>
-                <li>workforce confidentiality/security obligations,</li>
-                <li>incident response procedures.</li>
+                <li><strong className="text-slate-100">Encryption in transit</strong> &mdash; TLS/HTTPS on all external connections (auto-provisioned via Let&rsquo;s Encrypt).</li>
+                <li><strong className="text-slate-100">PII de-identification</strong> &mdash; All clinical text is scrubbed of protected health information (PHI) using Microsoft Presidio before reaching any external AI provider. The system fails closed: if de-identification is unavailable, AI requests are blocked.</li>
+                <li><strong className="text-slate-100">Access and authentication controls</strong> &mdash; bcrypt-hashed passwords, HTTP-only secure cookies, cross-site request protections.</li>
+                <li><strong className="text-slate-100">Automatic session timeout</strong> &mdash; Sessions expire after 15 minutes of inactivity, with a 60-second warning (per HIPAA 45 CFR 164.312(a)(2)(iii)).</li>
+                <li><strong className="text-slate-100">Token revocation</strong> &mdash; All active sessions are immediately invalidated when a password is changed.</li>
+                <li><strong className="text-slate-100">Audit logging</strong> &mdash; Access to clinical data and AI service usage is logged with metadata only (no PHI in logs).</li>
+                <li><strong className="text-slate-100">Rate limiting</strong> &mdash; Global and per-endpoint rate limiting to prevent abuse.</li>
+                <li><strong className="text-slate-100">Infrastructure isolation</strong> &mdash; All backend services (database, PII scrubbing, transcription) communicate over an internal network; only the TLS reverse proxy is externally accessible.</li>
+                <li><strong className="text-slate-100">Automated data retention</strong> &mdash; Clinical notes, expired accounts, and stale credentials are automatically purged per the retention schedule in Section 8.</li>
               </ul>
               <p className="mt-2">No system is completely secure; however, we continuously assess and improve controls.</p>
             </div>
