@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { processAutoRenewals, sendTrialExpiringReminders, expireEndedTrials } from '../services/billing/recurringBilling.js';
+import { runDataRetention } from '../services/billing/dataRetention.js';
 
 const router = Router();
 
@@ -69,6 +70,22 @@ router.post('/expire-trials', async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[cron] Expire trials error:', err);
     return res.status(500).json({ error: 'Expire trials processing failed' });
+  }
+});
+
+router.post('/data-retention', async (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  try {
+    const results = await runDataRetention();
+    console.log('[cron] Data retention cleanup:', results);
+    return res.json(results);
+  } catch (err) {
+    console.error('[cron] Data retention error:', err);
+    return res.status(500).json({ error: 'Data retention cleanup failed' });
   }
 });
 
