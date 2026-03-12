@@ -256,6 +256,12 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'trial_reminder_stage',
     sql: `ALTER TABLE scribe_users ADD COLUMN trial_reminder_stage INTEGER DEFAULT 0`,
   },
+  // Token revocation — tokens issued before this timestamp are rejected
+  {
+    table: 'scribe_users',
+    column: 'token_invalidated_at',
+    sql: `ALTER TABLE scribe_users ADD COLUMN token_invalidated_at TIMESTAMPTZ`,
+  },
 ];
 
 // ---------------------------------------------------------------------------

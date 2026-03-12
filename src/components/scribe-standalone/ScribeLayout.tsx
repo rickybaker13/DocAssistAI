@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
+import { useInactivityTimeout } from '../../hooks/useInactivityTimeout';
 import {
   LayoutDashboard,
   Plus,
@@ -37,6 +38,13 @@ export const ScribeLayout: React.FC = () => {
     await logout();
     navigate('/scribe/login');
   };
+
+  // HIPAA 45 CFR 164.312(a)(2)(iii) — automatic logoff after 15 min inactivity
+  const handleInactivityTimeout = useCallback(async () => {
+    await logout();
+    navigate('/scribe/login', { state: { sessionExpired: true } });
+  }, [logout, navigate]);
+  const { warningSecondsLeft } = useInactivityTimeout(handleInactivityTimeout);
 
   const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
@@ -93,6 +101,13 @@ export const ScribeLayout: React.FC = () => {
 
       {/* ── Main content area ────────────────────────────────────────────── */}
       <div className="flex-1 md:ml-60 flex flex-col min-h-screen">
+
+        {/* Inactivity warning banner */}
+        {warningSecondsLeft !== null && warningSecondsLeft > 0 && (
+          <div className="sticky top-0 z-50 bg-amber-600 text-white text-center text-sm py-2 px-4">
+            Session expires in {warningSecondsLeft}s due to inactivity. Move your mouse or press a key to stay logged in.
+          </div>
+        )}
 
         {/* Mobile top bar (< md) */}
         <header

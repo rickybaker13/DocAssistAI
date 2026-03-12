@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { DocAssistLogo } from './DocAssistLogo';
 import { SocialMediaLinks } from './SocialMediaLinks';
@@ -7,9 +7,11 @@ import { SocialMediaLinks } from './SocialMediaLinks';
 export const ScribeLoginPage: React.FC = () => {
   const { login, loading, error, user } = useScribeAuthStore();
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const sessionExpired = (location.state as any)?.sessionExpired === true;
 
   useEffect(() => { if (user) navigate("/scribe/dashboard"); }, [user, navigate]);
 
@@ -28,6 +30,13 @@ export const ScribeLoginPage: React.FC = () => {
           <h1 className="text-2xl font-semibold text-slate-50 tracking-tight">DocAssistAI</h1>
           <p className="text-sm text-slate-400 mt-1">Clinical documentation, simplified</p>
         </div>
+
+        {/* Session expired banner */}
+        {sessionExpired && (
+          <div className="mb-4 rounded-lg bg-amber-900/50 border border-amber-700 px-4 py-3 text-sm text-amber-200 text-center">
+            You were logged out due to inactivity. Please sign in again.
+          </div>
+        )}
 
         {/* Card */}
         <div className="bg-slate-800 rounded-2xl border border-slate-700 shadow-2xl p-8">
