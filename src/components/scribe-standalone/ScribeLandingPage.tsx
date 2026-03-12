@@ -7,6 +7,7 @@ import PainPointSection from './landing/PainPointSection';
 import HowItWorksSection from './landing/HowItWorksSection';
 import InteractiveTourSection from './landing/InteractiveTourSection';
 import FeaturesGrid from './landing/FeaturesGrid';
+import WhoItsForSection from './landing/WhoItsForSection';
 import PricingCTA from './landing/PricingCTA';
 import LandingFooter from './landing/LandingFooter';
 
@@ -120,6 +121,7 @@ export default function ScribeLandingPage() {
         <HowItWorksSection />
         <InteractiveTourSection />
         <FeaturesGrid />
+        <WhoItsForSection />
         <PricingCTA />
       </main>
 
