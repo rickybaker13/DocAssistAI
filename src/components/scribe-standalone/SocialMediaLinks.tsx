@@ -8,7 +8,7 @@ type SocialLink = {
 
 const followLinks: SocialLink[] = [
   { label: 'LinkedIn', href: 'https://www.linkedin.com/company/docassistai' },
-  { label: 'X', href: 'https://x.com/docassistai' },
+  { label: 'X', href: 'https://x.com/docassistai_app' },
   { label: 'Facebook', href: 'https://www.facebook.com/docassistai' },
   { label: 'Instagram', href: 'https://www.instagram.com/docassistai' },
   { label: 'YouTube', href: 'https://www.youtube.com/@docassistai' },
