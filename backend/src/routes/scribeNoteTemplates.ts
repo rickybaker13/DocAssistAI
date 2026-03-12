@@ -28,13 +28,13 @@ router.post('/', async (req: Request, res: Response) => {
   if (!noteType || typeof noteType !== 'string' || !name || typeof name !== 'string') {
     return res.status(400).json({ error: 'noteType and name are required and must be strings' }) as any;
   }
-  const validVerbosity = ['brief', 'standard', 'detailed'];
+  const validVerbosity = ['concise', 'brief', 'standard', 'detailed'];
   const resolvedVerbosity = validVerbosity.includes(verbosity) ? verbosity : 'standard';
   const template = await model.create({
     userId: req.scribeUserId!,
     noteType,
     name,
-    verbosity: resolvedVerbosity as 'brief' | 'standard' | 'detailed',
+    verbosity: resolvedVerbosity as 'concise' | 'brief' | 'standard' | 'detailed',
     sections: Array.isArray(sections) ? sections : [],
   });
   return res.status(201).json({ template });

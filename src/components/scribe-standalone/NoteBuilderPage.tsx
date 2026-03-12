@@ -20,9 +20,10 @@ const NOTE_TYPES = [
   { value: 'procedure_note', label: 'Procedure Note' },
 ];
 
-type Verbosity = 'brief' | 'standard' | 'detailed';
+type Verbosity = 'concise' | 'brief' | 'standard' | 'detailed';
 
 const VERBOSITY_OPTIONS: { value: Verbosity; label: string; description: string }[] = [
+  { value: 'concise', label: 'Concise', description: 'Telegraphic, key facts only' },
   { value: 'brief', label: 'Brief', description: 'Bullet points, concise' },
   { value: 'standard', label: 'Standard', description: 'Balanced clinical prose' },
   { value: 'detailed', label: 'Detailed', description: 'Full prose, all detail' },

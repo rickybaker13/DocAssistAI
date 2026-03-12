@@ -14,7 +14,7 @@ interface ScribeBuilderState {
   canvasSections: CanvasSection[];
   noteType: string;
   patientLabel: string;
-  verbosity: 'brief' | 'standard' | 'detailed';
+  verbosity: 'concise' | 'brief' | 'standard' | 'detailed';
   selectedTemplateId: string | null;
   addSection: (template: { id: string; name: string; promptHint: string | null; isPrebuilt: boolean }) => void;
   removeSection: (templateId: string) => void;
@@ -22,7 +22,7 @@ interface ScribeBuilderState {
   clearCanvas: () => void;
   setNoteType: (t: string) => void;
   setPatientLabel: (l: string) => void;
-  setVerbosity: (v: 'brief' | 'standard' | 'detailed') => void;
+  setVerbosity: (v: 'concise' | 'brief' | 'standard' | 'detailed') => void;
   setSelectedTemplate: (templateId: string, sections: CanvasSection[]) => void;
 }
 

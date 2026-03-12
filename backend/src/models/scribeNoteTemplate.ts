@@ -4,7 +4,7 @@ import { SYSTEM_NOTE_TEMPLATES } from '../database/systemNoteTemplates.js';
 
 export interface NoteTemplate {
   id: string; user_id: string | null; note_type: string; name: string;
-  verbosity: 'brief' | 'standard' | 'detailed'; sections: string; created_at: string;
+  verbosity: 'concise' | 'brief' | 'standard' | 'detailed'; sections: string; created_at: string;
 }
 
 export class ScribeNoteTemplateModel {
@@ -42,7 +42,7 @@ export class ScribeNoteTemplateModel {
     return result.rows;
   }
 
-  async create(input: { userId: string; noteType: string; name: string; verbosity: 'brief' | 'standard' | 'detailed'; sections: Array<{ name: string; promptHint: string | null }> }): Promise<NoteTemplate> {
+  async create(input: { userId: string; noteType: string; name: string; verbosity: 'concise' | 'brief' | 'standard' | 'detailed'; sections: Array<{ name: string; promptHint: string | null }> }): Promise<NoteTemplate> {
     const pool = getPool();
     const id = randomUUID();
     await pool.query(

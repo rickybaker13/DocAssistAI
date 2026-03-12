@@ -62,7 +62,9 @@ router.post('/generate', async (req: Request, res: Response) => {
     .join('\n');
 
   const verbosityInstruction =
-    verbosity === 'brief'
+    verbosity === 'concise'
+      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning. Example style: "CHF exac, EF 25%, started IV lasix 40 q12h".'
+      : verbosity === 'brief'
       ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
       : verbosity === 'detailed'
       ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
@@ -97,6 +99,123 @@ Return JSON with this exact structure:
   ]
 }
 Confidence is 0.0–1.0: 1.0 = fully supported by transcript, 0.0 = not in transcript at all.`;
+
+  try {
+    const raw = await aiService.chat(
+      {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        options: {
+          temperature: 0.3,
+          model: process.env.SCRIBE_GENERATE_MODEL || undefined,
+        },
+      },
+      { userId: req.scribeUserId }
+    );
+
+    const text = extractContent(raw);
+
+    let parsed: { sections: Array<{ name: string; content: string; confidence: number }> };
+    try {
+      const cleaned = text.replace(/```json?/g, '').replace(/```/g, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch {
+      const fallbackContent = Object.keys(subMap).length > 0
+        ? piiScrubber.reInject(text, subMap)
+        : text;
+      return res.json({
+        sections: [{ name: 'Note', content: fallbackContent, confidence: 0.5 }],
+        parseError: true,
+      }) as any;
+    }
+
+    if (Object.keys(subMap).length > 0) {
+      parsed.sections = parsed.sections.map((s: any) => ({
+        ...s,
+        content: piiScrubber.reInject(s.content ?? '', subMap),
+      }));
+    }
+
+    return res.json({ sections: parsed.sections });
+  } catch (err: any) {
+    return aiErrorResponse(res, err);
+  }
+});
+
+// ─── POST /api/ai/scribe/chart-generate ──────────────────────────────────────
+router.post('/chart-generate', async (req: Request, res: Response) => {
+  const { fragments, sections, noteType, verbosity } = req.body;
+
+  if (!fragments || !Array.isArray(fragments) || fragments.length === 0) {
+    return res.status(400).json({ error: 'fragments array is required and must be non-empty' }) as any;
+  }
+  if (!sections || !Array.isArray(sections) || sections.length === 0) {
+    return res.status(400).json({ error: 'sections array is required and must be non-empty' }) as any;
+  }
+
+  // Combine fragments into labeled blocks
+  const combined = fragments
+    .map((f: { label: string; text: string }) => `--- ${f.label.toUpperCase()} ---\n${f.text}`)
+    .join('\n\n');
+
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedChart = combined;
+  let subMap: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({ chartData: combined });
+    scrubbedChart = result.scrubbedFields.chartData;
+    subMap = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
+  }
+
+  const sectionList = sections
+    .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
+    .join('\n');
+
+  const verbosityInstruction =
+    verbosity === 'concise'
+      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning.'
+      : verbosity === 'brief'
+      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
+      : verbosity === 'detailed'
+      ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
+      : '';
+
+  const systemPrompt = `You are a clinical documentation AI assistant.
+Generate structured note content for each section listed below, based ONLY on the chart data provided.
+Cross-reference labs, imaging, medication lists, and clinical notes to build a coherent clinical narrative.
+Write in first-person plural physician voice ("We assessed...", "The patient was...", "Our plan includes...").
+Be clinically precise. Do not fabricate findings not present in the chart data.
+If a section cannot be completed from the chart data, write a natural clinical phrase such as "Further data to be reviewed" or "Not available in provided records."
+
+TEMPLATE-BASED SECTIONS: Some sections include a "TEMPLATE-BASED SECTION" marker with a default template of normal/negative findings. For these sections:
+- Use the provided template as your starting baseline.
+- Replace ONLY the specific system findings that are present in the chart data with the patient's actual findings.
+- Keep normal/negative findings INTACT for any system not addressed in the chart data.
+- Preserve the exact format (system name followed by colon, findings).
+
+Return ONLY valid JSON — no markdown fences, no extra text.${verbosityInstruction}
+${ICD10_TERMINOLOGY_INSTRUCTION}${TOKEN_PRESERVATION_INSTRUCTION}`;
+
+  const userPrompt = `Chart Data:
+${scrubbedChart}
+
+Generate content for these sections:
+${sectionList}
+
+Return JSON with this exact structure:
+{
+  "sections": [
+    { "name": "Section Name", "content": "Section text here", "confidence": 0.0 }
+  ]
+}
+Confidence is 0.0–1.0: 1.0 = fully supported by chart data, 0.0 = not in chart data at all.`;
 
   try {
     const raw = await aiService.chat(
@@ -280,7 +399,9 @@ router.post('/ghost-write', async (req: Request, res: Response) => {
 
   // Verbosity-specific writing instructions
   const verbosityInstruction =
-    verbosity === 'brief'
+    verbosity === 'concise'
+      ? `Write in telegraphic clinical shorthand. Key facts only — one line max. No complete sentences. Example: "Vanc trough 18, cont current dose, recheck AM".`
+      : verbosity === 'brief'
       ? `Write in clinical shorthand using standard medical abbreviations. Use sentence fragments — do NOT write complete sentences.
 Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj. ID consult placed. Cont vanco only if GPO source confirmed."`
       : verbosity === 'detailed'
@@ -364,7 +485,9 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
   }
 
   const verbosityInstruction =
-    verbosity === 'brief'
+    verbosity === 'concise'
+      ? 'If ready, write in telegraphic clinical shorthand. Key facts only, one line max. No complete sentences.'
+      : verbosity === 'brief'
       ? 'If ready, write in clinical shorthand with medical abbreviations. Sentence fragments OK.'
       : verbosity === 'detailed'
       ? 'If ready, write in complete clinical prose with full reasoning.'
