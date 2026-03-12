@@ -162,7 +162,7 @@ export default function SecurityPage() {
               className="text-base sm:text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mt-6 leading-relaxed"
               variants={fadeIn}
             >
-              DocAssistAI de-identifies all patient data before sending anything to the AI model.
+              Built by clinicians who take patient privacy personally. DocAssistAI de-identifies all patient data &mdash; from recordings and pasted chart data alike &mdash; before sending anything to the AI model.
               If de-identification fails, the system stops. It never proceeds unprotected.
             </motion.p>
           </motion.div>
@@ -380,7 +380,7 @@ export default function SecurityPage() {
             </div>
 
             <p className="mt-8 text-sm text-slate-500 italic">
-              Doc Assist AI &mdash; documentation assistance for every doc.
+              Doc Assist AI &mdash; built by clinicians, for clinicians.
             </p>
           </motion.div>
         </section>

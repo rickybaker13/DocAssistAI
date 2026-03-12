@@ -5,16 +5,16 @@ const steps = [
   {
     number: '1',
     icon: Mic,
-    title: 'Record',
+    title: 'Record or Paste',
     description:
-      'Speak naturally during the patient encounter. Our AI listens and transcribes in real-time.',
+      'Speak naturally during the encounter, or paste chart data — labs, imaging, med lists, consult notes. Two paths, same result.',
   },
   {
     number: '2',
     icon: Sparkles,
     title: 'AI Generates',
     description:
-      'Choose your note type and sections. AI creates a structured clinical note from your transcript.',
+      'Choose your note type and sections. All patient data is de-identified before the AI processes anything. Your PHI never reaches the model.',
   },
   {
     number: '3',

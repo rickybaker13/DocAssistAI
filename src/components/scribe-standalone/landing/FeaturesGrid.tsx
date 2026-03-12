@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Smartphone,
   Shield,
+  ClipboardPaste,
 } from 'lucide-react';
 
 const features = [
@@ -18,10 +19,16 @@ const features = [
       'SOAP, H&P, Progress, Procedure, Discharge, Consult, and Custom note formats to match any clinical workflow.',
   },
   {
-    icon: Sliders,
-    title: '3 Verbosity Levels',
+    icon: ClipboardPaste,
+    title: 'Chart to Note',
     description:
-      'Choose between Brief, Standard, or Comprehensive output to match your documentation style and time constraints.',
+      'Paste labs, imaging, med lists, and consult notes — the AI synthesizes chart data into a structured clinical note. No recording needed.',
+  },
+  {
+    icon: Sliders,
+    title: '4 Verbosity Levels',
+    description:
+      'Concise, Brief, Standard, or Detailed output. From telegraphic surgical shorthand to comprehensive clinical prose.',
   },
   {
     icon: Layout,
@@ -55,9 +62,9 @@ const features = [
   },
   {
     icon: Shield,
-    title: 'HIPAA-Ready',
+    title: 'HIPAA-Compliant Architecture',
     description:
-      'Secure, privacy-first architecture. Your patient data is protected with enterprise-grade encryption and compliance.',
+      'All patient data is de-identified by Microsoft Presidio before reaching the AI. Fail-closed design, TLS encryption, and no PHI stored or logged.',
   },
 ];
 
@@ -77,8 +84,9 @@ export default function FeaturesGrid() {
             Everything You Need
           </h2>
           <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-            Powerful features designed for clinicians who want faster, smarter
-            documentation without sacrificing quality.
+            Built by clinicians who know the documentation grind firsthand.
+            Record encounters or paste chart data &mdash; faster, smarter notes
+            without sacrificing quality or patient privacy.
           </p>
         </motion.div>
 

@@ -62,7 +62,7 @@ export default function ForPAsPage() {
         <SegmentHero
           badge="For Physician Assistants"
           headline="You Didn't Go to PA School to Chart Until 9 PM"
-          subheadline="DocAssistAI listens to your patient encounter and generates a structured clinical note in seconds. Your patient data is de-identified before the AI ever sees it."
+          subheadline="Built by clinicians who've been there. Record your encounter or paste chart data — DocAssistAI generates a structured note in seconds. All patient data is de-identified before the AI ever sees it."
           painPoints={painPoints}
         />
 
@@ -122,10 +122,10 @@ export default function ForPAsPage() {
           headline="Stop Charting After Hours"
           benefits={[
             '7 note types including SOAP, H&P, and Procedure notes',
-            '72+ customizable sections across 10 categories',
+            'Chart to Note: paste labs, imaging, and med lists — AI builds the note',
             'Normal PE and ROS templates that update by exception',
-            'Works on any device — no EHR integration required',
-            'HIPAA compliant with PII de-identification',
+            'HIPAA compliant — all PHI de-identified before reaching AI',
+            'Built by clinicians, for clinicians — works on any device',
           ]}
         />
       </main>

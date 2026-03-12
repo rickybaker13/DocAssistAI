@@ -62,7 +62,7 @@ export default function ForPracticesPage() {
         <SegmentHero
           badge="For Attendings & Practice Leaders"
           headline="Your Providers Spend 40% of Their Day on Documentation"
-          subheadline="That is recoverable time. DocAssistAI generates structured clinical notes during the encounter. PII is scrubbed before anything reaches the AI."
+          subheadline="That is recoverable time. Built by clinicians who understand the documentation burden. DocAssistAI generates notes from recordings or pasted chart data — with all PHI de-identified before anything reaches the AI."
           painPoints={painPoints}
         />
 
@@ -121,9 +121,9 @@ export default function ForPracticesPage() {
           headline="One Tool for Every Provider in Your Practice"
           benefits={[
             'Works for physicians, PAs, NPs, and all clinical staff',
-            'No EHR integration required — deploys in minutes',
-            'HIPAA compliant with PII de-identification built in',
-            'Customizable templates for any specialty',
+            'Chart to Note: providers paste chart data — AI builds discharge summaries, consults, and more',
+            'HIPAA compliant — Microsoft Presidio de-identifies all PHI before AI processing',
+            'Built by clinicians, for clinicians — no EHR integration required',
             'Free to pilot — evaluate before committing budget',
           ]}
         />

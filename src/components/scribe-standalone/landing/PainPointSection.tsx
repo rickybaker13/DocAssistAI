@@ -9,8 +9,8 @@ const oldWayItems = [
 ];
 
 const newWayItems = [
-  'Speak naturally during the encounter',
-  'AI generates your note in seconds',
+  'Record the encounter or paste chart data',
+  'AI generates your note in seconds — PHI de-identified',
   'Review and refine with AI suggestions',
   'Finalize and move on to the next patient',
 ];
