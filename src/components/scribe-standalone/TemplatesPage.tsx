@@ -14,6 +14,7 @@ const NOTE_TYPES = [
   { value: 'consult_note', label: 'Consult Note' },
   { value: 'discharge_summary', label: 'Discharge Summary' },
   { value: 'procedure_note', label: 'Procedure Note' },
+  { value: 'event_note', label: 'Event Note' },
 ];
 
 export const TemplatesPage: React.FC = () => {
