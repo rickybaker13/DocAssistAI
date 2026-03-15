@@ -601,20 +601,21 @@ router.post('/chart-to-graph', async (req: Request, res: Response) => {
     throw err;
   }
 
-  const systemPrompt = `You are a medical data visualization expert. Generate a self-contained SVG chart from the provided clinical data.
+  const systemPrompt = `You are a medical data visualization expert.
 
-Rules:
-- Analyze the data and choose the most appropriate chart type (line chart for trends over time, bar chart for comparisons, scatter plot for correlations, etc.)
-- Generate a complete, self-contained SVG element — no external fonts, stylesheets, or dependencies
-- Use a white background with clean, professional styling suitable for pasting into an EHR or clinical document
+CRITICAL OUTPUT RULE: Your entire response must be a single <svg>…</svg> element. Do NOT include any explanation, reasoning, planning, markdown, or surrounding text. Output the raw SVG tag and nothing else.
+
+Rules for the SVG:
+- Choose the most appropriate chart type (line chart for trends, bar chart for comparisons, scatter plot for correlations, etc.)
+- Self-contained — no external fonts, stylesheets, or dependencies
+- White background, clean professional styling suitable for an EHR or clinical document
 - Include: descriptive title, axis labels with units, data point labels/values, legend if multiple series
-- Use a color palette with good contrast: #2563eb (blue), #dc2626 (red), #16a34a (green), #f59e0b (amber), #7c3aed (purple)
-- SVG viewBox should be "0 0 600 400" for consistent sizing
-- Mark abnormal/critical values in red if identifiable from clinical context (e.g., out-of-range lab values)
-- Return ONLY the <svg>...</svg> markup — no explanation, no markdown fences, no surrounding text
+- Color palette: #2563eb (blue), #dc2626 (red), #16a34a (green), #f59e0b (amber), #7c3aed (purple)
+- viewBox="0 0 600 400"
+- Mark abnormal/critical values in red when identifiable from clinical context
 ${TOKEN_PRESERVATION_INSTRUCTION}`;
 
-  const userPrompt = `Generate an SVG chart from this clinical data:\n\n${scrubbedChartData}`;
+  const userPrompt = `Generate an SVG chart from this clinical data. Respond with ONLY the <svg> element.\n\n${scrubbedChartData}`;
 
   try {
     const raw = await aiService.chat(
@@ -631,6 +632,11 @@ ${TOKEN_PRESERVATION_INSTRUCTION}`;
     let svg = extractContent(raw).trim();
     // Strip markdown fences if present
     svg = svg.replace(/```(?:svg|xml|html)?\n?/g, '').replace(/```$/g, '').trim();
+    // Extract just the <svg>…</svg> if the model returned surrounding text
+    const svgMatch = svg.match(/<svg[\s\S]*<\/svg>/i);
+    if (svgMatch) {
+      svg = svgMatch[0];
+    }
 
     // Re-inject PII tokens
     if (Object.keys(subMap).length > 0) {
