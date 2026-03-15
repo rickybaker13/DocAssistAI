@@ -4,6 +4,8 @@ import { ArrowLeft, X } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
 import { BillingCodesPanel } from './BillingCodesPanel';
+import { ChartDataPanel } from './ChartDataPanel';
+import { GraphResultPanel } from './GraphResultPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
 import { useScribeNoteStore, type NoteSection } from '../../stores/scribeNoteStore';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
@@ -89,6 +91,7 @@ export const ScribeNotePage: React.FC = () => {
   const [focusedSection, setFocusedSection] = useState<SectionData | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [activeTab, setActiveTab] = useState<'note' | 'billing'>('note');
+  const [graphSvg, setGraphSvg] = useState<string | null>(null);
   const { user } = useScribeAuthStore();
   const billingCodesEnabled = user?.billing_codes_enabled ?? false;
 
@@ -200,6 +203,17 @@ export const ScribeNotePage: React.FC = () => {
       ...prev,
       [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + text,
     }));
+  };
+
+  const handleChartText = (text: string) => {
+    // Append chart-derived text to the last section (typically Plan or Assessment)
+    const targetSection = sections[sections.length - 1];
+    if (targetSection) {
+      setEdits(prev => ({
+        ...prev,
+        [targetSection.id]: (prev[targetSection.id] ? prev[targetSection.id] + '\n' : '') + text,
+      }));
+    }
   };
 
   const handleCopyNote = () => {
@@ -361,6 +375,17 @@ export const ScribeNotePage: React.FC = () => {
           onDelete={() => handleDeleteSection(section.id)}
         />
       ))}
+
+      {/* Chart Data input panel — collapsed by default */}
+      <ChartDataPanel
+        noteType={storeNote.noteType}
+        verbosity={storeNote.verbosity}
+        onGraphResult={setGraphSvg}
+        onApplyText={handleChartText}
+      />
+
+      {/* Graph result panel — visible only when a graph has been generated */}
+      <GraphResultPanel svgMarkup={graphSvg} onClear={() => setGraphSvg(null)} />
 
       <button
         onClick={() => setShowAddSection(true)}

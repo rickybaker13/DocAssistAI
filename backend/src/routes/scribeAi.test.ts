@@ -667,4 +667,74 @@ describe('Scribe AI Routes', () => {
       expect(sys).toMatch(/privacy-protection token|TOKEN_N|BRACKET_N/i);
     });
   });
+
+  // ─── chart-to-graph ──────────────────────────────────────────────────────
+  describe('POST /chart-to-graph', () => {
+    it('returns SVG from chart data', async () => {
+      const svgResponse = '<svg viewBox="0 0 600 400"><rect width="600" height="400" fill="white"/></svg>';
+      mockAiChat.mockResolvedValueOnce({ content: svgResponse } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/chart-to-graph')
+        .set('Cookie', authCookie)
+        .send({ chartData: 'WBC: 12.5, 11.3, 9.8\nDays: 1, 2, 3' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.svg).toContain('<svg');
+    });
+
+    it('strips markdown fences from AI response', async () => {
+      mockAiChat.mockResolvedValueOnce({
+        content: '```svg\n<svg viewBox="0 0 600 400"><text>Chart</text></svg>\n```',
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/chart-to-graph')
+        .set('Cookie', authCookie)
+        .send({ chartData: 'Hgb: 10, 9.5, 8.8' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.svg).not.toContain('```');
+      expect(res.body.svg).toContain('<svg');
+    });
+
+    it('rejects empty chartData', async () => {
+      const res = await request(app)
+        .post('/api/ai/scribe/chart-to-graph')
+        .set('Cookie', authCookie)
+        .send({ chartData: '' });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('calls PII scrub before AI and reInject on response', async () => {
+      mockScrub.mockImplementation(async (fields) => ({
+        scrubbedFields: { chartData: fields.chartData.replace('John', '[PERSON_0]') },
+        subMap: { '[PERSON_0]': 'John' },
+      }));
+      mockReInject.mockImplementation((text) => text.replace('[PERSON_0]', 'John'));
+      mockAiChat.mockResolvedValueOnce({ content: '<svg><text>[PERSON_0] labs</text></svg>' } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/chart-to-graph')
+        .set('Cookie', authCookie)
+        .send({ chartData: 'John WBC 12.5' });
+
+      expect(res.status).toBe(200);
+      expect(mockScrub).toHaveBeenCalled();
+      expect(mockReInject).toHaveBeenCalled();
+      expect(res.body.svg).toContain('John');
+    });
+
+    it('returns 503 when Presidio is unavailable', async () => {
+      mockScrub.mockRejectedValueOnce(new PiiServiceUnavailableError('Presidio offline'));
+
+      const res = await request(app)
+        .post('/api/ai/scribe/chart-to-graph')
+        .set('Cookie', authCookie)
+        .send({ chartData: 'WBC 12.5' });
+
+      expect(res.status).toBe(503);
+    });
+  });
 });
