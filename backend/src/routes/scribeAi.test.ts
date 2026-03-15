@@ -698,6 +698,23 @@ describe('Scribe AI Routes', () => {
       expect(res.body.svg).toContain('<svg');
     });
 
+    it('extracts SVG when model returns surrounding text', async () => {
+      const thinkingPreamble = 'Let me plan the chart...\nX-axis: days\nY-axis: values\n\n';
+      const svgBody = '<svg viewBox="0 0 600 400"><rect width="600" height="400" fill="white"/><text>TCD</text></svg>';
+      mockAiChat.mockResolvedValueOnce({
+        content: thinkingPreamble + svgBody,
+      } as any);
+
+      const res = await request(app)
+        .post('/api/ai/scribe/chart-to-graph')
+        .set('Cookie', authCookie)
+        .send({ chartData: 'TCD values: 107, 99, 111' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.svg).toBe(svgBody);
+      expect(res.body.svg).not.toContain('Let me plan');
+    });
+
     it('rejects empty chartData', async () => {
       const res = await request(app)
         .post('/api/ai/scribe/chart-to-graph')
