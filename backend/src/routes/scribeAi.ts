@@ -579,6 +579,70 @@ Return one of these two JSON shapes:
   }
 });
 
+// ── POST /api/ai/scribe/chart-to-graph ─────────────────────────────────────
+router.post('/chart-to-graph', async (req: Request, res: Response) => {
+  const { chartData, noteType = 'progress_note', verbosity = 'standard' } = req.body;
+
+  if (!chartData || !chartData.trim()) {
+    return res.status(400).json({ error: 'chartData is required' }) as any;
+  }
+
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedChartData = chartData;
+  let subMap: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({ chartData });
+    scrubbedChartData = result.scrubbedFields.chartData;
+    subMap = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
+  }
+
+  const systemPrompt = `You are a medical data visualization expert. Generate a self-contained SVG chart from the provided clinical data.
+
+Rules:
+- Analyze the data and choose the most appropriate chart type (line chart for trends over time, bar chart for comparisons, scatter plot for correlations, etc.)
+- Generate a complete, self-contained SVG element — no external fonts, stylesheets, or dependencies
+- Use a white background with clean, professional styling suitable for pasting into an EHR or clinical document
+- Include: descriptive title, axis labels with units, data point labels/values, legend if multiple series
+- Use a color palette with good contrast: #2563eb (blue), #dc2626 (red), #16a34a (green), #f59e0b (amber), #7c3aed (purple)
+- SVG viewBox should be "0 0 600 400" for consistent sizing
+- Mark abnormal/critical values in red if identifiable from clinical context (e.g., out-of-range lab values)
+- Return ONLY the <svg>...</svg> markup — no explanation, no markdown fences, no surrounding text
+${TOKEN_PRESERVATION_INSTRUCTION}`;
+
+  const userPrompt = `Generate an SVG chart from this clinical data:\n\n${scrubbedChartData}`;
+
+  try {
+    const raw = await aiService.chat(
+      {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        options: { temperature: 0.2 },
+      },
+      { userId: req.scribeUserId }
+    );
+
+    let svg = extractContent(raw).trim();
+    // Strip markdown fences if present
+    svg = svg.replace(/```(?:svg|xml|html)?\n?/g, '').replace(/```$/g, '').trim();
+
+    // Re-inject PII tokens
+    if (Object.keys(subMap).length > 0) {
+      svg = piiScrubber.reInject(svg, subMap);
+    }
+
+    return res.json({ svg });
+  } catch (err: any) {
+    return aiErrorResponse(res, err);
+  }
+});
+
 // ── POST /api/ai/scribe/billing-codes ──────────────────────────────────────
 router.post('/billing-codes', async (req: Request, res: Response) => {
   const { sections, transcript, noteType = 'progress_note', specialty = 'Medicine' } = req.body;
