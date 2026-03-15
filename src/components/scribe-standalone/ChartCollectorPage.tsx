@@ -16,6 +16,7 @@ const NOTE_TYPES = [
   { value: 'accept_note', label: 'Accept Note' },
   { value: 'consult_note', label: 'Consult Note' },
   { value: 'procedure_note', label: 'Procedure Note' },
+  { value: 'event_note', label: 'Event Note' },
 ];
 
 type Verbosity = 'concise' | 'brief' | 'standard' | 'detailed';
