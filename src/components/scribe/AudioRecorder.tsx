@@ -51,6 +51,24 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
     };
   }, []);
 
+  // Recover from iOS blank screen on pageshow (BFCache restore).
+  // When iOS suspends and restores the PWA, it fires pageshow with
+  // persisted=true but may leave a blank screen. Force a re-render.
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        forceRender((n) => n + 1);
+        // Also restart keep-alive if recording was in progress
+        if (isRecording) {
+          void keepAliveRef.current?.restart();
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [isRecording]);
+
   // --- iOS background interruption handling ---
   // When the page goes hidden (user switches apps), pause the timer.
   // When it comes back visible, check if MediaRecorder survived. If not,

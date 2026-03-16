@@ -2,7 +2,7 @@
  * Background Keep-Alive for iOS PWA
  *
  * Prevents iOS Safari from suspending the JS thread when the PWA is
- * backgrounded during audio recording.  Two mechanisms:
+ * backgrounded during audio recording.  Three mechanisms:
  *
  * 1. Silent audio loop — iOS treats pages with active <audio> playback
  *    as "audio apps" and keeps their JS execution alive (like Spotify).
@@ -11,6 +11,11 @@
  * 2. Screen Wake Lock — prevents the screen from dimming/locking.
  *    Supported on iOS Safari 16.4+.  Automatically released when the page
  *    is hidden, so we re-acquire it on visibilitychange.
+ *
+ * 3. MediaSession API — registers an active media session with metadata
+ *    so iOS shows lock screen controls and treats the app as a media app.
+ *    This may extend background execution and helps the user see that
+ *    recording is in progress from the lock screen.
  */
 
 /** Builds a minimal 1-second silent WAV as a data URL (no network fetch). */
@@ -87,7 +92,10 @@ export class BackgroundKeepAlive {
     // --- 2. Screen Wake Lock ---
     await this.requestWakeLock();
 
-    // --- 3. Re-acquire wake lock when page becomes visible ---
+    // --- 3. MediaSession API (lock screen presence) ---
+    this.registerMediaSession();
+
+    // --- 4. Re-acquire wake lock when page becomes visible ---
     this.visibilityHandler = () => {
       if (document.visibilityState === 'visible') {
         void this.requestWakeLock();
@@ -113,6 +121,8 @@ export class BackgroundKeepAlive {
       document.removeEventListener('visibilitychange', this.visibilityHandler);
       this.visibilityHandler = null;
     }
+
+    this.clearMediaSession();
   }
 
   /**
@@ -143,6 +153,40 @@ export class BackgroundKeepAlive {
       this.wakeLock = await navigator.wakeLock.request('screen');
     } catch {
       // Non-fatal: screen may dim, but recording continues
+    }
+  }
+
+  /**
+   * Register a MediaSession so iOS/Android show "Recording…" on the
+   * lock screen and treat the app as an active media session.
+   * This extends background execution time on some devices.
+   */
+  private registerMediaSession(): void {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: 'Recording in progress',
+        artist: 'DocAssistAI',
+        album: 'Scribe',
+      });
+      navigator.mediaSession.playbackState = 'playing';
+      // No-op handlers prevent iOS from pausing the audio element
+      navigator.mediaSession.setActionHandler('play', () => {});
+      navigator.mediaSession.setActionHandler('pause', () => {});
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  private clearMediaSession(): void {
+    if (!('mediaSession' in navigator)) return;
+    try {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.playbackState = 'none';
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
+    } catch {
+      // Non-fatal
     }
   }
 }
