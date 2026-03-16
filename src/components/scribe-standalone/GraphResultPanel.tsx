@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { ChevronDown, ChevronUp, Copy, X, Check, Image } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, X, Check, Image, Download } from 'lucide-react';
 import DOMPurify from 'dompurify';
 
 interface Props {
@@ -20,14 +20,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Copy SVG graph to clipboard in multiple formats so EHR rich-text editors
- * (Cerner PowerChart, Epic) can paste it.
- *
- * Writes:
- *  - image/png   → modern apps, image viewers
- *  - text/html   → EHR RTF/HTML editors (inline base64 <img>)
+ * Render SVG markup to a 2x-scaled canvas and return the canvas + PNG blob.
  */
-async function copySvgAsImage(svgMarkup: string): Promise<void> {
+async function svgToCanvas(svgMarkup: string): Promise<{ canvas: HTMLCanvasElement; pngBlob: Blob }> {
   const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
 
@@ -39,7 +34,6 @@ async function copySvgAsImage(svgMarkup: string): Promise<void> {
   });
 
   const canvas = document.createElement('canvas');
-  // Use 2x for crisp output
   const scale = 2;
   canvas.width = img.naturalWidth * scale;
   canvas.height = img.naturalHeight * scale;
@@ -52,24 +46,84 @@ async function copySvgAsImage(svgMarkup: string): Promise<void> {
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png')
   );
 
-  // Build an HTML snippet with the image inline as base64.
-  // EHR editors (Cerner PowerChart DynDoc, Epic) accept text/html with
-  // embedded <img src="data:image/png;base64,..."> on paste.
-  const dataUri = await blobToBase64(pngBlob);
-  const htmlSnippet = `<img src="${dataUri}" alt="Chart" style="max-width:100%;" />`;
-  const htmlBlob = new Blob([htmlSnippet], { type: 'text/html' });
+  return { canvas, pngBlob };
+}
 
-  await navigator.clipboard.write([
-    new ClipboardItem({
-      'image/png': pngBlob,
-      'text/html': htmlBlob,
-    }),
-  ]);
+/**
+ * Copy SVG graph to clipboard using two strategies:
+ *
+ * 1. Modern Clipboard API  — writes image/png + text/html blobs (works in
+ *    most modern apps, Epic Hyperspace, etc.).
+ * 2. Legacy execCommand fallback — creates a temporary <img> with a data-URI
+ *    src, selects it, and executes document.execCommand('copy'). This goes
+ *    through the browser's native clipboard path and maps to CF_DIB / CF_HTML
+ *    on Windows, which older editors like Cerner PowerChart DynDoc understand.
+ *
+ * Strategy 1 is tried first; if it throws (or if the Clipboard API is
+ * unavailable), strategy 2 is used as a fallback.
+ */
+async function copySvgAsImage(svgMarkup: string): Promise<void> {
+  const { pngBlob } = await svgToCanvas(svgMarkup);
+  const dataUri = await blobToBase64(pngBlob);
+
+  // --- Strategy 1: modern Clipboard API ---
+  if (navigator.clipboard?.write) {
+    try {
+      const htmlSnippet = `<img src="${dataUri}" alt="Chart" style="max-width:100%;" />`;
+      const htmlBlob = new Blob([htmlSnippet], { type: 'text/html' });
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'image/png': pngBlob,
+          'text/html': htmlBlob,
+        }),
+      ]);
+      return;
+    } catch {
+      // Fall through to legacy approach
+    }
+  }
+
+  // --- Strategy 2: legacy execCommand with a selected <img> element ---
+  // The browser maps the selected HTML (containing the <img>) to CF_HTML on
+  // Windows. Older RTF/HTML editors (Cerner PowerChart) read CF_HTML on paste.
+  const wrapper = document.createElement('div');
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-9999px';
+  wrapper.innerHTML = `<img src="${dataUri}" alt="Chart" />`;
+  document.body.appendChild(wrapper);
+
+  const range = document.createRange();
+  range.selectNodeContents(wrapper);
+  const sel = window.getSelection()!;
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  document.execCommand('copy');
+  sel.removeAllRanges();
+  document.body.removeChild(wrapper);
+}
+
+/**
+ * Download the SVG graph as a PNG file. Reliable fallback for EHR systems
+ * (e.g. Cerner PowerChart) that reject clipboard image formats — the user
+ * can insert the downloaded PNG via the EHR's Insert Image feature.
+ */
+async function downloadSvgAsPng(svgMarkup: string): Promise<void> {
+  const { pngBlob } = await svgToCanvas(svgMarkup);
+  const url = URL.createObjectURL(pngBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'chart.png';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export const GraphResultPanel: React.FC<Props> = ({ svgMarkup, onClear }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const handleCopyImage = useCallback(async () => {
@@ -83,6 +137,17 @@ export const GraphResultPanel: React.FC<Props> = ({ svgMarkup, onClear }) => {
       await navigator.clipboard.writeText(svgMarkup);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  }, [svgMarkup]);
+
+  const handleDownloadPng = useCallback(async () => {
+    if (!svgMarkup) return;
+    try {
+      await downloadSvgAsPng(svgMarkup);
+      setDownloaded(true);
+      setTimeout(() => setDownloaded(false), 2000);
+    } catch {
+      // silent — nothing useful to show the user here
     }
   }, [svgMarkup]);
 
@@ -131,6 +196,14 @@ export const GraphResultPanel: React.FC<Props> = ({ svgMarkup, onClear }) => {
             </button>
             <button
               type="button"
+              onClick={handleDownloadPng}
+              className="flex items-center gap-1.5 bg-slate-700 border border-slate-600 rounded-lg px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-600 hover:text-slate-100 transition-colors"
+            >
+              {downloaded ? <Check size={12} className="text-emerald-400" /> : <Download size={12} />}
+              {downloaded ? 'Saved!' : 'Download PNG'}
+            </button>
+            <button
+              type="button"
               onClick={onClear}
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors px-2 py-1.5"
             >
@@ -138,6 +211,7 @@ export const GraphResultPanel: React.FC<Props> = ({ svgMarkup, onClear }) => {
               Clear
             </button>
           </div>
+          <p className="text-[10px] text-slate-500 mt-1.5">If Copy doesn't work in your EHR, download the PNG and use Insert Image.</p>
         </div>
       )}
     </div>

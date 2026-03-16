@@ -48,4 +48,14 @@ describe('GraphResultPanel', () => {
     expect(container.innerHTML).not.toContain('<script>');
     expect(container.innerHTML).toContain('Safe');
   });
+
+  it('renders download PNG button', () => {
+    render(<GraphResultPanel svgMarkup={sampleSvg} onClear={vi.fn()} />);
+    expect(screen.getByText('Download PNG')).toBeInTheDocument();
+  });
+
+  it('shows EHR fallback hint text', () => {
+    render(<GraphResultPanel svgMarkup={sampleSvg} onClear={vi.fn()} />);
+    expect(screen.getByText(/Insert Image/)).toBeInTheDocument();
+  });
 });
