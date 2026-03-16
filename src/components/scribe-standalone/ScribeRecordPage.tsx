@@ -106,7 +106,7 @@ export const ScribeRecordPage: React.FC = () => {
           </p>
           {isIosDevice() && (
             <p className="text-xs text-amber-400/70 text-center max-w-xs">
-              Tip: For uninterrupted recording on iPhone, avoid switching apps. Locking the screen is OK.
+              Tip: Keep the screen on during recording. Pressing the power button or switching apps will interrupt the recording. The screen will stay awake automatically.
             </p>
           )}
           <AudioRecorder onTranscript={handleTranscript} onError={handleError} />
