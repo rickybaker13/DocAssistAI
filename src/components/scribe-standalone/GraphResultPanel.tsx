@@ -7,6 +7,26 @@ interface Props {
   onClear: () => void;
 }
 
+/**
+ * Convert a PNG blob to a base64 data-URI string.
+ */
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Copy SVG graph to clipboard in multiple formats so EHR rich-text editors
+ * (Cerner PowerChart, Epic) can paste it.
+ *
+ * Writes:
+ *  - image/png   → modern apps, image viewers
+ *  - text/html   → EHR RTF/HTML editors (inline base64 <img>)
+ */
 async function copySvgAsImage(svgMarkup: string): Promise<void> {
   const svgBlob = new Blob([svgMarkup], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(svgBlob);
@@ -28,10 +48,23 @@ async function copySvgAsImage(svgMarkup: string): Promise<void> {
   ctx.drawImage(img, 0, 0);
   URL.revokeObjectURL(url);
 
-  const blob = await new Promise<Blob>((resolve, reject) =>
+  const pngBlob = await new Promise<Blob>((resolve, reject) =>
     canvas.toBlob(b => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))), 'image/png')
   );
-  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+
+  // Build an HTML snippet with the image inline as base64.
+  // EHR editors (Cerner PowerChart DynDoc, Epic) accept text/html with
+  // embedded <img src="data:image/png;base64,..."> on paste.
+  const dataUri = await blobToBase64(pngBlob);
+  const htmlSnippet = `<img src="${dataUri}" alt="Chart" style="max-width:100%;" />`;
+  const htmlBlob = new Blob([htmlSnippet], { type: 'text/html' });
+
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      'image/png': pngBlob,
+      'text/html': htmlBlob,
+    }),
+  ]);
 }
 
 export const GraphResultPanel: React.FC<Props> = ({ svgMarkup, onClear }) => {
