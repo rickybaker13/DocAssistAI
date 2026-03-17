@@ -205,15 +205,11 @@ export const ScribeNotePage: React.FC = () => {
     }));
   };
 
-  const handleChartText = (text: string) => {
-    // Append chart-derived text to the last section (typically Plan or Assessment)
-    const targetSection = sections[sections.length - 1];
-    if (targetSection) {
-      setEdits(prev => ({
-        ...prev,
-        [targetSection.id]: (prev[targetSection.id] ? prev[targetSection.id] + '\n' : '') + text,
-      }));
-    }
+  const handleChartText = (sectionId: string, text: string) => {
+    setEdits(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + text,
+    }));
   };
 
   const handleCopyNote = () => {
@@ -380,6 +376,7 @@ export const ScribeNotePage: React.FC = () => {
       <ChartDataPanel
         noteType={storeNote.noteType}
         verbosity={storeNote.verbosity}
+        sections={sections}
         onGraphResult={setGraphSvg}
         onApplyText={handleChartText}
       />
