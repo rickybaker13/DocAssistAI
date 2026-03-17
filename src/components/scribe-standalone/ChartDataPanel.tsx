@@ -1,22 +1,30 @@
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, BarChart3, FileText, Send } from 'lucide-react';
+import { ChevronDown, ChevronUp, BarChart3, FileText, Send, X } from 'lucide-react';
 import { getBackendUrl } from '../../config/appConfig';
 
 type Mode = 'add_to_note' | 'graph_values';
 
+export interface SectionOption {
+  id: string;
+  section_name: string;
+}
+
 interface Props {
   noteType: string;
   verbosity: string;
+  sections: SectionOption[];
   onGraphResult: (svg: string) => void;
-  onApplyText: (text: string) => void;
+  onApplyText: (sectionId: string, text: string) => void;
 }
 
-export const ChartDataPanel: React.FC<Props> = ({ noteType, verbosity, onGraphResult, onApplyText }) => {
+export const ChartDataPanel: React.FC<Props> = ({ noteType, verbosity, sections, onGraphResult, onApplyText }) => {
   const [collapsed, setCollapsed] = useState(true);
   const [mode, setMode] = useState<Mode>('graph_values');
   const [pasteText, setPasteText] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Holds AI-processed text while the user picks a destination section
+  const [pendingText, setPendingText] = useState<string | null>(null);
 
   const handleSubmit = async () => {
     if (!pasteText.trim()) return;
@@ -63,9 +71,8 @@ export const ChartDataPanel: React.FC<Props> = ({ noteType, verbosity, onGraphRe
         const data = await res.json();
         const content = data.data?.content || data.content || '';
         if (content) {
-          onApplyText(content);
+          setPendingText(content);
           setPasteText('');
-          setCollapsed(true);
         }
       }
     } catch (err: any) {
@@ -73,6 +80,18 @@ export const ChartDataPanel: React.FC<Props> = ({ noteType, verbosity, onGraphRe
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSectionPick = (sectionId: string) => {
+    if (pendingText) {
+      onApplyText(sectionId, pendingText);
+      setPendingText(null);
+      setCollapsed(true);
+    }
+  };
+
+  const handleCancelPick = () => {
+    setPendingText(null);
   };
 
   return (
@@ -93,71 +112,103 @@ export const ChartDataPanel: React.FC<Props> = ({ noteType, verbosity, onGraphRe
       {/* Body */}
       {!collapsed && (
         <div className="px-4 pb-4 space-y-3">
-          {/* Mode selector */}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setMode('graph_values')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                mode === 'graph_values'
-                  ? 'bg-teal-400/20 text-teal-400 border border-teal-400/30'
-                  : 'bg-slate-700 text-slate-400 border border-slate-600 hover:text-slate-300'
-              }`}
-            >
-              <BarChart3 size={12} />
-              Graph Values
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('add_to_note')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                mode === 'add_to_note'
-                  ? 'bg-teal-400/20 text-teal-400 border border-teal-400/30'
-                  : 'bg-slate-700 text-slate-400 border border-slate-600 hover:text-slate-300'
-              }`}
-            >
-              <FileText size={12} />
-              Add to Note
-            </button>
-          </div>
+          {/* Section picker — shown after AI processes text */}
+          {pendingText ? (
+            <div className="space-y-3">
+              <div className="bg-slate-900 border border-teal-400/30 rounded-lg p-3">
+                <p className="text-xs font-medium text-teal-400 mb-2">Which section should this be added to?</p>
+                <p className="text-xs text-slate-400 mb-3 line-clamp-3">{pendingText}</p>
+                <div className="flex flex-wrap gap-2">
+                  {sections.map(s => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleSectionPick(s.id)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-700 text-slate-200 border border-slate-600 hover:bg-teal-400/20 hover:text-teal-400 hover:border-teal-400/30 transition-colors"
+                    >
+                      {s.section_name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleCancelPick}
+                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-300 transition-colors"
+              >
+                <X size={12} />
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Mode selector */}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode('graph_values')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    mode === 'graph_values'
+                      ? 'bg-teal-400/20 text-teal-400 border border-teal-400/30'
+                      : 'bg-slate-700 text-slate-400 border border-slate-600 hover:text-slate-300'
+                  }`}
+                >
+                  <BarChart3 size={12} />
+                  Graph Values
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('add_to_note')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    mode === 'add_to_note'
+                      ? 'bg-teal-400/20 text-teal-400 border border-teal-400/30'
+                      : 'bg-slate-700 text-slate-400 border border-slate-600 hover:text-slate-300'
+                  }`}
+                >
+                  <FileText size={12} />
+                  Add to Note
+                </button>
+              </div>
 
-          {/* Textarea */}
-          <textarea
-            value={pasteText}
-            onChange={e => setPasteText(e.target.value)}
-            placeholder={
-              mode === 'graph_values'
-                ? 'Paste numerical data here (labs, vitals, trending values...)'
-                : 'Paste chart data here (labs, meds, imaging results...)'
-            }
-            rows={5}
-            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-y"
-          />
+              {/* Textarea */}
+              <textarea
+                value={pasteText}
+                onChange={e => setPasteText(e.target.value)}
+                placeholder={
+                  mode === 'graph_values'
+                    ? 'Paste numerical data here (labs, vitals, trending values...)'
+                    : 'Paste chart data here (labs, meds, imaging results...)'
+                }
+                rows={5}
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-teal-400 resize-y"
+              />
 
-          {/* Error */}
-          {error && (
-            <p className="text-xs text-red-400">{error}</p>
+              {/* Error */}
+              {error && (
+                <p className="text-xs text-red-400">{error}</p>
+              )}
+
+              {/* Submit */}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading || !pasteText.trim()}
+                className="flex items-center justify-center gap-2 w-full bg-teal-400 text-slate-900 rounded-lg py-2 text-sm font-semibold hover:bg-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-slate-900 border-t-transparent rounded-full" />
+                    {mode === 'graph_values' ? 'Generating graph…' : 'Processing…'}
+                  </>
+                ) : (
+                  <>
+                    <Send size={14} />
+                    {mode === 'graph_values' ? 'Generate Graph' : 'Process & Add to Note'}
+                  </>
+                )}
+              </button>
+            </>
           )}
-
-          {/* Submit */}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading || !pasteText.trim()}
-            className="flex items-center justify-center gap-2 w-full bg-teal-400 text-slate-900 rounded-lg py-2 text-sm font-semibold hover:bg-teal-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <>
-                <div className="animate-spin h-4 w-4 border-2 border-slate-900 border-t-transparent rounded-full" />
-                {mode === 'graph_values' ? 'Generating graph…' : 'Processing…'}
-              </>
-            ) : (
-              <>
-                <Send size={14} />
-                {mode === 'graph_values' ? 'Generate Graph' : 'Process & Add to Note'}
-              </>
-            )}
-          </button>
         </div>
       )}
     </div>
