@@ -17,6 +17,7 @@ import { ScribeFeedbackPage } from './components/scribe-standalone/ScribeFeedbac
 import { ScribeAdminFeedbackPage } from './components/scribe-standalone/ScribeAdminFeedbackPage';
 import { ScribeAdminSignupsPage } from './components/scribe-standalone/ScribeAdminSignupsPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
+import { PwaSplashGate } from './components/scribe-standalone/PwaSplashGate';
 import { ScribeTermsPage } from './components/scribe-standalone/ScribeTermsPage';
 import { ScribePrivacyPage } from './components/scribe-standalone/ScribePrivacyPage';
 import ForPAsPage from './components/scribe-standalone/ForPAsPage';
@@ -33,7 +34,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<ScribeLandingPage />} />
+        <Route path="/" element={<PwaSplashGate><ScribeLandingPage /></PwaSplashGate>} />
         <Route path="/scribe/login" element={<ScribeLoginPage />} />
         <Route path="/scribe/register" element={<ScribeRegisterPage />} />
         <Route path="/scribe/forgot-password" element={<ScribeForgotPasswordPage />} />
