@@ -61,11 +61,13 @@ router.post('/generate', async (req: Request, res: Response) => {
     .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
     .join('\n');
 
+  const assessmentPlanNumberedList = '\nFor Assessment and Plan sections: ALWAYS use a numbered list (1., 2., 3., …) — one item per problem or action. Never write these sections in paragraph form.';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning. Example style: "CHF exac, EF 25%, started IV lasix 40 q12h".'
+      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning. Example style: "CHF exac, EF 25%, started IV lasix 40 q12h".' + assessmentPlanNumberedList
       : verbosity === 'brief'
-      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
+      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.' + assessmentPlanNumberedList
       : verbosity === 'detailed'
       ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
       : '';
@@ -178,11 +180,13 @@ router.post('/chart-generate', async (req: Request, res: Response) => {
     .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
     .join('\n');
 
+  const assessmentPlanNumberedList = '\nFor Assessment and Plan sections: ALWAYS use a numbered list (1., 2., 3., …) — one item per problem or action. Never write these sections in paragraph form.';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning.'
+      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning.' + assessmentPlanNumberedList
       : verbosity === 'brief'
-      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
+      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.' + assessmentPlanNumberedList
       : verbosity === 'detailed'
       ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
       : '';
@@ -398,12 +402,17 @@ router.post('/ghost-write', async (req: Request, res: Response) => {
   }
 
   // Verbosity-specific writing instructions
+  const isAssessmentOrPlan = /assessment|plan/i.test(destinationSection);
+  const numberedListHint = isAssessmentOrPlan && (verbosity === 'concise' || verbosity === 'brief')
+    ? '\nALWAYS use a numbered list (1., 2., 3., …) — one item per problem or action. Never write in paragraph form.'
+    : '';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? `Write in telegraphic clinical shorthand. Key facts only — one line max. No complete sentences. Example: "Vanc trough 18, cont current dose, recheck AM".`
+      ? `Write in telegraphic clinical shorthand. Key facts only — one line max. No complete sentences. Example: "Vanc trough 18, cont current dose, recheck AM".` + numberedListHint
       : verbosity === 'brief'
       ? `Write in clinical shorthand using standard medical abbreviations. Use sentence fragments — do NOT write complete sentences.
-Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj. ID consult placed. Cont vanco only if GPO source confirmed."`
+Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj. ID consult placed. Cont vanco only if GPO source confirmed."` + numberedListHint
       : verbosity === 'detailed'
       ? `Write in complete clinical prose with full sentences. Include clinical reasoning and context where relevant.`
       : `Write 1–2 concise clinical sentences. Use medical abbreviations where natural (e.g., IV, q8h, D/C, s/p).`;
@@ -484,11 +493,16 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
     throw err;
   }
 
+  const isAssessmentOrPlanRS = /assessment|plan/i.test(sectionName);
+  const numberedListHintRS = isAssessmentOrPlanRS && (verbosity === 'concise' || verbosity === 'brief')
+    ? ' Use a numbered list (1., 2., 3., …) — one item per problem or action. Never write in paragraph form.'
+    : '';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? 'If ready, write in telegraphic clinical shorthand. Key facts only, one line max. No complete sentences.'
+      ? 'If ready, write in telegraphic clinical shorthand. Key facts only, one line max. No complete sentences.' + numberedListHintRS
       : verbosity === 'brief'
-      ? 'If ready, write in clinical shorthand with medical abbreviations. Sentence fragments OK.'
+      ? 'If ready, write in clinical shorthand with medical abbreviations. Sentence fragments OK.' + numberedListHintRS
       : verbosity === 'detailed'
       ? 'If ready, write in complete clinical prose with full reasoning.'
       : 'If ready, write 1–2 concise clinical sentences with medical abbreviations where natural.';
