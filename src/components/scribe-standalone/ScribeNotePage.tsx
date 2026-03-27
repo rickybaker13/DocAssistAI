@@ -7,6 +7,7 @@ import { BillingCodesPanel } from './BillingCodesPanel';
 import { ChartDataPanel } from './ChartDataPanel';
 import { GraphResultPanel } from './GraphResultPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
+import { ClinicalDataPanel } from './ClinicalDataPanel';
 import { useScribeNoteStore, type NoteSection } from '../../stores/scribeNoteStore';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
@@ -451,6 +452,16 @@ export const ScribeNotePage: React.FC = () => {
           loading={storeNote.billingCodesLoading}
           error={storeNote.billingCodesError}
           onRetry={fetchBillingCodes}
+        />
+      )}
+
+      {/* Clinical Data Panel — capture diagnoses, acuity, complications */}
+      {noteId && storeNote.teamId && (
+        <ClinicalDataPanel
+          noteId={noteId}
+          teamId={storeNote.teamId}
+          noteType={storeNote.noteType}
+          noteContent={sections.map(s => `${s.section_name}: ${edits[s.id] ?? s.content ?? ''}`).join('\n\n')}
         />
       )}
     </div>

@@ -30,6 +30,7 @@ import scribeCompCodesRouter from './routes/scribeCompCodes.js';
 import scribeNotesRouter from './routes/scribeNotes.js';
 import teamsRouter from './routes/teams.js';
 import metricsRouter from './routes/metrics.js';
+import encounterDataRouter from './routes/encounterData.js';
 import { scribeAuthMiddleware } from './middleware/scribeAuth.js';
 import { scribeSubscriptionMiddleware } from './middleware/scribeSubscription.js';
 import healthRouter from './routes/health.js';
@@ -128,6 +129,7 @@ app.use('/api/scribe/comp-codes', scribeAuthMiddleware, scribeCompCodesRouter);
 app.use('/api/scribe/notes', scribeAuthMiddleware, scribeSubscriptionMiddleware, scribeNotesRouter);
 app.use('/api/teams', scribeAuthMiddleware, teamsRouter);
 app.use('/api/metrics', scribeAuthMiddleware, metricsRouter);
+app.use('/api/encounters', scribeAuthMiddleware, encounterDataRouter);
 app.use('/api/cron', scribeCronRouter);
 app.use('/api', healthRouter);
 
