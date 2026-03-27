@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Users, Plus, LogIn, Settings, BarChart3, Loader2, Crown, Shield, User, Trash2 } from 'lucide-react';
+import { ArrowLeft, Users, Plus, LogIn, Settings, BarChart3, Loader2, Crown, Shield, User, Trash2, Database } from 'lucide-react';
 import { useTeams } from '../../hooks/useTeamMetrics';
 
 const ROLE_ICONS: Record<string, React.ReactNode> = {
@@ -179,6 +179,13 @@ export const TeamsPage: React.FC = () => {
                     title="View Metrics"
                   >
                     <BarChart3 className="w-4 h-4 text-teal-400" />
+                  </Link>
+                  <Link
+                    to={`/scribe/teams/${team.id}/registry`}
+                    className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
+                    title="Clinical Registry"
+                  >
+                    <Database className="w-4 h-4 text-amber-400" />
                   </Link>
                   {(team.role === 'admin' || team.role === 'lead') && (
                     <Link

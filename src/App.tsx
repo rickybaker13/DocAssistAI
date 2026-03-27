@@ -19,6 +19,7 @@ import { ScribeAdminSignupsPage } from './components/scribe-standalone/ScribeAdm
 import { TeamsPage } from './components/scribe-standalone/TeamsPage';
 import { TeamManagePage } from './components/scribe-standalone/TeamManagePage';
 import { MetricsDashboardPage } from './components/scribe-standalone/MetricsDashboardPage';
+import { PopulationDashboardPage } from './components/scribe-standalone/PopulationDashboardPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
 import { PwaSplashGate } from './components/scribe-standalone/PwaSplashGate';
 import { ScribeTermsPage } from './components/scribe-standalone/ScribeTermsPage';
@@ -68,6 +69,7 @@ function App() {
           <Route path="teams" element={<TeamsPage />} />
           <Route path="teams/:teamId/manage" element={<TeamManagePage />} />
           <Route path="teams/:teamId/metrics" element={<MetricsDashboardPage />} />
+          <Route path="teams/:teamId/registry" element={<PopulationDashboardPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
           <Route path="chart-collector" element={<ChartCollectorPage />} />
           <Route path="note/:id/record" element={<ScribeRecordPage />} />

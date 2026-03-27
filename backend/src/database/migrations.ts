@@ -202,6 +202,25 @@ CREATE TABLE IF NOT EXISTS metric_events (
   event_date DATE NOT NULL DEFAULT CURRENT_DATE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TABLE IF NOT EXISTS encounter_data (
+  id                TEXT PRIMARY KEY,
+  team_id           TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  user_id           TEXT NOT NULL REFERENCES scribe_users(id) ON DELETE CASCADE,
+  note_id           TEXT,
+  primary_diagnosis TEXT,
+  diagnosis_codes   JSONB NOT NULL DEFAULT '[]',
+  acuity_scores     JSONB NOT NULL DEFAULT '{}',
+  complications     JSONB NOT NULL DEFAULT '[]',
+  interventions     JSONB NOT NULL DEFAULT '[]',
+  disposition       TEXT,
+  admission_date    DATE,
+  discharge_date    DATE,
+  metadata          JSONB NOT NULL DEFAULT '{}',
+  source            TEXT NOT NULL DEFAULT 'manual',
+  created_at        TIMESTAMPTZ DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ DEFAULT NOW()
+);
 `;
 
 // ---------------------------------------------------------------------------
