@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Shield,
   Users,
+  BarChart3,
 } from 'lucide-react';
 import { DocAssistLogo } from './DocAssistLogo';
 
@@ -19,6 +20,7 @@ const getNavItems = (isAdmin: boolean) => [
   { to: '/scribe/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/scribe/note/new',  icon: Plus,            label: 'New Note'  },
   { to: '/scribe/templates', icon: FileText,         label: 'Templates' },
+  { to: '/scribe/teams',     icon: BarChart3,         label: 'Teams & Analytics' },
   { to: '/scribe/settings',  icon: Settings,         label: 'Settings'  },
   { to: '/scribe/feedback',  icon: MessageSquare,    label: 'Feedback'  },
   { to: '/scribe/account',   icon: User,             label: 'Account'   },
