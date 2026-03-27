@@ -1,7 +1,7 @@
 // src/components/scribe-standalone/NoteBuilderPage.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mic, X } from 'lucide-react';
+import { Mic, X, Users } from 'lucide-react';
 import { SectionLibrary } from './SectionLibrary';
 import { NoteCanvas } from './NoteCanvas';
 import { useScribeBuilderStore } from '../../stores/scribeBuilderStore';
@@ -9,6 +9,7 @@ import { useNoteTemplates, NoteTemplate } from '../../hooks/useNoteTemplates';
 import { useScribeNoteStore, generateNoteId } from '../../stores/scribeNoteStore';
 import { useTemplatePreferences } from '../../hooks/useTemplatePreferences';
 import { buildCanvasSectionsFromTemplate } from '../../utils/noteTemplateUtils';
+import { useTeams } from '../../hooks/useTeamMetrics';
 
 const NOTE_TYPES = [
   { value: 'progress_note', label: 'Progress Note' },
@@ -32,8 +33,8 @@ const VERBOSITY_OPTIONS: { value: Verbosity; label: string; description: string 
 
 export const NoteBuilderPage: React.FC = () => {
   const {
-    canvasSections, noteType, patientLabel, verbosity, selectedTemplateId,
-    setNoteType, setPatientLabel, clearCanvas, setVerbosity, setSelectedTemplate,
+    canvasSections, noteType, patientLabel, verbosity, selectedTemplateId, teamId,
+    setNoteType, setPatientLabel, clearCanvas, setVerbosity, setSelectedTemplate, setTeamId,
   } = useScribeBuilderStore();
   const navigate = useNavigate();
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +46,12 @@ export const NoteBuilderPage: React.FC = () => {
 
   const { systemTemplates, userTemplates, loading: templatesLoading, saveTemplate } = useNoteTemplates(noteType);
   const { frequentTemplateIds, maxFrequentTemplates } = useTemplatePreferences();
+  const { teams } = useTeams();
+
+  // Auto-select team if user only belongs to one
+  useEffect(() => {
+    if (teams.length === 1 && !teamId) setTeamId(teams[0].id);
+  }, [teams, teamId, setTeamId]);
 
   const frequentTemplates = userTemplates.filter(t => frequentTemplateIds.includes(t.id)).slice(0, maxFrequentTemplates);
 
@@ -60,7 +67,7 @@ export const NoteBuilderPage: React.FC = () => {
     setError(null);
     // Client-side only — no server call. Generate a local ID and init the store.
     const noteId = generateNoteId();
-    initNote({ noteId, noteType, patientLabel: patientLabel || '', verbosity });
+    initNote({ noteId, noteType, patientLabel: patientLabel || '', verbosity, teamId });
     navigate(`/scribe/note/${noteId}/record`);
   };
 
@@ -100,6 +107,23 @@ export const NoteBuilderPage: React.FC = () => {
           placeholder="Patient label (optional)"
           className="flex-1 bg-slate-800 border border-slate-700 text-slate-50 placeholder-slate-500 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400" />
       </div>
+
+      {/* Team selector for metrics tracking */}
+      {teams.length > 0 && (
+        <div className="flex items-center gap-2">
+          <Users size={14} className="text-slate-500" />
+          <select
+            value={teamId || ''}
+            onChange={e => setTeamId(e.target.value || null)}
+            aria-label="Track to team"
+            className="bg-slate-800 border border-slate-700 text-slate-50 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
+          >
+            <option value="">No team (don't track)</option>
+            {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+          <span className="text-xs text-slate-500">Metrics tracking</span>
+        </div>
+      )}
 
       {/* Template selection */}
       <div className="flex flex-col gap-2">

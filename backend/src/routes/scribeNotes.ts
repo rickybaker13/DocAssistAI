@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getPool } from '../database/db.js';
+import { captureNoteMetrics } from '../services/metricAutoCapture.js';
 
 const router = Router();
 
@@ -51,12 +52,17 @@ router.get('/:id', async (req: Request, res: Response) => {
 // ---------------------------------------------------------------------------
 router.post('/', async (req: Request, res: Response) => {
   try {
-    const { id, note_type, patient_label, verbosity, transcript, sections, status } = req.body;
+    const { id, note_type, patient_label, verbosity, transcript, sections, status, team_id } = req.body;
     if (!id || !note_type) {
       res.status(400).json({ error: 'id and note_type are required' });
       return;
     }
     const pool = getPool();
+
+    // Check if this note already exists (to distinguish INSERT vs UPDATE for metrics)
+    const existing = await pool.query('SELECT id FROM scribe_notes WHERE id = $1', [id]);
+    const isNew = (existing.rowCount ?? 0) === 0;
+
     await pool.query(
       `INSERT INTO scribe_notes (id, user_id, note_type, patient_label, verbosity, transcript, sections, status)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -79,6 +85,16 @@ router.post('/', async (req: Request, res: Response) => {
         status || 'draft',
       ],
     );
+
+    // Fire-and-forget: auto-capture metrics for the user's teams
+    captureNoteMetrics({
+      userId: req.scribeUserId!,
+      noteId: id,
+      noteType: note_type,
+      teamId: team_id,
+      isNew,
+    }).catch(() => {});
+
     res.json({ success: true });
   } catch (err: any) {
     console.error('POST /api/scribe/notes error:', err);
