@@ -16,8 +16,16 @@ export async function initPool(): Promise<void> {
   if (_pool) return;
 
   if (process.env.NODE_ENV === 'test') {
-    const { newDb } = await import('pg-mem');
+    const { randomUUID } = await import('crypto');
+    const { newDb, DataType } = await import('pg-mem');
     const db = newDb();
+    // Register gen_random_uuid() — pg-mem does not include it by default
+    db.public.registerFunction({
+      name: 'gen_random_uuid',
+      args: [],
+      returns: DataType.text,
+      implementation: () => randomUUID(),
+    });
     const { Pool: PgMemPool } = db.adapters.createPg();
     _pool = new PgMemPool() as unknown as pg.Pool;
   } else {
