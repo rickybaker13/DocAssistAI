@@ -22,6 +22,7 @@ export interface EncounterItem {
   error: string | null;
   createdAt: string;
   updatedAt: string;
+  teamId?: string | null;
 }
 
 export interface BillingCode {
@@ -51,6 +52,7 @@ interface ScribeNoteState {
   noteType: string;
   patientLabel: string;
   verbosity: string;
+  teamId: string | null;
   transcript: string;
   sections: NoteSection[];
   status: 'draft' | 'finalized';
@@ -59,11 +61,11 @@ interface ScribeNoteState {
   billingCodesLoading: boolean;
   billingCodesError: string | null;
 
-  initNote: (data: { noteId: string; noteType: string; patientLabel: string; verbosity: string }) => void;
+  initNote: (data: { noteId: string; noteType: string; patientLabel: string; verbosity: string; teamId?: string | null }) => void;
   setTranscript: (transcript: string) => void;
   setSections: (sections: NoteSection[]) => void;
   setStatus: (status: 'draft' | 'finalized') => void;
-  enqueueEncounter: (data: { noteId: string; noteType: string; patientLabel: string; verbosity: string; transcript: string }) => void;
+  enqueueEncounter: (data: { noteId: string; noteType: string; patientLabel: string; verbosity: string; transcript: string; teamId?: string | null }) => void;
   completeEncounter: (noteId: string, sections: NoteSection[]) => void;
   failEncounter: (noteId: string, error: string) => void;
   openEncounter: (noteId: string) => void;
@@ -84,11 +86,12 @@ export function generateNoteId(): string {
   return uuid();
 }
 
-const INITIAL: Pick<ScribeNoteState, 'noteId' | 'noteType' | 'patientLabel' | 'verbosity' | 'transcript' | 'sections' | 'status' | 'encounters' | 'billingCodes' | 'billingCodesLoading' | 'billingCodesError'> = {
+const INITIAL: Pick<ScribeNoteState, 'noteId' | 'noteType' | 'patientLabel' | 'verbosity' | 'teamId' | 'transcript' | 'sections' | 'status' | 'encounters' | 'billingCodes' | 'billingCodesLoading' | 'billingCodesError'> = {
   noteId: null,
   noteType: '',
   patientLabel: '',
   verbosity: 'standard',
+  teamId: null,
   transcript: '',
   sections: [],
   status: 'draft',
@@ -103,8 +106,8 @@ export const useScribeNoteStore = create<ScribeNoteState>()(
     (set, get) => ({
       ...INITIAL,
 
-      initNote: ({ noteId, noteType, patientLabel, verbosity }) =>
-        set({ ...INITIAL, encounters: get().encounters, noteId, noteType, patientLabel, verbosity }),
+      initNote: ({ noteId, noteType, patientLabel, verbosity, teamId }) =>
+        set({ ...INITIAL, encounters: get().encounters, noteId, noteType, patientLabel, verbosity, teamId: teamId ?? null }),
 
       setTranscript: (transcript) => set({ transcript }),
 
@@ -112,7 +115,7 @@ export const useScribeNoteStore = create<ScribeNoteState>()(
 
       setStatus: (status) => set({ status }),
 
-      enqueueEncounter: ({ noteId, noteType, patientLabel, verbosity, transcript }) =>
+      enqueueEncounter: ({ noteId, noteType, patientLabel, verbosity, transcript, teamId }) =>
         set((state) => ({
           encounters: [
             {
@@ -126,6 +129,7 @@ export const useScribeNoteStore = create<ScribeNoteState>()(
               error: null,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
+              teamId: teamId ?? null,
             },
             ...state.encounters.filter((item) => item.noteId !== noteId),
           ],

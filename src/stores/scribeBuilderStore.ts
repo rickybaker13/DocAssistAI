@@ -16,6 +16,7 @@ interface ScribeBuilderState {
   patientLabel: string;
   verbosity: 'concise' | 'brief' | 'standard' | 'detailed';
   selectedTemplateId: string | null;
+  teamId: string | null;
   addSection: (template: { id: string; name: string; promptHint: string | null; isPrebuilt: boolean }) => void;
   removeSection: (templateId: string) => void;
   reorderSections: (activeTemplateId: string, overTemplateId: string) => void;
@@ -24,6 +25,7 @@ interface ScribeBuilderState {
   setPatientLabel: (l: string) => void;
   setVerbosity: (v: 'concise' | 'brief' | 'standard' | 'detailed') => void;
   setSelectedTemplate: (templateId: string, sections: CanvasSection[]) => void;
+  setTeamId: (teamId: string | null) => void;
 }
 
 function uuid(): string {
@@ -39,6 +41,7 @@ export const useScribeBuilderStore = create<ScribeBuilderState>()(
       patientLabel: '',
       verbosity: 'standard',
       selectedTemplateId: null,
+      teamId: null,
 
       addSection: (template) => {
         const existing = get().canvasSections.find(s => s.templateId === template.id);
@@ -73,6 +76,7 @@ export const useScribeBuilderStore = create<ScribeBuilderState>()(
         selectedTemplateId: templateId,
         canvasSections: sections,
       }),
+      setTeamId: (teamId) => set({ teamId }),
     }),
     { name: 'scribe-builder-canvas' }
   )

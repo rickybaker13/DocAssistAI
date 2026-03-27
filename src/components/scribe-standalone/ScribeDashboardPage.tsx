@@ -58,6 +58,7 @@ export const ScribeDashboardPage: React.FC = () => {
           transcript: enc.transcript,
           sections: enc.sections,
           status: 'draft',
+          team_id: enc.teamId || undefined,
         }),
       });
       if (res.ok) {

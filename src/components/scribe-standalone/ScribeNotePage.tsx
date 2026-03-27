@@ -161,6 +161,7 @@ export const ScribeNotePage: React.FC = () => {
           transcript: storeNote.transcript,
           sections: merged,
           status: storeNote.status,
+          team_id: storeNote.teamId || undefined,
         }),
       }).catch(() => { /* best-effort */ });
     }, 2000);
@@ -267,6 +268,7 @@ export const ScribeNotePage: React.FC = () => {
           transcript: storeNote.transcript,
           sections: merged,
           status: 'finalized',
+          team_id: storeNote.teamId || undefined,
         }),
       }).catch(() => { /* best-effort */ });
     }
