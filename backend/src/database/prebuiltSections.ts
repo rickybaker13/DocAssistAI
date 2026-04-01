@@ -26,6 +26,9 @@ Neurological: Denies headache, dizziness, numbness, tingling, or focal weakness.
 const PHYSICIAN_DISCIPLINES = [
   'hospital_medicine', 'critical_care', 'emergency_medicine',
   'surgery', 'psychiatry', 'outpatient', 'specialty_medicine',
+  'anesthesiology', 'dermatology', 'dentistry', 'ent',
+  'family_medicine', 'neurology', 'ob_gyn', 'ophthalmology',
+  'orthopedic_surgery', 'pediatrics', 'sports_medicine',
 ];
 
 /** Disciplines applied to ICU/critical-care sections */

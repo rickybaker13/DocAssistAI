@@ -33,7 +33,7 @@ async function retrySave(url: string, body: object, maxRetries = 3): Promise<boo
 export const ScribeRecordPage: React.FC = () => {
   const { id: noteId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { canvasSections, noteType, patientLabel, verbosity } = useScribeBuilderStore();
+  const { canvasSections, noteType, patientLabel, verbosity, teamId } = useScribeBuilderStore();
   const { enqueueEncounter, completeEncounter, failEncounter } = useScribeNoteStore();
   const [phase, setPhase] = useState<Phase>('record');
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export const ScribeRecordPage: React.FC = () => {
   if (!noteId) return <div className="text-red-400 p-4">Invalid note ID.</div>;
 
   const handleTranscript = async (transcript: string) => {
-    enqueueEncounter({ noteId, noteType, patientLabel, verbosity, transcript });
+    enqueueEncounter({ noteId, noteType, patientLabel, verbosity, transcript, teamId });
     navigate('/scribe/dashboard');
 
     void (async () => {
@@ -81,6 +81,7 @@ export const ScribeRecordPage: React.FC = () => {
         transcript,
         sections,
         status: 'draft',
+        team_id: teamId || undefined,
       });
     } catch (e: unknown) {
       let msg = 'An unexpected error occurred';
@@ -106,7 +107,7 @@ export const ScribeRecordPage: React.FC = () => {
           </p>
           {isIosDevice() && (
             <p className="text-xs text-amber-400/70 text-center max-w-xs">
-              Tip: For uninterrupted recording on iPhone, avoid switching apps. Locking the screen is OK.
+              Tip: Keep the screen on during recording. Pressing the power button or switching apps will interrupt the recording. The screen will stay awake automatically.
             </p>
           )}
           <AudioRecorder onTranscript={handleTranscript} onError={handleError} />

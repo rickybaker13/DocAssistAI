@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
 import {
   Shield,
   Lock,
@@ -13,6 +14,14 @@ import {
   ArrowDown,
   CheckCircle2,
   AlertTriangle,
+  XCircle,
+  ChevronDown,
+  ChevronUp,
+  Building2,
+  Eye,
+  Server,
+  HardDrive,
+  Brain,
 } from 'lucide-react';
 import SegmentNav from './landing/SegmentNav';
 import SegmentFooter from './landing/SegmentFooter';
@@ -129,6 +138,85 @@ const commitments = [
   },
 ];
 
+/* ─── FAQ data ─── */
+const faqItems = [
+  {
+    q: 'Can the AI see my patients\u2019 names or medical record numbers?',
+    a: 'No. Before any text reaches the AI, our de-identification software (Microsoft Presidio) automatically finds and replaces patient names, dates of birth, MRNs, Social Security numbers, phone numbers, addresses, and 20+ other identifier types with generic placeholders like [PERSON_0]. The AI only ever sees these placeholders \u2014 never the real data.',
+  },
+  {
+    q: 'What happens if the de-identification system goes down?',
+    a: 'DocAssistAI stops working entirely. This is by design. We use what\u2019s called a \u201cfail-closed\u201d architecture: if the de-identification service is unavailable for any reason, the system returns an error and the AI is never called. There is no way to bypass this protection, even temporarily.',
+  },
+  {
+    q: 'Is DocAssistAI HIPAA compliant?',
+    a: 'DocAssistAI is designed to meet HIPAA Security Rule requirements including access controls, audit controls, transmission security, and integrity controls. We offer Business Associate Agreements (BAAs) for organizations that require them. Our transcription provider (Groq) also has a BAA in effect. Because we de-identify all data before it reaches the AI, the AI provider (Anthropic) never receives protected health information.',
+  },
+  {
+    q: 'Do you store audio recordings of patient encounters?',
+    a: 'No. Audio is streamed to our transcription service, converted to text in memory, and immediately discarded. There is no audio archive on our servers. We could not replay a recording even if asked to, because the audio file no longer exists after transcription.',
+  },
+  {
+    q: 'Is patient data used to train AI models?',
+    a: 'No. We use Anthropic\u2019s Claude API, which has a zero-retention policy for API calls. Your transcripts, notes, and clinical content are not stored by the AI provider and are never used to train, fine-tune, or improve any AI model.',
+  },
+  {
+    q: 'Can I use this with residents and medical students?',
+    a: 'Yes. DocAssistAI works on any device with a web browser \u2014 no installation or IT department involvement required. Each user has their own account with their own credentials. The privacy protections apply equally to every user regardless of role or training level.',
+  },
+  {
+    q: 'Does this integrate with our EHR (Epic, Cerner, etc.)?',
+    a: 'DocAssistAI works with any EHR through copy-and-paste. The clinician generates and reviews a note in DocAssistAI, then copies it into their EHR. This means no IT integration is required \u2014 no Epic module, no Cerner plugin, no firewall changes, no IT tickets. Clinicians can start using it today.',
+  },
+  {
+    q: 'What does a Business Associate Agreement (BAA) cover?',
+    a: 'A BAA is a contract required by HIPAA when a third party handles protected health information (PHI) on behalf of a covered entity. Our BAA covers the limited PHI that passes through our system during processing (audio in transit, text in memory during de-identification). We are happy to provide a BAA to any organization that requires one \u2014 contact admin@docassistai.app.',
+  },
+  {
+    q: 'How is this different from other AI scribes when it comes to privacy?',
+    a: 'Most AI scribes send the full, unredacted transcript \u2014 including patient names, dates, and medical record numbers \u2014 directly to an AI model. DocAssistAI is different: we de-identify everything first. The AI never sees real patient data. Additionally, if our de-identification system is unavailable, the entire product stops rather than proceeding without protection. This \u201cfail-closed\u201d approach is uncommon in the industry.',
+  },
+  {
+    q: 'Who built this?',
+    a: 'DocAssistAI was built by clinicians who understand the documentation burden firsthand and who take patient privacy personally. We are not a large enterprise vendor \u2014 we are a focused team building the tool we wish existed during our own clinical training.',
+  },
+];
+
+function FaqAccordion() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  return (
+    <div className="space-y-3">
+      {faqItems.map((item, index) => {
+        const isOpen = openIndex === index;
+        return (
+          <div
+            key={index}
+            className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden"
+          >
+            <button
+              onClick={() => setOpenIndex(isOpen ? null : index)}
+              className="w-full flex items-center justify-between gap-4 px-6 py-5 text-left hover:bg-slate-800/30 transition-colors"
+            >
+              <span className="text-slate-100 font-medium text-sm sm:text-base leading-snug">{item.q}</span>
+              {isOpen ? (
+                <ChevronUp className="w-5 h-5 text-teal-400 flex-shrink-0" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-slate-500 flex-shrink-0" />
+              )}
+            </button>
+            {isOpen && (
+              <div className="px-6 pb-5">
+                <p className="text-slate-400 text-sm leading-relaxed">{item.a}</p>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function SecurityPage() {
   return (
     <div className="min-h-screen bg-slate-950">
@@ -165,6 +253,62 @@ export default function SecurityPage() {
               Built by clinicians who take patient privacy personally. DocAssistAI de-identifies all patient data &mdash; from recordings and pasted chart data alike &mdash; before sending anything to the AI model.
               If de-identification fails, the system stops. It never proceeds unprotected.
             </motion.p>
+          </motion.div>
+        </section>
+
+        {/* ─── Plain-English Summary (for non-technical decision-makers) ─── */}
+        <section className="bg-slate-950 py-20 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="text-center mb-12">
+              <span className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-slate-300 mb-6">
+                <Building2 className="w-3.5 h-3.5" />
+                For Program Directors &amp; Administrators
+              </span>
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-50 mb-4">
+                The Short Version
+              </h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                No jargon. Here is exactly what happens to patient data when a clinician uses DocAssistAI.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="rounded-2xl border border-teal-400/20 bg-slate-900 p-6 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-teal-400/10 mb-4">
+                  <Shield className="w-7 h-7 text-teal-400" />
+                </div>
+                <h3 className="text-slate-50 font-bold text-lg mb-3">Names, dates, and IDs are stripped out before the AI sees anything</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  When a clinician records an encounter, software on our server automatically finds every patient name, date of birth, medical record number, and other identifying information. It replaces them with generic placeholders like [PERSON_0] before the text is ever sent to the AI.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-teal-400/20 bg-slate-900 p-6 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-teal-400/10 mb-4">
+                  <ShieldOff className="w-7 h-7 text-teal-400" />
+                </div>
+                <h3 className="text-slate-50 font-bold text-lg mb-3">If the protection system is down, the entire product stops</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  There is no override. There is no &ldquo;skip for now.&rdquo; If the de-identification service is unavailable for any reason, DocAssistAI will not generate a note. It returns an error instead. Patient data is never sent unprotected.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-teal-400/20 bg-slate-900 p-6 text-center">
+                <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-teal-400/10 mb-4">
+                  <UserCheck className="w-7 h-7 text-teal-400" />
+                </div>
+                <h3 className="text-slate-50 font-bold text-lg mb-3">Clinicians review every note before it is used</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  DocAssistAI generates a draft. The clinician reads it, makes any corrections, and decides whether to use it. Nothing is auto-submitted to any EHR or chart. The clinician is always the final decision-maker.
+                </p>
+              </div>
+            </div>
           </motion.div>
         </section>
 
@@ -343,6 +487,160 @@ export default function SecurityPage() {
               })}
             </div>
           </div>
+        </section>
+
+        {/* ─── What We Don't Do ─── */}
+        <section className="bg-slate-950 py-24 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="text-center mb-14">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-50 mb-4">
+                What We Don&rsquo;t Do
+              </h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                Sometimes what a company chooses not to do matters more than what it does.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              {[
+                {
+                  icon: XCircle,
+                  title: 'We don\u2019t store patient data',
+                  detail: 'No patient names, MRNs, dates of birth, or clinical content is written to any database, log file, or cache. Audio recordings are transcribed in memory and immediately discarded.',
+                },
+                {
+                  icon: Eye,
+                  title: 'We don\u2019t sell or share data with third parties',
+                  detail: 'Your patients\u2019 information is not monetized, aggregated, or shared with advertisers, data brokers, research firms, or anyone else. Period.',
+                },
+                {
+                  icon: Brain,
+                  title: 'We don\u2019t train AI models on your notes',
+                  detail: 'The AI models we use (Anthropic Claude) have a zero-retention policy for API calls. Your transcripts and notes are not used to train, fine-tune, or improve any AI model.',
+                },
+                {
+                  icon: HardDrive,
+                  title: 'We don\u2019t keep audio recordings',
+                  detail: 'Audio is streamed to our transcription service, converted to text, and discarded. There is no audio archive. We cannot replay your encounters because the files do not exist.',
+                },
+                {
+                  icon: Server,
+                  title: 'We don\u2019t run on shared cloud AI platforms',
+                  detail: 'Our de-identification engine (Microsoft Presidio) runs on our own private server, not on a shared cloud service. Patient data never passes through a multi-tenant environment.',
+                },
+                {
+                  icon: Database,
+                  title: 'We don\u2019t have a \u201cskip\u201d button for privacy',
+                  detail: 'De-identification is not optional. It is not a setting that can be toggled off. Every request goes through the same protection pipeline, every time, with no exceptions.',
+                },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.title}
+                    className="flex items-start gap-4 rounded-xl border border-slate-800 bg-slate-900/60 p-5"
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.4, delay: index * 0.05 }}
+                  >
+                    <div className="flex-shrink-0 inline-flex items-center justify-center w-10 h-10 rounded-lg bg-red-400/10 mt-0.5">
+                      <Icon className="w-5 h-5 text-red-400" />
+                    </div>
+                    <div>
+                      <h3 className="text-slate-50 font-semibold">{item.title}</h3>
+                      <p className="text-slate-400 text-sm leading-relaxed mt-1">{item.detail}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </section>
+
+        {/* ─── Compliance Summary (for compliance officers) ─── */}
+        <section className="bg-slate-950 py-24 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="max-w-4xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="text-center mb-14">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-50 mb-4">
+                Compliance at a Glance
+              </h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                A summary you can share with your compliance office or IT security team.
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-800">
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-400">Requirement</th>
+                      <th className="px-6 py-4 text-xs font-semibold uppercase tracking-wider text-slate-400">How DocAssistAI Meets It</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/50">
+                    {[
+                      ['PHI De-identification', 'Microsoft Presidio strips 20+ entity types (names, DOB, MRN, SSN, phone, address, etc.) before AI processing'],
+                      ['Encryption in Transit', 'TLS 1.2+ via Caddy reverse proxy with automatic certificate renewal. All API calls encrypted.'],
+                      ['Encryption at Rest', 'No PHI is stored at rest. Transcripts exist only in server memory during processing.'],
+                      ['Access Controls', 'JWT-based authentication with secure httpOnly cookies. Session expiry enforced.'],
+                      ['Audit Controls', 'Server-side audit logging of all API requests. No PHI in logs.'],
+                      ['Fail-Closed Design', 'If Presidio is unreachable, the system returns 503. AI is never called without de-identification.'],
+                      ['Business Associate Agreements', 'BAAs available on request. Groq (transcription provider) BAA is in effect by default.'],
+                      ['AI Data Retention', 'Anthropic Claude API has a zero-retention policy. No data is used for model training.'],
+                      ['Audio Retention', 'Audio is transcribed in memory and immediately discarded. No audio files are stored.'],
+                      ['Clinician Oversight', 'All AI output is a draft requiring clinician review before use. No auto-submission to EHRs.'],
+                    ].map(([req, detail]) => (
+                      <tr key={req}>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-200 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                            {req}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-400">{detail}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* ─── FAQ ─── */}
+        <section className="bg-slate-950 py-24 px-4 sm:px-6 lg:px-8">
+          <motion.div
+            className="max-w-3xl mx-auto"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="text-center mb-14">
+              <h2 className="text-3xl sm:text-4xl font-bold text-slate-50 mb-4">
+                Frequently Asked Questions
+              </h2>
+              <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+                Common questions from program directors, compliance officers, and clinicians.
+              </p>
+            </div>
+
+            <FaqAccordion />
+          </motion.div>
         </section>
 
         {/* ─── BAA & Contact ─── */}

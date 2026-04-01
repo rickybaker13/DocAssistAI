@@ -1,6 +1,6 @@
 # DocAssist Scribe — Pre-Launch Checklist
 
-> Last updated: 2026-03-07
+> Last updated: 2026-03-12
 > Target: Real-world clinical testing in ~1 week, public launch ~3-4 weeks
 
 ---
@@ -11,7 +11,7 @@ The core product is **functionally complete and deployed**:
 - Frontend: Vercel (`www.docassistai.app`) — auto-deploys on git push
 - Backend: DigitalOcean Droplet (`api.docassistai.app`) — Docker Compose stack
 - Audio → Structured Note pipeline: **~15 seconds** (Groq Whisper + Claude Haiku 4.5)
-- Auth: JWT cookies, 7-day expiry
+- Auth: JWT cookies, 7-day expiry, 15-min inactivity auto-logout, token revocation on password change
 - Billing: Square embedded card + hosted checkout, 7-day free trial, auto-renewal
 - PII Scrubbing: Presidio Analyzer + Anonymizer (Docker, internal network)
 - TLS: Caddy auto-provisioned (cert valid through May 2026)
@@ -44,7 +44,7 @@ The core product is **functionally complete and deployed**:
 - [x] Backend endpoints: `GET /consent-status`, `POST /accept-terms`
 
 ### 1.4 BAA Coverage Verification
-- [ ] Confirm DigitalOcean BAA is in place (Standard Support plan at $99/month — pending, submitted)
+- [x] Confirm DigitalOcean BAA is in place (Standard Support plan at $99/month — **received 2026-03-12**)
 - [x] **Groq BAA: COVERED** — Groq includes a Business Associate Addendum (BAA) in their Terms of Service (effective October 15, 2025). No separate signing required. By using Groq services, the BAA is automatically in effect.
   - BAA document: https://console.groq.com/docs/legal/customer-business-associate-addendum
   - This covers PHI in audio sent to Groq Whisper API for transcription
@@ -81,6 +81,16 @@ The core product is **functionally complete and deployed**:
   - Test backup verified: 23K dump file created successfully
 - [ ] Test backup restore procedure at least once
 - [ ] Consider offsite backup (DigitalOcean Spaces) once user volume grows
+
+### 2.5 HIPAA Session Security (Deployed 2026-03-12)
+- [x] **Automatic session timeout** — 15-minute inactivity auto-logout with 60-second warning banner (HIPAA 45 CFR 164.312(a)(2)(iii))
+- [x] **Token revocation on password change** — `token_invalidated_at` column; auth middleware rejects tokens issued before password change
+- [x] **Data retention policy** — automated cleanup cron at 3 AM daily:
+  - Clinical notes: deleted 3 days after last edit
+  - Expired trial accounts: purged 30 days after trial ends
+  - Cancelled accounts: purged 90 days after period ends
+  - Stale password reset tokens/OTPs: swept 24 hours after expiry
+- [x] **Disaster recovery runbook** — `docs/disaster-recovery.md` with backup/restore procedures and verification checklist
 
 ---
 
@@ -147,7 +157,7 @@ The app already has social media accounts linked in the UI (`SocialMediaLinks.ts
 | Platform | Handle/URL | Status |
 |----------|-----------|--------|
 | LinkedIn | [/company/docassistai](https://www.linkedin.com/company/docassistai) | Created — needs content |
-| X (Twitter) | [@docassistai](https://x.com/docassistai) | Created — needs content |
+| X (Twitter) | [@docassistai_app](https://x.com/docassistai_app) | Created — needs content |
 | Facebook | [/docassistai](https://www.facebook.com/docassistai) | Created — needs content |
 | Instagram | [@docassistai](https://www.instagram.com/docassistai) | Created — needs content |
 | YouTube | [@docassistai](https://www.youtube.com/@docassistai) | Created — needs content |

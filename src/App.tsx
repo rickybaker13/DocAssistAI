@@ -16,7 +16,12 @@ import { TemplatesPage } from './components/scribe-standalone/TemplatesPage';
 import { ScribeFeedbackPage } from './components/scribe-standalone/ScribeFeedbackPage';
 import { ScribeAdminFeedbackPage } from './components/scribe-standalone/ScribeAdminFeedbackPage';
 import { ScribeAdminSignupsPage } from './components/scribe-standalone/ScribeAdminSignupsPage';
+import { TeamsPage } from './components/scribe-standalone/TeamsPage';
+import { TeamManagePage } from './components/scribe-standalone/TeamManagePage';
+import { MetricsDashboardPage } from './components/scribe-standalone/MetricsDashboardPage';
+import { PopulationDashboardPage } from './components/scribe-standalone/PopulationDashboardPage';
 import ScribeLandingPage from './components/scribe-standalone/ScribeLandingPage';
+import { PwaSplashGate } from './components/scribe-standalone/PwaSplashGate';
 import { ScribeTermsPage } from './components/scribe-standalone/ScribeTermsPage';
 import { ScribePrivacyPage } from './components/scribe-standalone/ScribePrivacyPage';
 import ForPAsPage from './components/scribe-standalone/ForPAsPage';
@@ -38,7 +43,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<ScribeLandingPage />} />
+        <Route path="/" element={<PwaSplashGate><ScribeLandingPage /></PwaSplashGate>} />
         <Route path="/scribe/login" element={<ScribeLoginPage />} />
         <Route path="/scribe/register" element={<ScribeRegisterPage />} />
         <Route path="/scribe/forgot-password" element={<ScribeForgotPasswordPage />} />
@@ -66,6 +71,10 @@ function App() {
           <Route path="feedback" element={<ScribeFeedbackPage />} />
           <Route path="admin/feedback" element={<ScribeAdminFeedbackPage />} />
           <Route path="admin/signups" element={<ScribeAdminSignupsPage />} />
+          <Route path="teams" element={<TeamsPage />} />
+          <Route path="teams/:teamId/manage" element={<TeamManagePage />} />
+          <Route path="teams/:teamId/metrics" element={<MetricsDashboardPage />} />
+          <Route path="teams/:teamId/registry" element={<PopulationDashboardPage />} />
           <Route path="note/new" element={<NoteBuilderPage />} />
           <Route path="chart-collector" element={<ChartCollectorPage />} />
           <Route path="note/:id/record" element={<ScribeRecordPage />} />

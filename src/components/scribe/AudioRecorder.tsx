@@ -34,6 +34,11 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
+  // Chunk heartbeat: detect when MediaRecorder stops producing data
+  // (sign that iOS suspended the recording pipeline even if state says 'recording')
+  const lastChunkTimeRef = useRef<number | null>(null);
+  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   // Fix 1: Cleanup on unmount — stop recorder, clear timer, stop stream tracks
   useEffect(() => {
     return () => {
@@ -43,6 +48,9 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      if (heartbeatRef.current) {
+        clearInterval(heartbeatRef.current);
+      }
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
       }
@@ -50,6 +58,24 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       keepAliveRef.current = null;
     };
   }, []);
+
+  // Recover from iOS blank screen on pageshow (BFCache restore).
+  // When iOS suspends and restores the PWA, it fires pageshow with
+  // persisted=true but may leave a blank screen. Force a re-render.
+  const [, forceRender] = useState(0);
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) {
+        forceRender((n) => n + 1);
+        // Also restart keep-alive if recording was in progress
+        if (isRecording) {
+          void keepAliveRef.current?.restart();
+        }
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+    return () => window.removeEventListener('pageshow', handlePageShow);
+  }, [isRecording]);
 
   // --- iOS background interruption handling ---
   // When the page goes hidden (user switches apps), pause the timer.
@@ -79,7 +105,9 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
 
         const recorder = mediaRecorderRef.current;
         if (recorder && recorder.state === 'recording') {
-          // MediaRecorder survived (e.g. lock screen). Just restart keep-alive.
+          // MediaRecorder survived (e.g. lock screen). Restart keep-alive
+          // and nudge a data flush — some iOS versions buffer without emitting.
+          try { recorder.requestData(); } catch { /* not all browsers support this */ }
           await keepAliveRef.current?.restart();
           return;
         }
@@ -168,14 +196,29 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
       setInterruptions([]);
       setInterruptionDismissed(false);
       recorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) chunksRef.current.push(e.data);
+        if (e.data && e.data.size > 0) {
+          chunksRef.current.push(e.data);
+          lastChunkTimeRef.current = Date.now();
+        }
       };
       recorder.onstop = () => handleRecordingStop(stream);
       recorder.start(1000);
       mediaRecorderRef.current = recorder;
+      lastChunkTimeRef.current = Date.now();
       // Fix 5: Use store setter instead of local useState
       setRecording(true);
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+
+      // Heartbeat: every 5s, check if chunks are still arriving.
+      // If not, nudge the recorder with requestData() to flush buffered data.
+      heartbeatRef.current = setInterval(() => {
+        const recorder = mediaRecorderRef.current;
+        if (!recorder || recorder.state !== 'recording') return;
+        const elapsed = Date.now() - (lastChunkTimeRef.current ?? 0);
+        if (elapsed > 3000) {
+          try { recorder.requestData(); } catch { /* not supported everywhere */ }
+        }
+      }, 5000);
     } catch (err) {
       // Clean up keep-alive if recording setup fails after it was started
       keepAliveRef.current?.stop();
@@ -201,10 +244,12 @@ export const AudioRecorder: React.FC<Props> = ({ onTranscript, onError }) => {
   const stopRecording = () => {
     mediaRecorderRef.current?.stop();
     if (timerRef.current) clearInterval(timerRef.current);
+    if (heartbeatRef.current) { clearInterval(heartbeatRef.current); heartbeatRef.current = null; }
     // Fix 5: Use store setter
     setRecording(false);
     setDuration(0);
     hiddenAtRef.current = null;
+    lastChunkTimeRef.current = null;
     keepAliveRef.current?.stop();
     keepAliveRef.current = null;
   };

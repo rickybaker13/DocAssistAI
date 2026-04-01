@@ -61,11 +61,13 @@ router.post('/generate', async (req: Request, res: Response) => {
     .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
     .join('\n');
 
+  const assessmentPlanNumberedList = '\nFor Assessment and Plan sections: ALWAYS use a numbered list (1., 2., 3., …) — one item per problem or action. Never write these sections in paragraph form.';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning. Example style: "CHF exac, EF 25%, started IV lasix 40 q12h".'
+      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning. Example style: "CHF exac, EF 25%, started IV lasix 40 q12h".' + assessmentPlanNumberedList
       : verbosity === 'brief'
-      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
+      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.' + assessmentPlanNumberedList
       : verbosity === 'detailed'
       ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
       : '';
@@ -178,11 +180,13 @@ router.post('/chart-generate', async (req: Request, res: Response) => {
     .map((s: any) => `- ${s.name}${s.promptHint ? ` (Focus: ${s.promptHint})` : ''}`)
     .join('\n');
 
+  const assessmentPlanNumberedList = '\nFor Assessment and Plan sections: ALWAYS use a numbered list (1., 2., 3., …) — one item per problem or action. Never write these sections in paragraph form.';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning.'
+      ? '\nWrite in telegraphic clinical shorthand. Key facts only — one line per item max. Omit all filler, context, and reasoning.' + assessmentPlanNumberedList
       : verbosity === 'brief'
-      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.'
+      ? '\nWrite concisely. Use bullet points where appropriate. No more than 1–2 sentences per item. Omit filler phrases.' + assessmentPlanNumberedList
       : verbosity === 'detailed'
       ? '\nWrite in full prose with complete sentences. Include all clinically relevant detail, context, and nuance.'
       : '';
@@ -398,12 +402,17 @@ router.post('/ghost-write', async (req: Request, res: Response) => {
   }
 
   // Verbosity-specific writing instructions
+  const isAssessmentOrPlan = /assessment|plan/i.test(destinationSection);
+  const numberedListHint = isAssessmentOrPlan && (verbosity === 'concise' || verbosity === 'brief')
+    ? '\nALWAYS use a numbered list (1., 2., 3., …) — one item per problem or action. Never write in paragraph form.'
+    : '';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? `Write in telegraphic clinical shorthand. Key facts only — one line max. No complete sentences. Example: "Vanc trough 18, cont current dose, recheck AM".`
+      ? `Write in telegraphic clinical shorthand. Key facts only — one line max. No complete sentences. Example: "Vanc trough 18, cont current dose, recheck AM".` + numberedListHint
       : verbosity === 'brief'
       ? `Write in clinical shorthand using standard medical abbreviations. Use sentence fragments — do NOT write complete sentences.
-Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj. ID consult placed. Cont vanco only if GPO source confirmed."`
+Style example: "D/C CTX (ESBL-producing); start meropenem 1g IV q8h, renally adj. ID consult placed. Cont vanco only if GPO source confirmed."` + numberedListHint
       : verbosity === 'detailed'
       ? `Write in complete clinical prose with full sentences. Include clinical reasoning and context where relevant.`
       : `Write 1–2 concise clinical sentences. Use medical abbreviations where natural (e.g., IV, q8h, D/C, s/p).`;
@@ -484,11 +493,16 @@ router.post('/resolve-suggestion', async (req: Request, res: Response) => {
     throw err;
   }
 
+  const isAssessmentOrPlanRS = /assessment|plan/i.test(sectionName);
+  const numberedListHintRS = isAssessmentOrPlanRS && (verbosity === 'concise' || verbosity === 'brief')
+    ? ' Use a numbered list (1., 2., 3., …) — one item per problem or action. Never write in paragraph form.'
+    : '';
+
   const verbosityInstruction =
     verbosity === 'concise'
-      ? 'If ready, write in telegraphic clinical shorthand. Key facts only, one line max. No complete sentences.'
+      ? 'If ready, write in telegraphic clinical shorthand. Key facts only, one line max. No complete sentences.' + numberedListHintRS
       : verbosity === 'brief'
-      ? 'If ready, write in clinical shorthand with medical abbreviations. Sentence fragments OK.'
+      ? 'If ready, write in clinical shorthand with medical abbreviations. Sentence fragments OK.' + numberedListHintRS
       : verbosity === 'detailed'
       ? 'If ready, write in complete clinical prose with full reasoning.'
       : 'If ready, write 1–2 concise clinical sentences with medical abbreviations where natural.';
@@ -574,6 +588,76 @@ Return one of these two JSON shapes:
     }
 
     return res.json(parsed);
+  } catch (err: any) {
+    return aiErrorResponse(res, err);
+  }
+});
+
+// ── POST /api/ai/scribe/chart-to-graph ─────────────────────────────────────
+router.post('/chart-to-graph', async (req: Request, res: Response) => {
+  const { chartData, noteType = 'progress_note', verbosity = 'standard' } = req.body;
+
+  if (!chartData || !chartData.trim()) {
+    return res.status(400).json({ error: 'chartData is required' }) as any;
+  }
+
+  // ── PII De-identification ─────────────────────────────────────────────────
+  let scrubbedChartData = chartData;
+  let subMap: Record<string, string> = {};
+  try {
+    const result = await piiScrubber.scrub({ chartData });
+    scrubbedChartData = result.scrubbedFields.chartData;
+    subMap = result.subMap;
+  } catch (err) {
+    if (err instanceof PiiServiceUnavailableError) {
+      return res.status(503).json({ error: (err as Error).message }) as any;
+    }
+    throw err;
+  }
+
+  const systemPrompt = `You are a medical data visualization expert.
+
+CRITICAL OUTPUT RULE: Your entire response must be a single <svg>…</svg> element. Do NOT include any explanation, reasoning, planning, markdown, or surrounding text. Output the raw SVG tag and nothing else.
+
+Rules for the SVG:
+- Choose the most appropriate chart type (line chart for trends, bar chart for comparisons, scatter plot for correlations, etc.)
+- Self-contained — no external fonts, stylesheets, or dependencies
+- White background, clean professional styling suitable for an EHR or clinical document
+- Include: descriptive title, axis labels with units, data point labels/values, legend if multiple series
+- Color palette: #2563eb (blue), #dc2626 (red), #16a34a (green), #f59e0b (amber), #7c3aed (purple)
+- viewBox="0 0 600 400"
+- Mark abnormal/critical values in red when identifiable from clinical context
+${TOKEN_PRESERVATION_INSTRUCTION}`;
+
+  const userPrompt = `Generate an SVG chart from this clinical data. Respond with ONLY the <svg> element.\n\n${scrubbedChartData}`;
+
+  try {
+    const raw = await aiService.chat(
+      {
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        options: { temperature: 0.2 },
+      },
+      { userId: req.scribeUserId }
+    );
+
+    let svg = extractContent(raw).trim();
+    // Strip markdown fences if present
+    svg = svg.replace(/```(?:svg|xml|html)?\n?/g, '').replace(/```$/g, '').trim();
+    // Extract just the <svg>…</svg> if the model returned surrounding text
+    const svgMatch = svg.match(/<svg[\s\S]*<\/svg>/i);
+    if (svgMatch) {
+      svg = svgMatch[0];
+    }
+
+    // Re-inject PII tokens
+    if (Object.keys(subMap).length > 0) {
+      svg = piiScrubber.reInject(svg, subMap);
+    }
+
+    return res.json({ svg });
   } catch (err: any) {
     return aiErrorResponse(res, err);
   }

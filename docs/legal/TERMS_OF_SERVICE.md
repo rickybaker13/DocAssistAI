@@ -60,16 +60,16 @@ You will not (and will not permit others to):
 
 ## 7. Data Processing and Security Commitments
 
-DocAssistAI implements and maintains reasonable and appropriate administrative, physical, and technical safeguards designed to protect data in our custody.
+DocAssistAI implements and maintains reasonable and appropriate administrative, physical, and technical safeguards designed to protect data in our custody, including:
 
-These may include, as appropriate:
-
-- access controls and authentication controls,
-- encryption in transit and at rest (where technically supported),
-- logging and audit controls,
-- environment segregation,
-- vendor/subprocessor oversight,
-- incident response procedures.
+- **PII de-identification** — All clinical text is scrubbed of protected health information using Microsoft Presidio (self-hosted) before reaching external AI providers. Fail-closed: AI requests are blocked if de-identification is unavailable.
+- **Encryption in transit** — TLS/HTTPS on all external connections.
+- **Access controls** — bcrypt-hashed passwords, HTTP-only secure cookies, automatic session timeout (15 minutes of inactivity), and token revocation on password change.
+- **Audit logging** — Access to clinical data and AI service usage is logged (metadata only; no PHI in logs).
+- **Infrastructure isolation** — Database, PII scrubbing, and transcription services run on an internal network with no external access.
+- **Automated data retention** — Clinical notes are retained for 3 days from last edit. Expired trial accounts are purged after 30 days. Cancelled accounts are purged after 90 days. See the Privacy Policy (Section 8) for the full retention schedule.
+- **Vendor/subprocessor oversight** — Business Associate Agreements in place with infrastructure providers that handle PHI.
+- **Disaster recovery** — Daily automated database backups with documented restore procedures.
 
 No method of transmission or storage is 100% secure; we do not guarantee absolute security.
 

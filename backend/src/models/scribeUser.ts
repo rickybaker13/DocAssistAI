@@ -22,6 +22,7 @@ export interface ScribeUser {
   tos_accepted_at: string | null;
   privacy_accepted_at: string | null;
   tos_version: string | null;
+  token_invalidated_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -129,7 +130,11 @@ export class ScribeUserModel {
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {
     const pool = getPool();
-    await pool.query('UPDATE scribe_users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [passwordHash, userId]);
+    // Invalidate all existing tokens so sessions are revoked on password change
+    await pool.query(
+      'UPDATE scribe_users SET password_hash = $1, token_invalidated_at = NOW(), updated_at = NOW() WHERE id = $2',
+      [passwordHash, userId],
+    );
   }
 
   async activateSubscription(userId: string, billingCycle: 'monthly' | 'annual' = 'monthly'): Promise<ScribeUser | null> {

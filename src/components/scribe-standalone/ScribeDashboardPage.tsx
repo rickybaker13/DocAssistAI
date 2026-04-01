@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Settings, FileText, Mic, ClipboardPaste, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw, Pencil } from 'lucide-react';
+import { Plus, Settings, FileText, Mic, ClipboardPaste, Loader2, AlertCircle, CheckCircle2, Clock, CloudOff, RefreshCw, Pencil, Users } from 'lucide-react';
 import { useScribeNoteStore } from '../../stores/scribeNoteStore';
 import { getBackendUrl } from '../../config/appConfig';
 
@@ -58,6 +58,7 @@ export const ScribeDashboardPage: React.FC = () => {
           transcript: enc.transcript,
           sections: enc.sections,
           status: 'draft',
+          team_id: enc.teamId || undefined,
         }),
       });
       if (res.ok) {
@@ -165,6 +166,13 @@ export const ScribeDashboardPage: React.FC = () => {
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-slate-50 tracking-tight">My Notes</h1>
         <div className="flex items-center gap-2">
+          <Link
+            to="/scribe/teams"
+            aria-label="Teams & Metrics"
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+          >
+            <Users size={18} />
+          </Link>
           <Link
             to="/scribe/settings"
             aria-label="Settings"

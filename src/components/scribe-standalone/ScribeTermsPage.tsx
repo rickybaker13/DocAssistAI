@@ -90,14 +90,16 @@ export const ScribeTermsPage: React.FC = () => {
 
             <div>
               <h2 className="text-xl font-semibold text-slate-100 mt-8 mb-3">7. Data Processing and Security Commitments</h2>
-              <p>DocAssistAI implements and maintains reasonable and appropriate administrative, physical, and technical safeguards designed to protect data in our custody. These may include, as appropriate:</p>
+              <p>DocAssistAI implements and maintains reasonable and appropriate administrative, physical, and technical safeguards designed to protect data in our custody, including:</p>
               <ul className="list-disc pl-6 mt-2 space-y-1">
-                <li>access controls and authentication controls,</li>
-                <li>encryption in transit and at rest (where technically supported),</li>
-                <li>logging and audit controls,</li>
-                <li>environment segregation,</li>
-                <li>vendor/subprocessor oversight,</li>
-                <li>incident response procedures.</li>
+                <li><strong className="text-slate-100">PII de-identification</strong> &mdash; All clinical text is scrubbed of protected health information using Microsoft Presidio (self-hosted) before reaching external AI providers. Fail-closed: AI requests are blocked if de-identification is unavailable.</li>
+                <li><strong className="text-slate-100">Encryption in transit</strong> &mdash; TLS/HTTPS on all external connections.</li>
+                <li><strong className="text-slate-100">Access controls</strong> &mdash; bcrypt-hashed passwords, HTTP-only secure cookies, automatic session timeout (15 minutes of inactivity), and token revocation on password change.</li>
+                <li><strong className="text-slate-100">Audit logging</strong> &mdash; Access to clinical data and AI service usage is logged (metadata only; no PHI in logs).</li>
+                <li><strong className="text-slate-100">Infrastructure isolation</strong> &mdash; Database, PII scrubbing, and transcription services run on an internal network with no external access.</li>
+                <li><strong className="text-slate-100">Automated data retention</strong> &mdash; Clinical notes are retained for 3 days from last edit. Expired trial accounts are purged after 30 days. Cancelled accounts are purged after 90 days. See the <Link to="/privacy" className="text-teal-400 hover:text-teal-300">Privacy Policy</Link> (Section 8) for the full retention schedule.</li>
+                <li><strong className="text-slate-100">Vendor/subprocessor oversight</strong> &mdash; Business Associate Agreements in place with infrastructure providers that handle PHI.</li>
+                <li><strong className="text-slate-100">Disaster recovery</strong> &mdash; Daily automated database backups with documented restore procedures.</li>
               </ul>
               <p className="mt-2">No method of transmission or storage is 100% secure; we do not guarantee absolute security.</p>
             </div>

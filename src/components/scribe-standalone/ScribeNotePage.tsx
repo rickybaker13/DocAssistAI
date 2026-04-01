@@ -4,7 +4,10 @@ import { ArrowLeft, X } from 'lucide-react';
 import { NoteSectionEditor } from './NoteSectionEditor';
 import { FocusedAIPanel } from './FocusedAIPanel';
 import { BillingCodesPanel } from './BillingCodesPanel';
+import { ChartDataPanel } from './ChartDataPanel';
+import { GraphResultPanel } from './GraphResultPanel';
 import { ScribeChatDrawer } from './ScribeChatDrawer';
+import { ClinicalDataPanel } from './ClinicalDataPanel';
 import { useScribeNoteStore, type NoteSection } from '../../stores/scribeNoteStore';
 import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { getBackendUrl } from '../../config/appConfig';
@@ -89,6 +92,7 @@ export const ScribeNotePage: React.FC = () => {
   const [focusedSection, setFocusedSection] = useState<SectionData | null>(null);
   const [showAddSection, setShowAddSection] = useState(false);
   const [activeTab, setActiveTab] = useState<'note' | 'billing'>('note');
+  const [graphSvg, setGraphSvg] = useState<string | null>(null);
   const { user } = useScribeAuthStore();
   const billingCodesEnabled = user?.billing_codes_enabled ?? false;
 
@@ -158,6 +162,7 @@ export const ScribeNotePage: React.FC = () => {
           transcript: storeNote.transcript,
           sections: merged,
           status: storeNote.status,
+          team_id: storeNote.teamId || undefined,
         }),
       }).catch(() => { /* best-effort */ });
     }, 2000);
@@ -196,6 +201,13 @@ export const ScribeNotePage: React.FC = () => {
   };
 
   const handleChatInsert = (sectionId: string, text: string) => {
+    setEdits(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + text,
+    }));
+  };
+
+  const handleChartText = (sectionId: string, text: string) => {
     setEdits(prev => ({
       ...prev,
       [sectionId]: (prev[sectionId] ? prev[sectionId] + '\n' : '') + text,
@@ -257,6 +269,7 @@ export const ScribeNotePage: React.FC = () => {
           transcript: storeNote.transcript,
           sections: merged,
           status: 'finalized',
+          team_id: storeNote.teamId || undefined,
         }),
       }).catch(() => { /* best-effort */ });
     }
@@ -362,6 +375,18 @@ export const ScribeNotePage: React.FC = () => {
         />
       ))}
 
+      {/* Chart Data input panel — collapsed by default */}
+      <ChartDataPanel
+        noteType={storeNote.noteType}
+        verbosity={storeNote.verbosity}
+        sections={sections}
+        onGraphResult={setGraphSvg}
+        onApplyText={handleChartText}
+      />
+
+      {/* Graph result panel — visible only when a graph has been generated */}
+      <GraphResultPanel svgMarkup={graphSvg} onClear={() => setGraphSvg(null)} />
+
       <button
         onClick={() => setShowAddSection(true)}
         className="text-sm text-teal-400 border border-dashed border-slate-700 rounded-lg px-4 py-2 hover:bg-teal-400/10 transition-colors w-full"
@@ -427,6 +452,16 @@ export const ScribeNotePage: React.FC = () => {
           loading={storeNote.billingCodesLoading}
           error={storeNote.billingCodesError}
           onRetry={fetchBillingCodes}
+        />
+      )}
+
+      {/* Clinical Data Panel — capture diagnoses, acuity, complications */}
+      {noteId && storeNote.teamId && (
+        <ClinicalDataPanel
+          noteId={noteId}
+          teamId={storeNote.teamId}
+          noteType={storeNote.noteType}
+          noteContent={sections.map(s => `${s.section_name}: ${edits[s.id] ?? s.content ?? ''}`).join('\n\n')}
         />
       )}
     </div>
