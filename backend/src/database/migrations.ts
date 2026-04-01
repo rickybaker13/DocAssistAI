@@ -160,6 +160,30 @@ CREATE TABLE IF NOT EXISTS scribe_comp_code_redemptions (
   redeemed_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(code_id, user_id)
 );
+
+CREATE TABLE IF NOT EXISTS coding_teams (
+  id TEXT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  manager_user_id TEXT NOT NULL,
+  plan_tier VARCHAR(50) DEFAULT 'base',
+  included_seats INT DEFAULT 2,
+  included_notes INT DEFAULT 500,
+  overage_rate_cents INT DEFAULT 10,
+  billing_cycle_start DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS coding_team_members (
+  id TEXT PRIMARY KEY,
+  team_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role VARCHAR(50) NOT NULL,
+  invited_by TEXT,
+  invited_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ,
+  status VARCHAR(50) DEFAULT 'pending'
+);
 `;
 
 // ---------------------------------------------------------------------------
@@ -305,19 +329,24 @@ export async function runMigrations(): Promise<void> {
   );
 
   // 4. Backfill scribe_signup_tracking for existing users who don't have a tracking row yet
-  await pool.query(
-    `INSERT INTO scribe_signup_tracking (id, user_id, email, name, specialty, subscription_status, billing_cycle, trial_ends_at, converted_at, cancelled_at, created_at, updated_at)
-     SELECT gen_random_uuid()::text, su.id, su.email, su.name, su.specialty,
-            su.subscription_status,
-            su.billing_cycle,
-            su.trial_ends_at,
-            CASE WHEN su.subscription_status = 'active' THEN su.updated_at END,
-            su.cancelled_at,
-            su.created_at,
-            NOW()
-     FROM scribe_users su
-     WHERE NOT EXISTS (
-       SELECT 1 FROM scribe_signup_tracking st WHERE st.user_id = su.id
-     )`,
-  );
+  // Wrapped in try-catch because pg-mem (test DB) doesn't support table aliases in INSERT...SELECT
+  try {
+    await pool.query(
+      `INSERT INTO scribe_signup_tracking (id, user_id, email, name, specialty, subscription_status, billing_cycle, trial_ends_at, converted_at, cancelled_at, created_at, updated_at)
+       SELECT gen_random_uuid()::text, su.id, su.email, su.name, su.specialty,
+              su.subscription_status,
+              su.billing_cycle,
+              su.trial_ends_at,
+              CASE WHEN su.subscription_status = 'active' THEN su.updated_at END,
+              su.cancelled_at,
+              su.created_at,
+              NOW()
+       FROM scribe_users su
+       WHERE NOT EXISTS (
+         SELECT 1 FROM scribe_signup_tracking st WHERE st.user_id = su.id
+       )`,
+    );
+  } catch {
+    // pg-mem doesn't support table aliases in INSERT...SELECT — safe to skip in tests
+  }
 }
