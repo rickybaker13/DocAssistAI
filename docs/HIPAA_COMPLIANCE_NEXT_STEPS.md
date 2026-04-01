@@ -137,7 +137,7 @@ Replace Railway's auto-deploy with one of:
 
 | # | Gap | Fix | Status |
 |---|---|---|---|
-| 12 | **RBAC** | Add role column to `scribe_users`, enforce in middleware. | |
+| 12 | **RBAC** | Add role column to `scribe_users`, enforce in middleware. | **DONE** — `user_role` column (clinician/coding_manager/billing_coder). Role checks in all CodeAssist routes. Frontend `CoderAuthGuard` enforces role-based routing. (2026-04-01) |
 | 13 | **Data retention policy** | Define retention periods, add cleanup jobs. | **DONE** — Notes: 3 days. Expired trials: 30 days. Cancelled accounts: 90 days. Stale tokens: 24 hours. Cron job deployed at 3 AM daily (2026-03-12). |
 | 14 | **Backup & disaster recovery plan** | Document backup strategy (DO snapshots + `pg_dump` cron), test restores. | **DONE** — `docs/disaster-recovery.md` + daily pg_dump cron at 2 AM (2026-03-12) |
 
@@ -164,10 +164,36 @@ Replace Railway's auto-deploy with one of:
 - **DigitalOcean BAA** — Signed and in place (2026-03-12)
 - **Groq BAA** — Included in Groq ToS (effective 2025-10-15)
 - **Published Privacy Policy + Terms of Service** — With consent tracking (TOS version, acceptance timestamp)
+- **CodeAssist HIPAA compliance** (added 2026-04-01):
+  - Raw pasted clinical notes **never persisted** — request-scoped memory only, discarded after AI response
+  - PII scrubbing on all pasted notes before AI calls (same Presidio pipeline as Scribe)
+  - Patient header fields (name, MRN) stored encrypted at rest in `coding_sessions` table
+  - Spreadsheet exports streamed directly to client — no temporary files stored on server
+  - Role-based access control: coders see only their own sessions, managers see team sessions
+  - Audit logging: every `extract-codes` call logged with `coder_user_id`, `team_id`, `timestamp`, `code_count` — **no PHI in logs**
+  - Rate limiting on AI extraction (10/min) and export (5/min) endpoints
+  - Fail-closed: if Presidio is down, 503 returned — no AI call made, no PHI exposed
 
 ---
 
-## 5. Consolidated Cost Estimate (Post-Migration)
+## 5. CodeAssist PHI Inventory
+
+| Data | Stored in DB | Encrypted at Rest | Sent to AI | Notes |
+|---|---|---|---|---|
+| Patient name | Yes (`coding_sessions`) | Yes | No | Coder-entered, never sent to LLM |
+| MRN | Yes (`coding_sessions`) | Yes | No | Coder-entered, nullable |
+| Date of service | Yes (`coding_sessions`) | Yes | No | Coder-entered |
+| Provider name | Yes (`coding_sessions`) | Yes | No | Coder-entered |
+| Raw pasted note | **No** (transient) | N/A | Yes (after PII scrub) | Discarded after request completes |
+| Generated codes | Yes (JSONB) | Yes | No (output only) | ICD-10, CPT, E/M codes |
+| Supporting excerpts | Yes (in JSONB) | Yes | No (output only) | Short quotes from the scrubbed note |
+| Spreadsheet file | **No** (streamed) | Yes (in transit) | No | Generated on-the-fly, never saved to disk |
+
+**Minimum necessary principle:** Only the minimum PHI needed for the spreadsheet export (patient name, MRN, DOS, provider) is stored. The raw clinical note is never persisted.
+
+---
+
+## 6. Consolidated Cost Estimate (Post-Migration)
 
 | Item | Monthly Cost |
 |---|---|
