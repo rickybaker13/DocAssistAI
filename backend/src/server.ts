@@ -29,6 +29,7 @@ import scribeAdminSignupsRouter from './routes/scribeAdminSignups.js';
 import scribeCompCodesRouter from './routes/scribeCompCodes.js';
 import scribeNotesRouter from './routes/scribeNotes.js';
 import coderAiRouter from './routes/coderAi.js';
+import coderTeamsRouter from './routes/coderTeams.js';
 import { scribeAuthMiddleware } from './middleware/scribeAuth.js';
 import { scribeSubscriptionMiddleware } from './middleware/scribeSubscription.js';
 import healthRouter from './routes/health.js';
@@ -127,6 +128,7 @@ app.use('/api/scribe/comp-codes', scribeAuthMiddleware, scribeCompCodesRouter);
 app.use('/api/scribe/notes', scribeAuthMiddleware, scribeSubscriptionMiddleware, scribeNotesRouter);
 app.use('/api/cron', scribeCronRouter);
 app.use('/api/ai/scribe/coder', scribeAuthMiddleware, coderAiRouter);
+app.use('/api/scribe/coder/teams', scribeAuthMiddleware, coderTeamsRouter);
 app.use('/api', healthRouter);
 
 // Health check
