@@ -161,6 +161,59 @@ CREATE TABLE IF NOT EXISTS scribe_comp_code_redemptions (
   UNIQUE(code_id, user_id)
 );
 
+CREATE TABLE IF NOT EXISTS coding_teams (
+  id TEXT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  manager_user_id TEXT NOT NULL,
+  plan_tier VARCHAR(50) DEFAULT 'base',
+  included_seats INT DEFAULT 2,
+  included_notes INT DEFAULT 500,
+  overage_rate_cents INT DEFAULT 10,
+  billing_cycle_start DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS coding_team_members (
+  id TEXT PRIMARY KEY,
+  team_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  role VARCHAR(50) NOT NULL,
+  invited_by TEXT,
+  invited_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ,
+  status VARCHAR(50) DEFAULT 'pending'
+);
+
+CREATE TABLE IF NOT EXISTS coding_sessions (
+  id TEXT PRIMARY KEY,
+  coder_user_id TEXT NOT NULL,
+  team_id TEXT NOT NULL,
+  patient_name VARCHAR(255) NOT NULL,
+  mrn VARCHAR(100),
+  date_of_service DATE NOT NULL,
+  provider_name VARCHAR(255) NOT NULL,
+  facility VARCHAR(255),
+  note_type VARCHAR(100) NOT NULL,
+  icd10_codes JSONB NOT NULL DEFAULT '[]',
+  cpt_codes JSONB NOT NULL DEFAULT '[]',
+  em_level JSONB,
+  missing_documentation JSONB DEFAULT '[]',
+  coder_status VARCHAR(50) DEFAULT 'coded',
+  batch_week DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS coding_usage (
+  id TEXT PRIMARY KEY,
+  team_id TEXT NOT NULL,
+  month DATE NOT NULL,
+  notes_coded INT DEFAULT 0,
+  overage_notes INT DEFAULT 0,
+  overage_charge_cents INT DEFAULT 0,
+  UNIQUE (team_id, month)
+);
+
 CREATE TABLE IF NOT EXISTS teams (
   id          TEXT PRIMARY KEY,
   name        TEXT NOT NULL,
@@ -317,6 +370,17 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'trial_reminder_stage',
     sql: `ALTER TABLE scribe_users ADD COLUMN trial_reminder_stage INTEGER DEFAULT 0`,
   },
+  // CodeAssist: user role and coding team assignment
+  {
+    table: 'scribe_users',
+    column: 'user_role',
+    sql: `ALTER TABLE scribe_users ADD COLUMN user_role VARCHAR(50) DEFAULT 'clinician'`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'coding_team_id',
+    sql: `ALTER TABLE scribe_users ADD COLUMN coding_team_id UUID`,
+  },
   // Token revocation — tokens issued before this timestamp are rejected
   {
     table: 'scribe_users',
@@ -361,9 +425,7 @@ export async function runMigrations(): Promise<void> {
   );
 
   // 4. Backfill scribe_signup_tracking for existing users who don't have a tracking row yet
-  // Note: pg-mem has limited support for aliased subqueries, so this is
-  // wrapped in try-catch for test environments. The backfill only matters
-  // for existing production databases.
+  // Wrapped in try-catch because pg-mem (test DB) doesn't support table aliases in INSERT...SELECT
   try {
     await pool.query(
       `INSERT INTO scribe_signup_tracking (id, user_id, email, name, specialty, subscription_status, billing_cycle, trial_ends_at, converted_at, cancelled_at, created_at, updated_at)
@@ -381,6 +443,6 @@ export async function runMigrations(): Promise<void> {
        )`,
     );
   } catch {
-    // pg-mem doesn't support this complex INSERT...SELECT — safe to skip in tests
+    // pg-mem doesn't support table aliases in INSERT...SELECT — safe to skip in tests
   }
 }
