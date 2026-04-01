@@ -11,12 +11,20 @@ export const ScribeLoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
 
-  useEffect(() => { if (user) navigate("/scribe/dashboard"); }, [user, navigate]);
+  const dashboardForRole = (role?: string) =>
+    role === 'billing_coder' || role === 'coding_manager'
+      ? '/coder/dashboard'
+      : '/scribe/dashboard';
+
+  useEffect(() => { if (user) navigate(dashboardForRole(user.user_role)); }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const ok = await login(email, password, rememberMe);
-    if (ok) navigate('/scribe/dashboard');
+    if (ok) {
+      const loggedInUser = useScribeAuthStore.getState().user;
+      navigate(dashboardForRole(loggedInUser?.user_role));
+    }
   };
 
   return (

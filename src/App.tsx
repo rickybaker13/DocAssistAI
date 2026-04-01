@@ -24,6 +24,11 @@ import ForNPsPage from './components/scribe-standalone/ForNPsPage';
 import ForResidentsPage from './components/scribe-standalone/ForResidentsPage';
 import ForPracticesPage from './components/scribe-standalone/ForPracticesPage';
 import SecurityPage from './components/scribe-standalone/SecurityPage';
+import { CoderAuthGuard } from './components/coder/CoderAuthGuard';
+import { CoderLayout } from './components/coder/CoderLayout';
+import { CoderDashboard } from './components/coder/CoderDashboard';
+import { CoderSessionDetail } from './components/coder/CoderSessionDetail';
+import { CoderTeamManagement } from './components/coder/CoderTeamManagement';
 import { install402Interceptor } from './utils/fetchInterceptor';
 
 // Install once at app startup
@@ -66,6 +71,19 @@ function App() {
           <Route path="note/:id/record" element={<ScribeRecordPage />} />
           <Route path="note/:id" element={<ScribeNotePage />} />
           <Route index element={<Navigate to="/scribe/dashboard" replace />} />
+        </Route>
+        <Route
+          path="/coder/*"
+          element={
+            <CoderAuthGuard>
+              <CoderLayout />
+            </CoderAuthGuard>
+          }
+        >
+          <Route path="dashboard" element={<CoderDashboard />} />
+          <Route path="session/:id" element={<CoderSessionDetail />} />
+          <Route path="team" element={<CoderTeamManagement />} />
+          <Route index element={<Navigate to="/coder/dashboard" replace />} />
         </Route>
         <Route path="/account" element={<Navigate to="/scribe/account" replace />} />
         <Route path="/billing" element={<Navigate to="/scribe/account" replace />} />
