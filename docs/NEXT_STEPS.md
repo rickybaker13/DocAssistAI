@@ -211,3 +211,37 @@ See `docs/HIPAA_COMPLIANCE_NEXT_STEPS.md` for the full checklist. Key remaining 
 - BAA with DigitalOcean (for the droplet)
 - Audit log persistence and rotation
 - Encryption at rest verification
+
+---
+
+## CodeAssist (Billing Coder Module) — Post-Launch Priorities
+
+_Added 2026-04-01. See `docs/plans/2026-04-01-codeassist-billing-coder-design.md` for full design._
+
+### Immediate — Before First Real Users
+
+| # | Task | Effort | Notes |
+|---|---|---|---|
+| 1 | **Wire pricing to Square** | 1–2 days | Connect $99/mo base + $25/seat + $0.10 overage to Square billing. Model exists in `coding_teams` + `coding_usage` tables. |
+| 2 | **Email invites via Resend** | 2–4 hrs | `POST /api/scribe/coder/teams/:id/invite` currently creates stub user but doesn't send email. Wire up Resend. |
+| 3 | **Coder onboarding flow** | 4–6 hrs | When coder clicks invite link → registration page pre-fills team. Currently requires manual SQL. |
+| 4 | **Column-level encryption** | 2–4 hrs | `patient_name`, `mrn`, `provider_name` in `coding_sessions` marked for encryption at rest. Implement via `pgcrypto` or application-layer AES. |
+| 5 | **Manual smoke test** | 1 hr | Create test manager, invite coder, paste a real-format note, verify codes, export xlsx, open in Excel. |
+| 6 | **Update Privacy Policy / ToS** | 1–2 hrs | Add CodeAssist data handling, team accounts, and billing coder role to existing legal docs. |
+
+### Short-Term — First 2 Weeks
+
+| # | Task | Effort | Notes |
+|---|---|---|---|
+| 7 | **Manager billing dashboard** | 4–6 hrs | Show invoices, usage history chart, plan details on `/coder/team` page. |
+| 8 | **Coder can edit codes before saving** | 4–6 hrs | V1 is read-only suggestions. Add inline editing (add/remove/modify codes). |
+| 9 | **Batch status workflow** | 2–3 hrs | Bulk "Mark All Reviewed" button on weekly batch table. |
+| 10 | **Export template customization** | 2–3 hrs | Let managers configure which columns appear in the xlsx export (some UPAs want different formats). |
+
+### Medium-Term — See `docs/FUTURE_DIRECTIONS.md`
+
+- HCC / RAF scoring
+- CPT modifier suggestions
+- EHR integration (FHIR)
+- Clearinghouse auto-submission
+- Provider-facing coding report

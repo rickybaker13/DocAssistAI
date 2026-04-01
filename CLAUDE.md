@@ -4,6 +4,7 @@
 - **Frontend:** React/TypeScript/Vite on `localhost:8080` — `npm run dev`
 - **Backend:** Express/TypeScript on `localhost:3000` — `cd backend && npm run dev`
 - **Scribe module:** `src/components/scribe-standalone/` (frontend) + `backend/src/routes/scribeAi.ts`
+- **CodeAssist module:** `src/components/coder/` (frontend) + `backend/src/routes/coderAi.ts`, `coderTeams.ts`, `coderSessions.ts`, `coderExport.ts`
 - **DB:** PostgreSQL via `pg` pool (`backend/src/database/db.ts`). Production: PostgreSQL container on DO droplet (`DATABASE_URL`). Tests: `pg-mem` in-memory (auto-selected when `NODE_ENV=test`). `getPool()` throws if `initPool()` not called first.
 
 ## Production Deployment
@@ -19,11 +20,17 @@
 
 ## Test Commands
 ```bash
-# Backend (ESM mode required):
+# Backend — Scribe tests (ESM mode required):
 cd backend && node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns="scribe" --no-coverage
 
-# Frontend:
+# Backend — CodeAssist tests:
+cd backend && node --experimental-vm-modules node_modules/.bin/jest --testPathPatterns="(coder|codingTeam|codingSession)" --no-coverage
+
+# Frontend — Scribe:
 npx vitest run src/components/scribe-standalone/
+
+# Frontend — CodeAssist:
+npx vitest run src/components/coder/ src/stores/coderStore.test.ts
 
 # Full frontend suite:
 npx vitest run src/
@@ -125,6 +132,83 @@ mockReInject.mockImplementation((text) => text);
 **Custom HIPAA recognizers:** `backend/presidio-config/custom-recognizers.yaml` — mounted into the analyzer container via Docker volume. Covers: MRN, DOB, health plan numbers, account numbers, ages > 89.
 
 **Health check:** `GET /api/health` returns `{ presidio, analyzer, anonymizer }` status. Used by frontend health banner.
+
+## CodeAssist Module (Billing Coder)
+
+**Purpose:** Billing coders paste clinical notes from EHRs, get AI-extracted ICD-10/CPT/E&M codes with supporting excerpts, and export weekly batches as CMS-1500-aligned spreadsheets. All AI calls routed through Presidio PII pipeline.
+
+### User Roles
+
+- **`clinician`** (default) — access to Scribe (recording/note generation). No CodeAssist access.
+- **`coding_manager`** — creates a coding team, invites coders, views team usage/billing. Has CodeAssist access.
+- **`billing_coder`** — invited by a manager. Paste-and-code workflow only. No Scribe access.
+
+Role stored in `scribe_users.user_role` (VARCHAR, default `'clinician'`). Frontend routing: clinicians → `/scribe/*`, coders → `/coder/*`.
+
+### Database Tables
+
+| Table | Purpose |
+|---|---|
+| `coding_teams` | Team account (name, manager, plan tier, included seats/notes, billing cycle) |
+| `coding_team_members` | Membership + invitations (role, status: pending/active/deactivated) |
+| `coding_sessions` | Saved code extractions — codes + excerpts only, **never raw note text** |
+| `coding_usage` | Monthly metering per team (notes coded, overage tracking) |
+
+### Key API Shapes (CodeAssist)
+
+| Endpoint | Request | Response |
+|---|---|---|
+| `POST /api/ai/scribe/coder/extract-codes` | `{ noteText, noteType?, specialty? }` | `{ icd10_codes[], cpt_codes[], em_level, missing_documentation[], disclaimer }` |
+| `GET /api/scribe/coder/sessions` | query: `limit, offset` | `CoderSession[]` |
+| `POST /api/scribe/coder/sessions` | `{ patientName, mrn?, dateOfService, providerName, facility?, noteType, icd10Codes, cptCodes, emLevel, missingDocumentation }` | `CoderSession` |
+| `GET /api/scribe/coder/export` | query: `start, end, format (xlsx\|csv)` | Binary file download |
+| `POST /api/scribe/coder/teams` | `{ name }` | `{ team, member }` |
+| `POST /api/scribe/coder/teams/:id/invite` | `{ email }` | `CodingTeamMember` |
+| `GET /api/scribe/coder/teams/:id/usage` | — | `{ current, history[] }` |
+
+### CodeAssist PII/PHI Data Flow
+
+```
+Coder pastes note → HTTPS → Backend
+  1. Patient header fields (name, MRN, DOS, provider)
+     → encrypted → saved to DB → NEVER sent to AI
+  2. Pasted note text
+     → Presidio PII scrub → [PERSON_0], [DATE_0] tokens
+     → scrubbed text to Claude (temperature 0.2)
+     → response re-injected (supporting_text, reasoning fields)
+     → codes + excerpts saved to DB
+     → raw note DISCARDED (request-scoped memory only)
+  3. Spreadsheet export
+     → server-side xlsx generation (exceljs) → streamed to browser
+     → no file stored on server
+```
+
+**PHI stored:** patient_name, mrn, provider_name (encrypted at rest in `coding_sessions`). **PHI NOT stored:** raw pasted note text (transient only).
+
+### CodeAssist Pricing Model
+
+- **$99/mo base** — 1 manager + 2 coder seats, 500 notes/month included
+- **+$25/seat/mo** per additional coder
+- **$0.10/note** overage after 500
+- Annual: $990/yr (~17% savings)
+- AI cost: ~$0.035/note (Claude extraction prompt)
+
+### Rate Limiting
+
+- `extract-codes`: 10 req/min per user
+- `export`: 5 req/min per user
+
+### Frontend Architecture
+
+- **Store:** `src/stores/coderStore.ts` — Zustand (no persist, sessions fetched from API)
+- **Routing:** `/coder/dashboard`, `/coder/session/:id`, `/coder/team` — guarded by `CoderAuthGuard`
+- **Key components:** `NoteInputPanel` (form + textarea), `CoderResultsPanel` (codes + audit trail), `WeeklyBatchTable` (batch view + export), `CoderTeamManagement` (members + usage)
+
+### Design & Plan Documents
+
+- `docs/plans/2026-04-01-codeassist-billing-coder-design.md` — Full approved design
+- `docs/plans/2026-04-01-codeassist-implementation.md` — 15-task implementation plan
+- `docs/FUTURE_DIRECTIONS.md` — Deferred features (HCC scoring, modifiers, EHR integration, etc.)
 
 ## Known Gotchas
 
