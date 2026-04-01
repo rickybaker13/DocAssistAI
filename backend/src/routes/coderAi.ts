@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { aiService } from '../services/ai/aiService.js';
 import { piiScrubber, PiiServiceUnavailableError } from '../services/piiScrubber.js';
 import { ScribeUserModel } from '../models/scribeUser.js';
@@ -23,8 +24,17 @@ function extractContent(raw: unknown): string {
   return '';
 }
 
+const extractCodesLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10,
+  keyGenerator: (req) => req.scribeUserId || req.ip || 'unknown',
+  message: { error: 'Too many code extraction requests. Please wait a moment.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── POST /api/ai/scribe/coder/extract-codes ────────────────────────────────
-router.post('/extract-codes', async (req: Request, res: Response) => {
+router.post('/extract-codes', extractCodesLimiter, async (req: Request, res: Response) => {
   // ── Role check ──────────────────────────────────────────────────────────
   const user = await userModel.findById(req.scribeUserId!);
   if (!user || (user.user_role !== 'billing_coder' && user.user_role !== 'coding_manager')) {

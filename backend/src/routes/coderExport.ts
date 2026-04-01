@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import ExcelJS from 'exceljs';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { CodingSessionModel, CodingSession } from '../models/codingSession.js';
@@ -8,8 +9,17 @@ const router = Router();
 const userModel = new ScribeUserModel();
 const sessionModel = new CodingSessionModel();
 
+const exportLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 5,
+  keyGenerator: (req) => req.scribeUserId || req.ip || 'unknown',
+  message: { error: 'Too many export requests. Please wait a moment.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // ─── GET / — Export coding sessions as spreadsheet ─────────────────────────
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', exportLimiter, async (req: Request, res: Response) => {
   const start = req.query.start as string | undefined;
   const end = req.query.end as string | undefined;
   const format = (req.query.format as string) || 'xlsx';
