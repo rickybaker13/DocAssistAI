@@ -184,6 +184,35 @@ CREATE TABLE IF NOT EXISTS coding_team_members (
   accepted_at TIMESTAMPTZ,
   status VARCHAR(50) DEFAULT 'pending'
 );
+
+CREATE TABLE IF NOT EXISTS coding_sessions (
+  id TEXT PRIMARY KEY,
+  coder_user_id TEXT NOT NULL,
+  team_id TEXT NOT NULL,
+  patient_name VARCHAR(255) NOT NULL,
+  mrn VARCHAR(100),
+  date_of_service DATE NOT NULL,
+  provider_name VARCHAR(255) NOT NULL,
+  facility VARCHAR(255),
+  note_type VARCHAR(100) NOT NULL,
+  icd10_codes JSONB NOT NULL DEFAULT '[]',
+  cpt_codes JSONB NOT NULL DEFAULT '[]',
+  em_level JSONB,
+  missing_documentation JSONB DEFAULT '[]',
+  coder_status VARCHAR(50) DEFAULT 'coded',
+  batch_week DATE NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS coding_usage (
+  id TEXT PRIMARY KEY,
+  team_id TEXT NOT NULL,
+  month DATE NOT NULL,
+  notes_coded INT DEFAULT 0,
+  overage_notes INT DEFAULT 0,
+  overage_charge_cents INT DEFAULT 0,
+  UNIQUE (team_id, month)
+);
 `;
 
 // ---------------------------------------------------------------------------
