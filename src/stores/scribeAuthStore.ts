@@ -9,6 +9,8 @@ export interface ScribeUser {
   specialty: string | null;
   is_admin: boolean;
   billing_codes_enabled: boolean;
+  user_role: 'clinician' | 'coding_manager' | 'billing_coder';
+  coding_team_id: string | null;
 }
 
 export interface SubscriptionStatus {

@@ -17,6 +17,8 @@ export interface ScribeUser {
   billing_cycle: 'monthly' | 'annual';
   billing_codes_enabled: boolean;
   trial_reminder_stage: number;
+  user_role: 'clinician' | 'coding_manager' | 'billing_coder';
+  coding_team_id: string | null;
   tos_accepted_at: string | null;
   privacy_accepted_at: string | null;
   tos_version: string | null;

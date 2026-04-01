@@ -256,6 +256,17 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'trial_reminder_stage',
     sql: `ALTER TABLE scribe_users ADD COLUMN trial_reminder_stage INTEGER DEFAULT 0`,
   },
+  // CodeAssist: user role and coding team assignment
+  {
+    table: 'scribe_users',
+    column: 'user_role',
+    sql: `ALTER TABLE scribe_users ADD COLUMN user_role VARCHAR(50) DEFAULT 'clinician'`,
+  },
+  {
+    table: 'scribe_users',
+    column: 'coding_team_id',
+    sql: `ALTER TABLE scribe_users ADD COLUMN coding_team_id UUID`,
+  },
 ];
 
 // ---------------------------------------------------------------------------
