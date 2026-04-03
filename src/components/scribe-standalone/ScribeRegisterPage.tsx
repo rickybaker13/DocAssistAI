@@ -17,7 +17,16 @@ export const ScribeRegisterPage: React.FC = () => {
   const [accountType, setAccountType] = useState<'clinical' | 'coding' | null>(null);
   const [codingPath, setCodingPath] = useState<'manager' | 'invited' | null>(null);
 
-  useEffect(() => { if (user) navigate('/scribe/dashboard'); }, [user, navigate]);
+  useEffect(() => {
+    if (user) {
+      const role = user.user_role;
+      if (role === 'coding_manager' || role === 'billing_coder') {
+        navigate('/coder/dashboard');
+      } else {
+        navigate('/scribe/dashboard');
+      }
+    }
+  }, [user, navigate]);
 
   const setField = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm(prev => ({ ...prev, [field]: e.target.value }));
@@ -35,9 +44,9 @@ export const ScribeRegisterPage: React.FC = () => {
     const ok = await register(form.email, form.password, form.name, form.specialty, role);
     if (ok) {
       if (role === 'coding_manager') {
-        navigate('/coder/team');
+        navigate('/coder/team', { replace: true });
       } else {
-        navigate('/scribe/dashboard');
+        navigate('/scribe/dashboard', { replace: true });
       }
     }
   };
