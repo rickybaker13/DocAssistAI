@@ -1,5 +1,6 @@
 import { getPool } from '../database/db.js';
 import { randomUUID } from 'crypto';
+import { encrypt, decrypt } from '../services/encryption.js';
 
 export interface CodingSession {
   id: string;
@@ -42,7 +43,16 @@ function normalizeDateField(val: unknown): string {
   return String(val);
 }
 
+/** Decrypt PHI fields that are stored encrypted in the database. */
+function decryptPhiFields(row: Record<string, unknown>): void {
+  row.patient_name = decrypt(row.patient_name as string | null);
+  row.mrn = decrypt(row.mrn as string | null);
+  row.provider_name = decrypt(row.provider_name as string | null);
+  row.facility = decrypt(row.facility as string | null);
+}
+
 function hydrateRow(row: Record<string, unknown>): CodingSession {
+  decryptPhiFields(row);
   return {
     ...row,
     date_of_service: normalizeDateField(row.date_of_service),
@@ -75,6 +85,11 @@ export class CodingSessionModel {
     const pool = getPool();
     const id = randomUUID();
     const batchWeek = computeBatchWeek(input.dateOfService);
+    // Encrypt PHI fields before storing
+    const encPatientName = encrypt(input.patientName);
+    const encMrn = encrypt(input.mrn ?? null);
+    const encProviderName = encrypt(input.providerName);
+    const encFacility = encrypt(input.facility ?? null);
     await pool.query(
       `INSERT INTO coding_sessions
         (id, coder_user_id, team_id, patient_name, mrn, date_of_service, provider_name, facility, note_type, icd10_codes, cpt_codes, em_level, missing_documentation, coder_status, batch_week)
@@ -83,11 +98,11 @@ export class CodingSessionModel {
         id,
         input.coderUserId,
         input.teamId,
-        input.patientName,
-        input.mrn ?? null,
+        encPatientName,
+        encMrn,
         input.dateOfService,
-        input.providerName,
-        input.facility ?? null,
+        encProviderName,
+        encFacility,
         input.noteType,
         JSON.stringify(input.icd10Codes ?? []),
         JSON.stringify(input.cptCodes ?? []),

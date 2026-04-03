@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { CodingSessionModel, CodingSession } from '../models/codingSession.js';
 import { getPool } from '../database/db.js';
+import { decrypt } from '../services/encryption.js';
 
 const router = Router();
 const userModel = new ScribeUserModel();
@@ -50,6 +51,11 @@ router.get('/', exportLimiter, async (req: Request, res: Response) => {
     );
     sessions = result.rows.map((row: Record<string, unknown>) => ({
       ...row,
+      // Decrypt PHI fields stored with column-level encryption
+      patient_name: decrypt(row.patient_name as string | null),
+      mrn: decrypt(row.mrn as string | null),
+      provider_name: decrypt(row.provider_name as string | null),
+      facility: decrypt(row.facility as string | null),
       date_of_service: row.date_of_service instanceof Date
         ? row.date_of_service.toISOString().slice(0, 10)
         : String(row.date_of_service).slice(0, 10),
