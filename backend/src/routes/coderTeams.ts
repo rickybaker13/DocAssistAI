@@ -1,9 +1,11 @@
 import { Router, Request, Response } from 'express';
+import { randomBytes } from 'crypto';
 import { ScribeUserModel } from '../models/scribeUser.js';
 import { CodingTeamModel } from '../models/codingTeam.js';
 import { CodingTeamMemberModel } from '../models/codingTeamMember.js';
 import { CodingUsageModel } from '../models/codingUsage.js';
 import { getPool } from '../database/db.js';
+import { emailService } from '../services/email/emailService.js';
 
 const router = Router();
 const userModel = new ScribeUserModel();
@@ -112,7 +114,13 @@ router.post('/:id/invite', async (req: Request, res: Response) => {
     invitedBy: user.id,
   });
 
-  return res.status(201).json({ member }) as any;
+  // Generate invite token, store it, and send email
+  const inviteToken = randomBytes(24).toString('base64url');
+  await pool.query('UPDATE coding_team_members SET invite_token = $1 WHERE id = $2', [inviteToken, member.id]);
+
+  await emailService.sendCoderInviteEmail(email.trim(), user.name || user.email, team.name, inviteToken);
+
+  return res.status(201).json({ member: { ...member, invite_token: inviteToken } }) as any;
 });
 
 // ─── PATCH /:id/members/:memberId — Activate/deactivate member ─────────────

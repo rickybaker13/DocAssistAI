@@ -387,6 +387,12 @@ const COLUMN_MIGRATIONS: ColumnMigration[] = [
     column: 'token_invalidated_at',
     sql: `ALTER TABLE scribe_users ADD COLUMN token_invalidated_at TIMESTAMPTZ`,
   },
+  // CodeAssist: invite token for coder onboarding via email
+  {
+    table: 'coding_team_members',
+    column: 'invite_token',
+    sql: `ALTER TABLE coding_team_members ADD COLUMN invite_token TEXT`,
+  },
 ];
 
 // ---------------------------------------------------------------------------

@@ -141,6 +141,29 @@ export class EmailService {
     `);
   }
 
+  async sendCoderInviteEmail(to: string, managerName: string, teamName: string, inviteToken: string): Promise<void> {
+    const acceptUrl = `${APP_URL}/coder/join/${inviteToken}`;
+    await send(to, `You're invited to join ${teamName} on DocAssistAI CodeAssist`, `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 40px 20px;">
+        <h1 style="color: #0f172a; font-size: 24px; margin-bottom: 16px;">You've Been Invited</h1>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6;">
+          <strong>${managerName}</strong> has invited you to join <strong>${teamName}</strong> as a billing coder on DocAssistAI CodeAssist.
+        </p>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6;">
+          CodeAssist helps billing coders extract ICD-10, CPT, and E&M codes from clinical notes with AI assistance.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${acceptUrl}" style="display: inline-block; background: #14b8a6; color: #fff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+            Accept Invitation
+          </a>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px;">
+          If you didn't expect this invitation, you can safely ignore this email.
+        </p>
+      </div>
+    `);
+  }
+
   async sendPaymentFailedEmail(toEmail: string): Promise<void> {
     await send(toEmail, 'DocAssistAI payment failed — action needed', `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">

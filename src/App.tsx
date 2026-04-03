@@ -30,6 +30,7 @@ import ForResidentsPage from './components/scribe-standalone/ForResidentsPage';
 import ForPracticesPage from './components/scribe-standalone/ForPracticesPage';
 import SecurityPage from './components/scribe-standalone/SecurityPage';
 import { CoderAuthGuard } from './components/coder/CoderAuthGuard';
+import { CoderJoinPage } from './components/coder/CoderJoinPage';
 import { CoderLayout } from './components/coder/CoderLayout';
 import { CoderDashboard } from './components/coder/CoderDashboard';
 import { CoderSessionDetail } from './components/coder/CoderSessionDetail';
@@ -55,6 +56,7 @@ function App() {
         <Route path="/for-residents" element={<ForResidentsPage />} />
         <Route path="/for-practices" element={<ForPracticesPage />} />
         <Route path="/security" element={<SecurityPage />} />
+        <Route path="/coder/join/:token" element={<CoderJoinPage />} />
         <Route
           path="/scribe/*"
           element={
