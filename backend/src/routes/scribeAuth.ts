@@ -38,7 +38,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 
 router.post('/register', authLimiter, async (req: Request, res: Response) => {
-  const { email, password, name, specialty, signupSource, utmSource, utmMedium, utmCampaign, referralCode } = req.body;
+  const { email, password, name, specialty, userRole, signupSource, utmSource, utmMedium, utmCampaign, referralCode } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' }) as any;
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Invalid email address' }) as any;
   if (password.length < MIN_PASSWORD_LENGTH) return res.status(400).json({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }) as any;
@@ -46,6 +46,12 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
 
   const passwordHash = await bcrypt.hash(password, 12);
   const user = await userModel.create({ email, passwordHash, name, specialty });
+
+  // Set coding_manager role if requested (only coding_manager is accepted from registration)
+  if (userRole === 'coding_manager') {
+    await getPool().query('UPDATE scribe_users SET user_role = $1 WHERE id = $2', ['coding_manager', user.id]);
+  }
+
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: '7d' });
   res.cookie(COOKIE, token, COOKIE_OPTS);
 
@@ -84,7 +90,8 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     }
   })();
 
-  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
+  const finalRole = userRole === 'coding_manager' ? 'coding_manager' : 'clinician';
+  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin, user_role: finalRole } });
 });
 
 router.post('/login', authLimiter, async (req: Request, res: Response) => {
