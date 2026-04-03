@@ -1,6 +1,6 @@
 # DocAssistAI Privacy Policy
 
-**Effective date:** 2026-03-03  
+**Effective date:** 2026-04-03  
 **Entity:** DocAssistAI ("DocAssistAI," "we," "us," "our")
 
 > **Important:** This policy is a template for legal/compliance review and publication hardening. It is not legal advice.
@@ -30,6 +30,8 @@ Depending on service configuration and contracting:
 
 - Clinical notes, transcripts, prompts, templates, and related healthcare workflow content
 - Files, structured records, and integration payloads (e.g., EHR/FHIR-connected datasets where enabled)
+- Clinical notes pasted into the CodeAssist billing coder module for code extraction
+- Patient demographic information entered by billing coders (name, MRN, date of service, provider name)
 
 ### 3.3 Technical and Usage Data
 
@@ -97,6 +99,9 @@ We retain personal information only as long as necessary for service delivery, c
 | **Password reset tokens** | 24 hours after expiry | Automatically swept. |
 | **Audit logs** | 1 year | Rotated via file-size limits (100 MB total). |
 | **Audio recordings** | Not retained | Audio is processed in-memory for transcription and immediately discarded. Never stored to disk. |
+| **Pasted clinical notes (CodeAssist)** | Not retained | Notes pasted into the billing coder module are processed in-memory for code extraction and immediately discarded. Raw note text is never written to disk or database. |
+| **Extracted billing codes (CodeAssist)** | Duration of team subscription | ICD-10/CPT codes and brief supporting excerpts are retained for audit and export purposes. |
+| **Patient demographics (CodeAssist)** | Duration of team subscription | Patient name, MRN, provider name, and facility are encrypted at rest (AES-256-GCM) and retained for spreadsheet export. |
 
 Automated cleanup runs daily. Users may request earlier deletion by contacting admin@docassistai.app.
 
@@ -112,6 +117,9 @@ We implement safeguards designed to protect personal information, including:
 - **Audit logging** — Access to clinical data and AI service usage is logged with metadata only (no PHI in logs).
 - **Rate limiting** — Global and per-endpoint rate limiting to prevent abuse.
 - **Infrastructure isolation** — All backend services (database, PII scrubbing, transcription) communicate over an internal network; only the TLS reverse proxy is externally accessible.
+- **Column-level encryption** — Sensitive patient demographic fields (name, MRN, provider name) stored by the CodeAssist billing coder module are encrypted at rest using AES-256-GCM with unique initialization vectors per value.
+- **Transient processing** — Clinical notes pasted into CodeAssist are held in server memory only for the duration of the code extraction request. Raw note text is never persisted to disk or database.
+- **Role-based access control** — User roles (clinician, coding manager, billing coder) restrict access to features and data. Billing coders can only access their own coding sessions; managers can view team-wide data.
 - **Automated data retention** — Clinical notes, expired accounts, and stale credentials are automatically purged per the retention schedule in Section 8.
 
 No system is completely secure; however, we continuously assess and improve controls.

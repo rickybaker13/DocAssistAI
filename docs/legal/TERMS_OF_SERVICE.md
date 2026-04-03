@@ -1,6 +1,6 @@
 # DocAssistAI Terms of Service
 
-**Effective date:** 2026-03-03  
+**Effective date:** 2026-04-03  
 **Entity:** DocAssistAI ("DocAssistAI," "we," "us," "our")
 
 > **Important:** These Terms are a template intended for business and legal review. They are not legal advice.
@@ -26,6 +26,7 @@ DocAssistAI may generate summaries, draft notes, coding suggestions, and other A
 - Outputs may contain errors, omissions, or outdated information.
 - You are solely responsible for clinical review, professional judgment, final documentation, coding, billing, and treatment decisions.
 - You must independently verify material outputs before relying on them.
+- **Billing code suggestions (CodeAssist):** AI-extracted ICD-10, CPT, and E&M codes are suggestions only and do not constitute professional coding advice. A qualified billing coder or coding professional must review, verify, and approve all codes before submission to payers. DocAssistAI is not responsible for claim denials, overpayments, underpayments, or compliance issues arising from use of suggested codes.
 
 ## 4. HIPAA, PHI, and Business Associate Status
 
@@ -46,6 +47,15 @@ Customer is responsible for:
 
 You must promptly notify us of suspected unauthorized account access.
 
+### 5.1 Team Accounts (CodeAssist)
+
+The CodeAssist billing coder module supports team-based accounts:
+
+- A **Coding Manager** creates a team account and invites billing coders via email.
+- The Coding Manager is responsible for managing team membership, including promptly deactivating coders who should no longer have access.
+- Each team member must have their own individual account. Shared credentials are prohibited.
+- The Coding Manager is the billing contact for the team's subscription and usage charges.
+
 ## 6. Acceptable Use and Prohibited Conduct
 
 You will not (and will not permit others to):
@@ -62,12 +72,15 @@ You will not (and will not permit others to):
 
 DocAssistAI implements and maintains reasonable and appropriate administrative, physical, and technical safeguards designed to protect data in our custody, including:
 
-- **PII de-identification** — All clinical text is scrubbed of protected health information using Microsoft Presidio (self-hosted) before reaching external AI providers. Fail-closed: AI requests are blocked if de-identification is unavailable.
+- **PII de-identification** — All clinical text is scrubbed of protected health information using Microsoft Presidio (self-hosted) before reaching external AI providers. Fail-closed: AI requests are blocked if de-identification is unavailable. This applies to both Scribe (recorded encounters) and CodeAssist (pasted clinical notes).
 - **Encryption in transit** — TLS/HTTPS on all external connections.
-- **Access controls** — bcrypt-hashed passwords, HTTP-only secure cookies, automatic session timeout (15 minutes of inactivity), and token revocation on password change.
+- **Encryption at rest** — Patient demographic fields stored by CodeAssist (name, MRN, provider name) are encrypted using AES-256-GCM with unique initialization vectors per value.
+- **Transient processing** — Clinical notes pasted into CodeAssist are processed in server memory only and are never written to disk or database. Only the extracted codes and brief supporting excerpts are retained.
+- **Access controls** — bcrypt-hashed passwords, HTTP-only secure cookies, automatic session timeout (15 minutes of inactivity), token revocation on password change, and role-based access control (clinician, coding manager, billing coder).
 - **Audit logging** — Access to clinical data and AI service usage is logged (metadata only; no PHI in logs).
 - **Infrastructure isolation** — Database, PII scrubbing, and transcription services run on an internal network with no external access.
 - **Automated data retention** — Clinical notes are retained for 3 days from last edit. Expired trial accounts are purged after 30 days. Cancelled accounts are purged after 90 days. See the Privacy Policy (Section 8) for the full retention schedule.
+- **Rate limiting** — Per-user rate limits on AI code extraction (10 requests/minute) and spreadsheet export (5 requests/minute) to prevent abuse.
 - **Vendor/subprocessor oversight** — Business Associate Agreements in place with infrastructure providers that handle PHI.
 - **Disaster recovery** — Daily automated database backups with documented restore procedures.
 
@@ -97,6 +110,16 @@ If Services are paid, fees, billing cycles, taxes, and payment terms are set in 
 
 - Fees are non-refundable unless required by law or expressly stated otherwise.
 - Late payments may accrue permitted charges and may result in suspension after notice.
+
+### 11.1 CodeAssist Team Pricing
+
+CodeAssist team subscriptions are billed as follows:
+
+- **Base plan:** Monthly or annual fee includes a set number of coder seats and a monthly allotment of coded notes.
+- **Additional seats:** Per-seat monthly fee for coders beyond the included allotment.
+- **Overage:** Per-note fee for coded notes exceeding the monthly allotment.
+- Usage is metered per team and reported on the Coding Manager's team dashboard.
+- The Coding Manager is responsible for all charges incurred by team members.
 
 ## 12. Confidentiality
 
