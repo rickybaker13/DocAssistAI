@@ -27,7 +27,7 @@ interface ScribeAuthState {
   loading: boolean;
   error: string | null;
   login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
-  register: (email: string, password: string, name?: string, specialty?: string) => Promise<boolean>;
+  register: (email: string, password: string, name?: string, specialty?: string, userRole?: string) => Promise<boolean>;
   requestPasswordReset: (email: string) => Promise<boolean>;
   resetPassword: (payload: { password: string; token?: string; email?: string; otp?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -91,7 +91,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
     }
   },
 
-  register: async (email, password, name?, specialty?) => {
+  register: async (email, password, name?, specialty?, userRole?) => {
     set({ loading: true, error: null });
     // Capture UTM params from URL for signup tracking
     const params = new URLSearchParams(window.location.search);
@@ -114,7 +114,7 @@ export const useScribeAuthStore = create<ScribeAuthState>((set, get) => ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password, name, specialty, ...trackingFields }),
+        body: JSON.stringify({ email, password, name, specialty, userRole, ...trackingFields }),
       });
       const data = await res.json();
       if (!res.ok) { set({ loading: false, error: data.error || 'Registration failed' }); return false; }
