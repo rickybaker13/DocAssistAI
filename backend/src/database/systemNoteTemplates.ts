@@ -1,7 +1,7 @@
 import { PHYSICAL_EXAM_DEFAULT, REVIEW_OF_SYSTEMS_DEFAULT } from './prebuiltSections.js';
 
 export interface SystemNoteTemplate {
-  noteType: 'progress_note' | 'h_and_p' | 'transfer_note' | 'accept_note' | 'consult_note' | 'discharge_summary' | 'procedure_note';
+  noteType: 'progress_note' | 'h_and_p' | 'transfer_note' | 'accept_note' | 'consult_note' | 'discharge_summary' | 'procedure_note' | 'event_note';
   name: string;
   verbosity: 'concise' | 'brief' | 'standard' | 'detailed';
   sections: Array<{ name: string; promptHint: string | null }>;
@@ -104,6 +104,18 @@ export const SYSTEM_NOTE_TEMPLATES: SystemNoteTemplate[] = [
       { name: 'Procedure Description', promptHint: 'Step-by-step description of the procedure performed' },
       { name: 'Post-procedure Assessment', promptHint: 'Immediate patient status and findings after procedure' },
       { name: 'Complications', promptHint: 'Any complications encountered; if none write "No immediate complications"' },
+    ],
+  },
+  {
+    noteType: 'event_note',
+    name: 'Standard Event Note',
+    verbosity: 'standard',
+    sections: [
+      { name: 'Event Description', promptHint: 'What happened — time, location, nature of the event' },
+      { name: 'Clinical Status at Time of Event', promptHint: 'Vital signs, level of consciousness, relevant exam findings' },
+      { name: 'Interventions', promptHint: 'Actions taken in response to the event — medications, procedures, consultations' },
+      { name: 'Patient Response', promptHint: 'How the patient responded to interventions, current status' },
+      { name: 'Plan', promptHint: 'Ongoing monitoring, orders placed, follow-up actions' },
     ],
   },
 ];

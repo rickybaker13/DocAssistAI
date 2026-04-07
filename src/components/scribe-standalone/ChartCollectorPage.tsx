@@ -251,6 +251,15 @@ export const ChartCollectorPage: React.FC = () => {
         <ClipboardPaste size={18} aria-hidden="true" />
         Generate Note from Charts
       </button>
+      {(fragments.length === 0 || selectedSections.length === 0) && !generating && (
+        <p className="text-xs text-slate-500 text-center -mt-2">
+          {fragments.length === 0 && selectedSections.length === 0
+            ? 'Select a template and add chart data to get started'
+            : selectedSections.length === 0
+            ? 'Select a template above to continue'
+            : 'Add at least one chart fragment above'}
+        </p>
+      )}
     </div>
   );
 };
