@@ -29,7 +29,11 @@ const UNAVAILABLE_MSG =
 
 // ── Internal: call Presidio Analyzer ─────────────────────────────────────────
 
-async function analyzeText(text: string): Promise<AnalyzerResult[]> {
+// Max characters per Presidio request — keeps each call well within the timeout.
+// Chunks split on the nearest preceding newline to avoid cutting mid-entity.
+const CHUNK_SIZE = 2500;
+
+async function analyzeChunk(text: string): Promise<AnalyzerResult[]> {
   const analyzerUrl = (process.env.PRESIDIO_ANALYZER_URL || 'http://localhost:5002').trim().replace(/\/+$/, '');
   const timeoutMs = parseInt(process.env.PRESIDIO_TIMEOUT_MS || '5000', 10);
 
@@ -56,6 +60,43 @@ async function analyzeText(text: string): Promise<AnalyzerResult[]> {
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Split text into chunks of ≤ CHUNK_SIZE characters, breaking at the nearest
+ * preceding newline so entities aren't split across chunks. Analyze each chunk
+ * sequentially and merge results with offset-adjusted spans.
+ */
+async function analyzeText(text: string): Promise<AnalyzerResult[]> {
+  if (text.length <= CHUNK_SIZE) {
+    return analyzeChunk(text);
+  }
+
+  const allResults: AnalyzerResult[] = [];
+  let offset = 0;
+
+  while (offset < text.length) {
+    let end = Math.min(offset + CHUNK_SIZE, text.length);
+    // If not at the very end, back up to the nearest newline to avoid splitting mid-entity
+    if (end < text.length) {
+      const lastNewline = text.lastIndexOf('\n', end);
+      if (lastNewline > offset) {
+        end = lastNewline + 1; // include the newline in this chunk
+      }
+    }
+
+    const chunk = text.slice(offset, end);
+    const chunkResults = await analyzeChunk(chunk);
+
+    // Shift spans back to original-text coordinates
+    for (const r of chunkResults) {
+      allResults.push({ ...r, start: r.start + offset, end: r.end + offset });
+    }
+
+    offset = end;
+  }
+
+  return allResults;
 }
 
 // ── Internal: deduplicate overlapping spans ───────────────────────────────────
