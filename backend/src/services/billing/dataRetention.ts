@@ -29,19 +29,22 @@ export async function runDataRetention(): Promise<RetentionResult> {
 
   // 2. Purge expired trial accounts — 30 days past trial_ends_at, never converted
   //    ON DELETE CASCADE handles notes, templates, billing prefs, feedback, etc.
+  //    Admin accounts are exempt.
   const trialsResult = await pool.query(
     `DELETE FROM scribe_users
      WHERE subscription_status IN ('trialing', 'expired')
        AND trial_ends_at < NOW() - INTERVAL '30 days'
        AND subscription_status != 'active'
+       AND is_admin = FALSE
        AND id NOT IN (SELECT user_id FROM scribe_payment_history)`,
   );
 
-  // 3. Purge cancelled accounts — 90 days past period_ends_at
+  // 3. Purge cancelled accounts — 90 days past period_ends_at. Admin accounts are exempt.
   const cancelledResult = await pool.query(
     `DELETE FROM scribe_users
      WHERE subscription_status = 'cancelled'
-       AND period_ends_at < NOW() - INTERVAL '90 days'`,
+       AND period_ends_at < NOW() - INTERVAL '90 days'
+       AND is_admin = FALSE`,
   );
 
   // 4. Sweep stale password reset tokens (expired > 24 hours ago)
