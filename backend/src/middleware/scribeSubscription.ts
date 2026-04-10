@@ -20,6 +20,12 @@ export async function scribeSubscriptionMiddleware(
     return;
   }
 
+  // Admin accounts bypass all subscription checks
+  if (user.is_admin) {
+    next();
+    return;
+  }
+
   const now = new Date();
   const status = user.subscription_status;
 

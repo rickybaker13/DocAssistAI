@@ -162,7 +162,8 @@ export async function expireEndedTrials(): Promise<number> {
     `SELECT id, email
      FROM scribe_users
      WHERE subscription_status = 'trialing'
-       AND trial_ends_at < NOW()`,
+       AND trial_ends_at < NOW()
+       AND is_admin = FALSE`,
   );
 
   for (const user of rows) {

@@ -268,8 +268,10 @@ router.get('/status', scribeAuthMiddleware, async (req: Request, res: Response) 
   if (!user) {
     return res.status(404).json({ error: 'User not found' });
   }
+  // Admin accounts report as comp (bypasses TrialExpiredGate and upgrade flow)
+  const effectiveStatus = user.is_admin ? 'comp' : user.subscription_status;
   return res.json({
-    subscription_status: user.subscription_status,
+    subscription_status: effectiveStatus,
     billing_cycle: user.billing_cycle ?? 'monthly',
     trial_ends_at: user.trial_ends_at,
     period_ends_at: user.period_ends_at,
