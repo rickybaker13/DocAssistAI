@@ -91,7 +91,18 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
   })();
 
   const finalRole = userRole === 'coding_manager' ? 'coding_manager' : 'clinician';
-  return res.status(201).json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin, user_role: finalRole } });
+  return res.status(201).json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      specialty: user.specialty,
+      is_admin: user.is_admin,
+      billing_codes_enabled: user.billing_codes_enabled,
+      user_role: finalRole,
+      coding_team_id: null,
+    },
+  });
 });
 
 router.post('/login', authLimiter, async (req: Request, res: Response) => {
@@ -104,7 +115,18 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
   const token = jwt.sign({ userId: user.id }, getSecret(), { expiresIn: rememberMe ? '30d' : '7d' });
   const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : COOKIE_OPTS.maxAge;
   res.cookie(COOKIE, token, { ...COOKIE_OPTS, maxAge });
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin } });
+  return res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      specialty: user.specialty,
+      is_admin: user.is_admin,
+      billing_codes_enabled: user.billing_codes_enabled,
+      user_role: user.user_role,
+      coding_team_id: user.coding_team_id,
+    },
+  });
 });
 
 router.post('/forgot-password', authLimiter, async (req: Request, res: Response) => {
@@ -159,14 +181,36 @@ router.post('/reset-password', authLimiter, async (req: Request, res: Response) 
 router.get('/me', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const user = await userModel.findById(req.scribeUserId!);
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin, billing_codes_enabled: user.billing_codes_enabled } });
+  return res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      specialty: user.specialty,
+      is_admin: user.is_admin,
+      billing_codes_enabled: user.billing_codes_enabled,
+      user_role: user.user_role,
+      coding_team_id: user.coding_team_id,
+    },
+  });
 });
 
 router.patch('/profile', scribeAuthMiddleware, async (req: Request, res: Response) => {
   const { name, specialty, billing_codes_enabled } = req.body;
   const user = await userModel.update(req.scribeUserId!, { name, specialty, billing_codes_enabled });
   if (!user) return res.status(404).json({ error: 'User not found' }) as any;
-  return res.json({ user: { id: user.id, email: user.email, name: user.name, specialty: user.specialty, is_admin: user.is_admin, billing_codes_enabled: user.billing_codes_enabled } });
+  return res.json({
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      specialty: user.specialty,
+      is_admin: user.is_admin,
+      billing_codes_enabled: user.billing_codes_enabled,
+      user_role: user.user_role,
+      coding_team_id: user.coding_team_id,
+    },
+  });
 });
 
 router.get('/consent-status', scribeAuthMiddleware, async (req: Request, res: Response) => {
