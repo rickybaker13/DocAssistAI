@@ -4,8 +4,11 @@ import { useScribeAuthStore } from '../../stores/scribeAuthStore';
 import { CoderTeamManagement } from './CoderTeamManagement';
 
 const TEAM_RESPONSE = {
-  id: 'team-1',
-  name: 'Acme Coding Team',
+  team: {
+    id: 'team-1',
+    name: 'Acme Coding Team',
+    included_notes: 500,
+  },
   members: [
     { id: 'm1', name: 'Alice', email: 'alice@acme.com', role: 'coding_manager', status: 'active' },
     { id: 'm2', name: 'Bob', email: 'bob@acme.com', role: 'billing_coder', status: 'pending' },
@@ -14,10 +17,8 @@ const TEAM_RESPONSE = {
 };
 
 const USAGE_RESPONSE = {
-  used: 342,
-  included: 500,
-  overage: 0,
-  overage_cost: 0,
+  current: { notes_coded: 342, overage_notes: 0, overage_charge_cents: 0 },
+  history: [],
 };
 
 function mockFetchResponses(overrides?: Record<string, any>) {
@@ -85,7 +86,10 @@ describe('CoderTeamManagement', () => {
 
   it('shows overage warning when over limit', async () => {
     mockFetchResponses({
-      usage: { used: 642, included: 500, overage: 142, overage_cost: 14.2 },
+      usage: {
+        current: { notes_coded: 642, overage_notes: 142, overage_charge_cents: 1420 },
+        history: [],
+      },
     });
     render(<CoderTeamManagement />);
 

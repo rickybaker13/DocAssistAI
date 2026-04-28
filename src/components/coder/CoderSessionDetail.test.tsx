@@ -52,7 +52,7 @@ describe('CoderSessionDetail', () => {
   it('renders session data after fetch', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => MOCK_SESSION,
+      json: async () => ({ session: MOCK_SESSION }),
     }) as any;
 
     renderDetail();
@@ -69,7 +69,7 @@ describe('CoderSessionDetail', () => {
   it('shows all ICD-10 codes', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => MOCK_SESSION,
+      json: async () => ({ session: MOCK_SESSION }),
     }) as any;
 
     renderDetail();
@@ -87,7 +87,7 @@ describe('CoderSessionDetail', () => {
   it('status badge matches coder_status', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => MOCK_SESSION,
+      json: async () => ({ session: MOCK_SESSION }),
     }) as any;
 
     renderDetail();
@@ -102,7 +102,7 @@ describe('CoderSessionDetail', () => {
   it('shows flagged status correctly', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ ...MOCK_SESSION, coder_status: 'flagged' }),
+      json: async () => ({ session: { ...MOCK_SESSION, coder_status: 'flagged' } }),
     }) as any;
 
     renderDetail();
