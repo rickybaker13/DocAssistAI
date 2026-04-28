@@ -15,32 +15,43 @@ interface TeamMember {
 interface TeamData {
   id: string;
   name: string;
+  included_notes: number;
   members: TeamMember[];
 }
 
-interface TeamUsage {
-  used: number;
-  included: number;
-  overage: number;
-  overage_cost: number;
+interface UsageRecord {
+  notes_coded: number;
+  overage_notes: number;
+  overage_charge_cents: number;
 }
 
 /* ── TeamUsageBar ──────────────────────────────────────────────────── */
 
-function TeamUsageBar({ teamId }: { teamId: string }) {
-  const [usage, setUsage] = useState<TeamUsage | null>(null);
+function TeamUsageBar({ teamId, includedNotes }: { teamId: string; includedNotes: number }) {
+  const [current, setCurrent] = useState<UsageRecord | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     const url = `${getBackendUrl()}/api/scribe/coder/teams/${teamId}/usage`;
     fetch(url, { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-      .then(setUsage)
-      .catch(() => {});
+      .then((data) => {
+        // Backend returns { current, history }; legacy/test mocks may return the record directly.
+        const record: UsageRecord | null =
+          data?.current ??
+          (data && 'notes_coded' in data ? (data as UsageRecord) : null);
+        setCurrent(record);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
   }, [teamId]);
 
-  if (!usage) return null;
+  if (!loaded) return null;
 
-  const pct = Math.min((usage.used / usage.included) * 100, 100);
+  const used = current?.notes_coded ?? 0;
+  const overage = current?.overage_notes ?? 0;
+  const overageCost = (current?.overage_charge_cents ?? 0) / 100;
+  const pct = includedNotes > 0 ? Math.min((used / includedNotes) * 100, 100) : 0;
 
   return (
     <div className="bg-slate-900 border border-slate-700 rounded-lg p-5 mb-6">
@@ -53,11 +64,11 @@ function TeamUsageBar({ teamId }: { teamId: string }) {
         />
       </div>
       <p className="text-sm text-slate-300 mt-2">
-        {usage.used} / {usage.included} notes this month
+        {used} / {includedNotes} notes this month
       </p>
-      {usage.overage > 0 && (
+      {overage > 0 && (
         <p className="text-sm text-amber-400 mt-1">
-          {usage.overage} overage notes (${usage.overage_cost.toFixed(2)})
+          {overage} overage notes (${overageCost.toFixed(2)})
         </p>
       )}
     </div>
@@ -104,7 +115,15 @@ export function CoderTeamManagement() {
       });
       if (!res.ok) throw new Error('Failed to load team');
       const data = await res.json();
-      setTeam(data);
+      // Backend returns { team, members }. Older mocks may return a flat object.
+      const teamObj = data?.team ?? data;
+      const members: TeamMember[] = data?.members ?? data?.team?.members ?? [];
+      setTeam({
+        id: teamObj?.id,
+        name: teamObj?.name,
+        included_notes: teamObj?.included_notes ?? 500,
+        members,
+      });
       setError(null);
     } catch (err: any) {
       setError(err.message ?? 'Unknown error');
@@ -121,6 +140,7 @@ export function CoderTeamManagement() {
 
   const toggleMemberStatus = async (memberId: string, newStatus: 'active' | 'deactivated') => {
     if (!teamId) return;
+    const action = newStatus === 'active' ? 'activate' : 'deactivate';
     try {
       const res = await fetch(
         `${getBackendUrl()}/api/scribe/coder/teams/${teamId}/members/${memberId}`,
@@ -128,7 +148,7 @@ export function CoderTeamManagement() {
           method: 'PATCH',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({ action }),
         },
       );
       if (!res.ok) throw new Error('Update failed');
@@ -198,7 +218,7 @@ export function CoderTeamManagement() {
       <h1 className="text-2xl font-bold text-slate-100 mb-6">{team?.name ?? 'Team'}</h1>
 
       {/* Usage */}
-      <TeamUsageBar teamId={teamId} />
+      <TeamUsageBar teamId={teamId} includedNotes={team?.included_notes ?? 500} />
 
       {/* Members */}
       <div className="bg-slate-900 border border-slate-700 rounded-lg p-5 mb-6">

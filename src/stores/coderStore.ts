@@ -130,7 +130,8 @@ export const useCoderStore = create<CoderState>((set, get) => ({
         body: JSON.stringify(data),
       });
       if (!res.ok) return null;
-      const session = await res.json();
+      const body = await res.json();
+      const session: CoderSession = body?.session ?? body;
       // Add to local sessions list
       set((state) => ({ sessions: [session, ...state.sessions] }));
       return session;
@@ -149,7 +150,8 @@ export const useCoderStore = create<CoderState>((set, get) => ({
         credentials: 'include',
       });
       if (!res.ok) throw new Error('Failed to fetch sessions');
-      const sessions = await res.json();
+      const body = await res.json();
+      const sessions: CoderSession[] = Array.isArray(body) ? body : body?.sessions ?? [];
       set({ sessions, sessionsLoading: false });
     } catch (err: any) {
       set({ sessionsLoading: false, sessionsError: err.message });
@@ -175,7 +177,8 @@ export const useCoderStore = create<CoderState>((set, get) => ({
         body: JSON.stringify({ coderStatus: status }),
       });
       if (!res.ok) return;
-      const updated = await res.json();
+      const body = await res.json();
+      const updated: CoderSession = body?.session ?? body;
       set((state) => ({
         sessions: state.sessions.map((s) => (s.id === id ? updated : s)),
       }));

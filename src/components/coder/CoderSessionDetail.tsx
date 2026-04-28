@@ -136,7 +136,7 @@ export function CoderSessionDetail() {
         return res.json();
       })
       .then((data) => {
-        if (!cancelled) setSession(data);
+        if (!cancelled) setSession(data?.session ?? data);
       })
       .catch((err) => {
         if (!cancelled) setError(err.message);
@@ -158,11 +158,11 @@ export function CoderSessionDetail() {
         method: 'PATCH',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coder_status: newStatus }),
+        body: JSON.stringify({ coderStatus: newStatus }),
       });
       if (!res.ok) throw new Error('Failed to update status');
       const updated = await res.json();
-      setSession(updated);
+      setSession(updated?.session ?? updated);
     } catch {
       setError('Failed to update status');
     }

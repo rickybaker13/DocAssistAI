@@ -8,7 +8,7 @@ beforeEach(() => {
   useCoderStore.getState().reset();
   globalThis.fetch = vi.fn().mockResolvedValue({
     ok: true,
-    json: async () => [],
+    json: async () => ({ sessions: [] }),
   }) as any;
 });
 
@@ -112,7 +112,7 @@ describe('CoderDashboard', () => {
     // Mock fetch to return session data (fetchSessions is called on mount)
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => sessionData,
+      json: async () => ({ sessions: sessionData }),
     }) as any;
     renderDashboard();
     await waitFor(() => {
